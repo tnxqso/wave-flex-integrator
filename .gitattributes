@@ -1,0 +1,9 @@
+# Ensure all text files use LF
+* text=auto
+
+# Handle specific files
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.code-workspace text eol=lf
+*.gitignore text eol=lf

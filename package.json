@@ -1,0 +1,45 @@
+{
+  "name": "wave-flex-integrator",
+  "version": "0.1.0",
+  "description": "Seamlessly integrates Wavelog with FlexRadio SmartSDR, enriching DXCluster spots and sending them to SmartSDR's panadapter.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [
+    "dxcluster",
+    "ham-radio",
+    "flexradio",
+    "smartSDR",
+    "wavelog",
+    "panadapter",
+    "integration",
+    "radio-automation"
+  ],
+  "author": "B Synnerlig <your.email@example.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/wave-flex-integrator.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/wave-flex-integrator/issues"
+  },
+  "homepage": "https://github.com/yourusername/wave-flex-integrator#readme",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "electron-json-storage": "^4.6.0",
+    "electron-store": "^10.0.0",
+    "lodash": "^4.17.21",
+    "lodash.merge": "^4.6.2",
+    "node-fetch": "^2.7.0",
+    "winston": "^3.14.2"
+  },
+  "devDependencies": {
+    "electron": "^32.1.2",
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

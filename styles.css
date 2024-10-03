@@ -1,0 +1,35 @@
+/* styles.css */
+
+/* Optional: Add some custom styling for better visuals */
+body {
+  background-color: #f8f9fa;
+}
+.container-fluid {
+  padding-top: 20px;
+}
+h1 {
+  margin-bottom: 30px;
+}
+.status-item {
+  font-weight: bold;
+}
+#spotsList li {
+  margin-bottom: 5px;
+}
+/* styles.css */
+
+.flag-icon {
+  width: 32px;
+  height: 24px;
+  vertical-align: middle;
+}
+
+.label-text {
+  min-width: 150px; /* Adjust this value to control label width */
+  text-align: left;
+}
+
+.status-item {
+  min-width: 100px; /* Adjust this value to control the status message column width */
+  text-align: left;  /* Keep the status text left-aligned */
+}
