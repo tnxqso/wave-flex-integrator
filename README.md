@@ -24,6 +24,9 @@ To ensure proper functionality of the Wave-Flex Integrator, two key features dev
   The Wavelog team has announced that the DXCluster-Feature is already part of the latest development branch, and seamless logging will be merged into the main repository within a few days.
 
 In summary, PR #978 requires manual merging, and if you're using the current stable version of Wavelog, you might need to wait until these features are merged into the main repository or switch to the dev branch for full compatibility with Wave-Flex-Integrator.
+As an alternative, if you are in a hurry to test things out, I have prepared a fork of Wavelog (dev branch) and applied the required pull request. If you wish you could use my unofficial fork for testing the full functionality by using this command when checking out wavelog.
+
+`git clone --branch dev https://github.com/besynnerlig/wavelog.git wavelog-dev` This will clone the repository into a new folder named wavelog-dev. Use Wavelogs instructions for installing but replace their git clone command with the one given. Doing that will give you an unofficial version of Wavelog and you can expect no support from Wavelog using that of course. You would also need to replace that version with the official one at some point. So it's only recommended if you are sure what you are doing and confident how to restore things back again to the official version.
 
 ## Table of Contents
 
