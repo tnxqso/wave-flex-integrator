@@ -19,7 +19,7 @@ To ensure proper functionality of the Wave-Flex Integrator, two key features dev
   PR [#978](https://github.com/wavelog/wavelog/pull/978) is required to allow the Wavelog browser to open a new logging window for the clicked callsign in SmartSDR. This feature has not yet been merged into Wavelog’s development branch, so it must be applied manually. Merging this pull request manually requires familiarity with Git and GitHub processes. If you're comfortable with these tools, you can apply the changes yourself by pulling the code and merging it into your local Wavelog installation.
 
 - Pull Request [#1017](https://github.com/wavelog/wavelog/pull/1017):
-  PR #1017 provides the API that WFI uses to enrich spot data, such as DXCC needed status, LoTW membership, and more. This feature was merged into Wavelog's development branch, but at the time of writing, it has not yet been merged into the main repository.
+  PR #1017 provides the API that Wave-Flex Integrator uses to enrich spot data, such as DXCC needed status, LoTW membership, and more. This feature was merged into Wavelog's development branch, but at the time of writing, it has not yet been merged into the main repository.
   If you’re comfortable with Git, you can use Wavelog’s dev branch and manually merge these pull requests into your own setup.
   The Wavelog team has announced that the DXCluster-Feature is already part of the latest development branch, and seamless logging will be merged into the main repository within a few days.
 
