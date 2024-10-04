@@ -1,5 +1,5 @@
 
-# Wavelog-FlexRadio-Integrator
+# Wave-Flex-Integrator
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node.js Version](https://img.shields.io/badge/node.js-12%2B-green.svg)](https://nodejs.org/)
@@ -9,6 +9,21 @@ A powerful tool that connects your FlexRadio to the Wavelog logging software, in
 > **Note:** This software is currently in beta testing, and the information below may be updated frequently as the project evolves.
 
 > **Note:** This software is currently not listening for logging ADIF brodcasts from programs like WSJT-X but it's a feature that we are considering to add. If you run digital modes, you might want to wait until we've added that functionality.
+
+
+> **Important Notice** Wavelog Features Required
+
+To ensure proper functionality of the Wave-Flex Integrator, two key features developed by Wavelog must be in place:
+
+- Pull Request #978:
+  PR [#978](https://github.com/wavelog/wavelog/pull/978) is required to allow the Wavelog browser to open a new logging window for the clicked callsign in SmartSDR. This feature has not yet been merged into Wavelog’s development branch, so it must be applied manually. Merging this pull request manually requires familiarity with Git and GitHub processes. If you're comfortable with these tools, you can apply the changes yourself by pulling the code and merging it into your local Wavelog installation.
+
+- Pull Request [#1017](https://github.com/wavelog/wavelog/pull/1017):
+  PR #1017 provides the API that WFI uses to enrich spot data, such as DXCC needed status, LoTW membership, and more. This feature was merged into Wavelog's development branch, but at the time of writing, it has not yet been merged into the main repository.
+  If you’re comfortable with Git, you can use Wavelog’s dev branch and manually merge these pull requests into your own setup.
+  The Wavelog team has announced that the DXCluster-Feature is already part of the latest development branch, and seamless logging will be merged into the main repository within a few days.
+
+In summary, PR #978 requires manual merging, and if you're using the current stable version of Wavelog, you might need to wait until these features are merged into the main repository or switch to the dev branch for full compatibility with Wave-Flex-Integrator.
 
 ## Table of Contents
 
@@ -66,7 +81,7 @@ Before installing, ensure the following prerequisites are met:
 
 ```bash
 git clone https://github.com/yourusername/wavelog-flexradio-integrator.git
-cd wavelog-flexradio-integrator
+cd wave-flex-integrator
 npm install
 npm start
 ```
