@@ -19,9 +19,6 @@ const defaultConfig = {
     callsign: 'YOUR-CALLSIGN-HERE',              // User callsign for login
     loginPrompt: 'login:',     // Expected login prompt from the DXCluster server
     commandsAfterLogin: [      // Commands to execute after successful login
-      'SET/NAME JOHN',         // e.g., 'SET/NAME John'
-      'SET/SKIMMER CW',
-      'SET/SEEME',
     ],
     reconnect: {
       initialDelay: 10000,      // Initial delay before reconnection attempt in milliseconds
