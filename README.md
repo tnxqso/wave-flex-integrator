@@ -11,7 +11,7 @@ A powerful tool that connects your FlexRadio to the Wavelog logging software, in
 > **Note:** This software is currently not listening for logging ADIF brodcasts from programs like WSJT-X but it's a feature that we are considering to add. If you run digital modes, you might want to wait until we've added that functionality.
 
 
-> **Important Notice** Wavelog Features Required
+## Important Notice: Wavelog Features Required
 
 To ensure proper functionality of the Wave-Flex Integrator, two key features developed by Wavelog must be in place:
 
@@ -39,7 +39,7 @@ In summary, PR #978 requires manual merging, and if you're using the current sta
 
 ## Introduction
 
-Tired of running multiple programs just to log contacts and integrate with FlexRadio? If you're using [Wavelog's web based Logging Software](https://www.wavelog.org) this tool eliminates the need for CAT software by directly syncing your radio and logging software. **Wavelog-FlexRadio-Integrator** connects to a DX Cluster, processes incoming spots, and enhances them with additional information via the Wavelog API before sending them to your FlexRadio.
+Tired of running multiple programs just to log contacts and integrate with FlexRadio? If you're using [Wavelog's web based Logging Software](https://www.wavelog.org) this tool eliminates the need for CAT software by directly syncing your radio and logging software. **Wave-Flex Integrator** connects to a DX Cluster, processes incoming spots, and enhances them with additional information via the Wavelog API before sending them to your FlexRadio.
 
 When a spot appears on your SmartSDR panadapter, you can click it, and a prefilled Wavelog logging window will open, ready to log the QSO. This application works exclusively with **Wavelog** and **FlexRadio**, and we are not affiliated with either of them. Currently, it supports no other logging software.
 
@@ -80,7 +80,7 @@ Before installing, ensure the following prerequisites are met:
 ### Windows NPM Installation
 
 ```bash
-git clone https://github.com/yourusername/wavelog-flexradio-integrator.git
+git clone https://github.com/tnxqso/wave-flex-integrator.git
 cd wave-flex-integrator
 npm install
 npm start
