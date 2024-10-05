@@ -116,7 +116,7 @@ Upon first startup, you will need to configure the application via the **Configu
 > **Tip:** Coloring the spots sometimes gives other results than expected when shown on the SmartSDR panadapter. Use the default colors to start with and change only a single color at a time.
 
 - **Wavelog Settings**:
-  - `API URL`: The base URL for your Wavelog API.
+  - `BASE URL`: The base URL for your Wavelog API, e.g. `https://YOURSERVERNAME/index.php`. Keep the /index.php at the end unless you have <a target="_new" href="https://github.com/wavelog/Wavelog/wiki/Wavelog.php-Configuration-File">modified Wavelogs .htaccess file using mod_rewrite</a>)
   - `API Key`: Your Wavelog API key. You can generate one by clicking your account at top right corner --> API Keys
   - `Station Location IDs`: A comma-separated list of station location IDs (optional). If you don't want the API to search all your station locations defined in Wavelog, otherwise leave blank.
 

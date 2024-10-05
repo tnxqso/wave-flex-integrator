@@ -58,6 +58,19 @@
           >Configuration</a
         >
       </li>
+      <!-- New About Tab -->
+      <li class="nav-item" role="presentation">
+        <a
+          class="nav-link"
+          id="about-tab"
+          data-bs-toggle="tab"
+          href="#about"
+          role="tab"
+          aria-controls="about"
+          aria-selected="false"
+          >About</a
+        >
+      </li>
     </ul>
     
     <!-- Tab Contents -->
@@ -312,8 +325,8 @@
             <!-- Wavelog API Configuration -->
             <h4 class="mt-4">Wavelog API Configuration</h4>
             <div class="mb-3">
-              <label for="wavelogApiUrl" class="form-label">API URL</label>
-              <input type="url" class="form-control" id="wavelogApiUrl" required placeholder="https://api.wavelog.com" />
+              <label for="wavelogApiUrl" class="form-label">BASE URL (Keep the /index.php at the end unless you have <a target="_new" href="https://github.com/wavelog/Wavelog/wiki/Wavelog.php-Configuration-File">modified Wavelogs .htaccess</a>)</label>
+              <input type="url" class="form-control" id="wavelogApiUrl" required placeholder="https://wavelog.example.com/index.php" />
             </div>
             <div class="mb-3">
               <label for="wavelogApiKey" class="form-label">API Key</label>
@@ -337,6 +350,29 @@
           </form>
         </div>
       </div>
+
+      <!-- About Tab -->
+      <div
+        class="tab-pane fade"
+        id="about"
+        role="tabpanel"
+        aria-labelledby="about-tab"
+      >
+        <!-- About Content -->
+        <div id="aboutContent" class="mt-4">
+          <h3>About Wave-Flex Integrator</h3>
+          <p><strong>Version:</strong> <span id="appVersion">1.0.0</span></p>
+          <p><strong>Description:</strong> Wave-Flex Integrator is a powerful tool that connects your FlexRadio to the Wavelog logging software, integrating DX Cluster data and seamlessly syncing frequency and mode without the need for traditional CAT software. It simplifies your setup, allowing you to focus more on operating and logging your contacts.</p>
+          <p>
+            For support and more information, please refer to the
+            <a href="https://github.com/tnxqso/wave-flex-integrator/blob/main/README.md" target="_new">README file</a>.
+          </p>
+          <p><strong>Author:</strong> <a target="_new" href="https://github.com/tnxqso">TNX QSO Community</a></p>
+          <p><strong>License:</strong> <a target="_new" href="https://opensource.org/license/mit"> MIT License</a></p>
+          <!-- Add more placeholders as needed -->
+        </div>
+      </div>
+
     </div>
   </div>
 

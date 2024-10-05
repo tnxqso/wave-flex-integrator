@@ -1,7 +1,7 @@
 // main.js
 'use strict';
 
-const { app, BrowserWindow, ipcMain, dialog } = require('electron'); // Added 'dialog'
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const storage = require('electron-json-storage');
@@ -21,7 +21,7 @@ let isLoggedIn = false;
 let commandsSent = false;
 let dxClusterClient, flexRadioClient, augmentedSpotCache;
 let uiManager;
-let isShuttingDown = false; // Added flag to prevent recursive shutdowns
+let isShuttingDown = false;
 
 /**
  * Loads the default configuration and merges it with local configuration if available.
@@ -409,8 +409,10 @@ function logConnectionState(state, server = {}, error = null) {
  */
 function main(config) {
   // Check if the callsign is set to "YOUR-CALLSIGN-HERE" and skip connection attempts if so
-  if (config.dxCluster.callsign === "YOUR-CALLSIGN-HERE") {
-    logger.warn('DXCluster connection attempt skipped due to default callsign "YOUR-CALLSIGN-HERE". Please configure a valid callsign.');
+  if (config.dxCluster.callsign === 'YOUR-CALLSIGN-HERE') {
+    logger.warn(
+      'DXCluster connection attempt skipped due to default callsign "YOUR-CALLSIGN-HERE". Please configure a valid callsign.'
+    );
     dialog.showErrorBox(
       'Configuration Error',
       'Essential configuration is missing. Please configure the application.'
@@ -486,6 +488,13 @@ ipcMain.handle('update-config', async (event, newConfig) => {
       }
     });
   });
+});
+
+/**
+ * Handles IPC request to get the application version.
+ */
+ipcMain.handle('get-app-version', async (event) => {
+  return app.getVersion();
 });
 
 // Handle uncaught exceptions

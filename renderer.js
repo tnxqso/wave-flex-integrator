@@ -1,6 +1,7 @@
 'use strict';
 
 const { ipcRenderer } = require('electron');
+const { shell } = require('electron');
 
 /**
  * Scrolls the window to the top of the page.
@@ -712,6 +713,20 @@ function displayCacheHealth(healthStatus) {
   }
 }
 
+/**
+ * Populates the About tab with version information.
+ */
+function populateAboutTab() {
+  ipcRenderer.invoke('get-app-version').then((version) => {
+    const versionElement = document.getElementById('appVersion');
+    if (versionElement) {
+      versionElement.textContent = version;
+    }
+  }).catch((error) => {
+    console.error('Failed to get app version:', error);
+  });
+}
+
 // Initialize the form once the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', () => {
   // Load configuration and populate form
@@ -724,4 +739,18 @@ document.addEventListener('DOMContentLoaded', () => {
     .catch(() => {
       showAlert('Error fetching configuration.', 'danger');
     });
+
+  // Populate About tab
+  populateAboutTab();
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Attach a click event to all external links
+  document.querySelectorAll('a[target="_new"]').forEach(link => {
+    link.addEventListener('click', (event) => {
+      event.preventDefault(); // Prevent the default anchor behavior
+      const url = link.href;
+      shell.openExternal(url); // Open in the default system browser
+    });
+  });
 });
