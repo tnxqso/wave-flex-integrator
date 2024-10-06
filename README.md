@@ -130,7 +130,7 @@ Upon first startup, you will need to configure the application via the **Configu
 
 - **FlexRadio Settings**:
   - `Enabled`: Enable or disable FlexRadio integration.
-  - `Host`: The hostname or IP address of your FlexRadio device.
+  - `Host`: The hostname or IP address of your FlexRadio device. It must be reachable at that hostname or IP from your desktop computer where Flex-Wave Integrator is running.
   - `Port`: The port number to connect to FlexRadio.
   - `Spot Management`: Customize how long spots remain active and their display colors.
 
@@ -154,6 +154,27 @@ npm start
 ```
 
 For binary installations, details will be provided soon.
+
+
+## Upgrading Wave-Flex Integrator
+
+1. Open a command prompt window.
+2. Change to the directory where Wave-Flex Integrator is installed, e.g.:
+   ```bash
+   cd wave-flex-integrator
+   ```
+   
+   Make sure that went well before you continue to next step.
+
+3. Pull the latest changes from the repository:
+   ```bash
+   git reset --hard 
+   git pull origin main
+   ```
+
+
+This ensures your local repository is now an exact match with the remote Wave-Flex Integrator branch.
+
 
 ## Contributing
 
