@@ -1,4 +1,3 @@
-
 # Wave-Flex-Integrator
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -8,25 +7,49 @@ A powerful tool that connects your FlexRadio to the Wavelog logging software, in
 
 > **Note:** This software is currently in beta testing, and the information below may be updated frequently as the project evolves.
 
+> **Note:** The TNXQSO team is not affiliated with **Wavelog** or **FlexRadio**. This project is independently developed to integrate these tools for the ham radio community.
+
 > **Note:** This software is currently not listening for logging ADIF brodcasts from programs like WSJT-X but it's a feature that we are considering to add. If you run digital modes, you might want to wait until we've added that functionality.
 
 
-## Important Notice: Wavelog Features Required
+## What is Wavelog?
 
-To ensure proper functionality of the Wave-Flex Integrator, two key features developed by Wavelog must be in place:
+**Wavelog** is a free, web-based logging software designed for ham radio enthusiasts. It’s feature-rich and easy to set up on your own server at no cost. Whether you prefer managing your own installation or having someone else handle the technical details, Wavelog offers flexible options:
 
-- Pull Request #978:
-  PR [#978](https://github.com/wavelog/wavelog/pull/978) is required to allow the Wavelog browser to open a new logging window for the clicked callsign in SmartSDR. This feature has not yet been merged into Wavelog’s development branch, so it must be applied manually. Merging this pull request manually requires familiarity with Git and GitHub processes. If you're comfortable with these tools, you can apply the changes yourself by pulling the code and merging it into your local Wavelog installation.
+- **Install on your own server:** You can set up your own Wavelog server by following the installation instructions. This allows you to have full control over your logging software, and it's completely free to do so.
+- **Hosted solutions:** If you’d rather not worry about server administration, there are hosting services available at a cost. These services handle everything for you, including LAMP stack administration and regular Wavelog updates, so you can focus on using the software without technical concerns.
 
-- Pull Request [#1017](https://github.com/wavelog/wavelog/pull/1017):
-  PR #1017 provides the API that Wave-Flex Integrator uses to enrich spot data, such as DXCC needed status, LoTW membership, and more. This feature was merged into Wavelog's development branch, but at the time of writing, it has not yet been merged into the main repository.
-  If you’re comfortable with Git, you can use Wavelog’s dev branch and manually merge these pull requests into your own setup.
-  The Wavelog team has announced that the DXCluster-Feature is already part of the latest development branch, and seamless logging will be merged into the main repository within a few days.
+### Try Wavelog Before You Commit
 
-In summary, PR #978 requires manual merging, and if you're using the current stable version of Wavelog, you might need to wait until these features are merged into the main repository or switch to the dev branch for full compatibility with Wave-Flex-Integrator.
-As an alternative, if you are in a hurry to test things out, I have prepared a fork of Wavelog (dev branch) and applied the required pull request. If you wish you could use my unofficial fork for testing the full functionality by using this command when checking out wavelog.
+If you're new to Wavelog and want to try it out before setting up your own server, you can explore its features on their demo page. Simply visit the [Wavelog demo](https://demo.wavelog.org/user/login) to log in and see how it works in practice. The demo gives you a great feel for what Wavelog can do and whether it suits your needs.
 
-`git clone --branch dev https://github.com/besynnerlig/wavelog.git wavelog-dev` This will clone the repository into a new folder named wavelog-dev. Use Wavelogs instructions for installing but replace their git clone command with the one given. Doing that will give you an unofficial version of Wavelog and you can expect no support from Wavelog using that of course. You would also need to replace that version with the official one at some point. So it's only recommended if you are sure what you are doing and confident how to restore things back again to the official version.
+Whether you choose to run your own installation or use a hosting service, Wavelog is a powerful and versatile tool for logging and managing your ham radio contacts.
+
+## Important Notice: Required Wavelog Features
+
+To ensure the **Wave-Flex Integrator** works properly, two key features from Wavelog must be in place. As of now, these features are only available in Wavelog’s development (`dev`) branch. You will need to switch to this branch to access them.
+
+### Important Disclaimer
+
+Please be aware that using the `dev` branch means you are working with code that is under active development. This branch may include experimental features, incomplete functionality, or potential bugs that have not yet been thoroughly tested. By switching to the Wavelog `dev` branch:
+
+- **You accept the risks** that come with using a development version of the software.
+- **The responsibility for any issues** arising from the use of the `dev` branch lies with the user.
+- **The Wavelog team and the Wave-Flex Integrator project** cannot guarantee support or stability when using the `dev` branch.
+
+Proceed with caution, and make sure you understand how to switch back to the stable version if necessary.
+
+### How to Switch to the Wavelog dev Branch
+
+Follow these steps to update your Wavelog installation on the Wavelog server to the latest `dev` branch. Please note, in some cases, these steps may vary depending on your setup or any customizations you may have:
+
+   ```bash
+   cd /var/www/wavelog # Replace path with your installation folder if necessary
+   git fetch # Fetch the latest updates from the Wavelog repository
+   git checkout dev # Fetch the latest updates from the Wavelog repository
+   git pull origin dev # Pull the latest changes to ensure your Wavelog is up-to-date:
+   ```
+
 
 ## Table of Contents
 
@@ -63,7 +86,7 @@ When a spot appears on your SmartSDR panadapter, you can click it, and a prefill
 - **NPM**: Node Package Manager for installing dependencies.
 - **FlexRadio**: Compatible FlexRadio device connected to your LAN or reachable on the Internet over TCP-IP.
 - **SmartSDR**: Installed and running on your local machine.
-- **Wavelog**: Wavelog logging software (you can try their [demo](https://demo.wavelog.org/user/login)).
+- **WaveLog**: Installed and running with the `dev` branch checked out [as described above](#how-to-switch-to-the-wavelog-dev-branch)
 - **DX Cluster Access**: Your callsign will be used to access a DX Cluster server of your choice.
 
 > **Note:** While we provide the source code for those who want to run it via Node.js, we will soon offer binaries for easier installation. At the time of writing, Wavelog’s main repository has not yet merged the new API features required. You can, however, use Wavelog’s development branch, where these features are already included. Stay tuned for updates on this.
