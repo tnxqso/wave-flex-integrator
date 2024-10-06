@@ -13,7 +13,9 @@ const util = require('util');
 const sleep = util.promisify(setTimeout);
 const { setUtilLogger } = require('./utils');
 const UIManager = require('./ui_manager');
-const merge = require('lodash.merge');
+
+// Replace lodash.merge with lodash.mergewith for custom merging
+const mergeWith = require('lodash.mergewith');
 
 let logger;
 let mainWindow;
@@ -24,6 +26,16 @@ let uiManager;
 let isShuttingDown = false;
 
 /**
+ * Customizer function for lodash.mergeWith to handle array merging
+ * Ensure stored arrays are preserved (including empty arrays) and completely replace default arrays
+ */
+function customizer(objValue, srcValue) {
+  if (Array.isArray(objValue) && Array.isArray(srcValue)) {
+    return srcValue; // Replace default array with stored array
+  }
+}
+
+/**
  * Loads the default configuration and merges it with local configuration if available.
  */
 let defaultConfig = require('./defaultConfig.js');
@@ -32,7 +44,8 @@ let defaultConfig = require('./defaultConfig.js');
 const localConfigPath = path.join(__dirname, 'localConfig.js');
 if (fs.existsSync(localConfigPath)) {
   const localConfig = require('./localConfig.js');
-  defaultConfig = merge({}, defaultConfig, localConfig);
+  // Use mergeWith instead of merge and pass the customizer function
+  defaultConfig = mergeWith({}, defaultConfig, localConfig, customizer);
   console.log('Loaded local configuration.');
 } else {
   console.log('Loaded default configuration.');
@@ -79,8 +92,8 @@ function loadConfig() {
         console.log('Loaded configuration from storage.');
       }
 
-      // Merge storedConfig with defaultConfig
-      let config = merge({}, defaultConfig, storedConfig);
+      // Merge storedConfig with defaultConfig using mergeWith and customizer
+      let config = mergeWith({}, defaultConfig, storedConfig, customizer);
 
       // Check for missing keys in storedConfig and update if necessary
       let configUpdated = false;
@@ -116,7 +129,10 @@ function loadConfig() {
       }
 
       // Merge again to ensure any new defaults are included
-      config = merge({}, defaultConfig, storedConfig);
+      config = mergeWith({}, defaultConfig, storedConfig, customizer);
+
+      // **Optional Debugging: Verify the final merged configuration**
+      console.log('Final Merged Configuration:', JSON.stringify(config, null, 2));
 
       resolve(config);
     });
@@ -438,7 +454,7 @@ ipcMain.handle('get-config', async (event) => {
         }
         reject(error);
       } else {
-        const mergedConfig = merge({}, defaultConfig, storedConfig);
+        const mergedConfig = mergeWith({}, defaultConfig, storedConfig, customizer); // Updated line
         resolve(mergedConfig);
       }
     });
@@ -467,7 +483,7 @@ ipcMain.handle('reset-config-to-defaults', async (event) => {
  * @returns {Promise<void>} - Resolves when the configuration is updated.
  */
 ipcMain.handle('update-config', async (event, newConfig) => {
-  const updatedConfig = merge({}, defaultConfig, newConfig);
+  const updatedConfig = mergeWith({}, defaultConfig, newConfig, customizer); // Updated line
 
   return new Promise((resolve, reject) => {
     storage.set('config', updatedConfig, (error) => {
