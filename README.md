@@ -68,7 +68,7 @@ Whether you choose to run your own installation or use a hosting service, Wavelo
 
 ## Important Notice: Required Wavelog Features
 
-To ensure the **Wave-Flex Integrator** works properly, two key features from Wavelog must be in place. As of now, these features are only available in Wavelog’s development (`dev`) branch. You will need to switch to this branch to access them.
+To ensure the **Wave-Flex Integrator** works properly, two key features from Wavelog must be in place. As of now, these features are only available in Wavelog’s development (`dev`) branch. If you set up your own Wavelog server, you will need to switch to this branch to access them. However, if you use a hosted Wavelog server, you should ask the server administrator if they have implemented the "log_qso" API yet. It's because that is a key feature that is quite new and it's not sure that they have applied that yet.
 
 ### Important Disclaimer
 
