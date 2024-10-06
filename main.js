@@ -132,7 +132,7 @@ function loadConfig() {
       config = mergeWith({}, defaultConfig, storedConfig, customizer);
 
       // **Optional Debugging: Verify the final merged configuration**
-      console.log('Final Merged Configuration:', JSON.stringify(config, null, 2));
+      //console.log('Final Merged Configuration:', JSON.stringify(config, null, 2));
 
       resolve(config);
     });

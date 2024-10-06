@@ -46,8 +46,8 @@ When a spot appears on your SmartSDR panadapter, you can click it, and a prefill
 
 - **Node.js**: Version 12 or higher for running the application.
 - **NPM**: Node Package Manager for installing dependencies.
-- **FlexRadio**: Compatible FlexRadio device connected to your LAN or reachable on the Internet over TCP-IP.
-- **SmartSDR**: Installed and running on your local machine.
+- **FlexRadio**: Compatible FlexRadio device connected to your LAN or reachable on the Internet over TCP-IP. You sholud enable spots in Settings --> Spots. Do not override colors or background.
+- **SmartSDR**: Installed and running on your local machine. Version 3.7.4 or higher is tested. Find your version in Settings --> Radio setup --> Radio tab -->Radio Hardware version, (Yes, Radio Hardware version) which is the version of SmartSDR that is running and the associated radio firmware.
 - **WaveLog**: Installed and running with the `dev` branch checked out [as described above](#how-to-switch-to-the-wavelog-dev-branch)
 - **DX Cluster Access**: Your callsign will be used to access a DX Cluster server of your choice.
 
