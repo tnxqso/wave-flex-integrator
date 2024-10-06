@@ -12,6 +12,47 @@ A powerful tool that connects your FlexRadio to the Wavelog logging software, in
 > **Note:** This software is currently not listening for logging ADIF brodcasts from programs like WSJT-X but it's a feature that we are considering to add. If you run digital modes, you might want to wait until we've added that functionality.
 
 
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Features](#features)
+- [Requirements](#requirements)
+- [What is Wavelog](#what-is-wavelog)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Contributing](#contributing)
+- [License](#license)
+- [Acknowledgments](#acknowledgments)
+
+## Introduction
+
+Tired of running multiple programs just to log contacts and integrate with FlexRadio? If you're using [Wavelog's web based Logging Software](https://www.wavelog.org) this tool eliminates the need for CAT software by directly syncing your radio and logging software. **Wave-Flex Integrator** connects to a DX Cluster, processes incoming spots, and enhances them with additional information via the Wavelog API before sending them to your FlexRadio.
+
+When a spot appears on your SmartSDR panadapter, you can click it, and a prefilled Wavelog logging window will open, ready to log the QSO. This application works exclusively with **Wavelog** and **FlexRadio**, and we are not affiliated with either of them. Currently, it supports no other logging software.
+
+## Features
+
+- **DX Cluster Integration**: Automatically connect to a DX Cluster to receive real-time spot data.
+- **Spot Augmentation**:
+  - Enriches spot data using the Wavelog API, showing whether a callsign’s DXCC is needed for the band or mode, and whether they are a LoTW (Logbook of The World) member.
+  - Sends color-coded spots to FlexRadio’s SmartSDR panadapter. Colors can be customized based on DXCC, worked-before status, and LoTW membership.
+- **One-Click Logging**: Clicking a spot in SmartSDR opens a Wavelog logging window with the callsign and relevant data prefilled.
+- **Error Handling**: Automatically reconnects to the DX Cluster and FlexRadio if the connection drops.
+- **Seamless FlexRadio and Wavelog Sync**: Automatically syncs frequency and mode between FlexRadio and Wavelog without the need for CAT software.
+- **Cross-Platform Support**: Aims to support Windows, macOS, and Linux.
+
+## Requirements
+
+- **Node.js**: Version 12 or higher for running the application.
+- **NPM**: Node Package Manager for installing dependencies.
+- **FlexRadio**: Compatible FlexRadio device connected to your LAN or reachable on the Internet over TCP-IP.
+- **SmartSDR**: Installed and running on your local machine.
+- **WaveLog**: Installed and running with the `dev` branch checked out [as described above](#how-to-switch-to-the-wavelog-dev-branch)
+- **DX Cluster Access**: Your callsign will be used to access a DX Cluster server of your choice.
+
+> **Note:** While we provide the source code for those who want to run it via Node.js, we will soon offer binaries for easier installation. At the time of writing, Wavelog’s main repository has not yet merged the new API features required. You can, however, use Wavelog’s development branch, where these features are already included. Stay tuned for updates on this.
+
 ## What is Wavelog?
 
 **Wavelog** is a free, web-based logging software designed for ham radio enthusiasts. It’s feature-rich and easy to set up on your own server at no cost. Whether you prefer managing your own installation or having someone else handle the technical details, Wavelog offers flexible options:
@@ -50,56 +91,13 @@ Follow these steps to update your Wavelog installation on the Wavelog server to 
    git pull origin dev # Pull the latest changes to ensure your Wavelog is up-to-date:
    ```
 
-
-## Table of Contents
-
-- [Introduction](#introduction)
-- [Features](#features)
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Usage](#usage)
-- [Contributing](#contributing)
-- [License](#license)
-- [Acknowledgments](#acknowledgments)
-
-## Introduction
-
-Tired of running multiple programs just to log contacts and integrate with FlexRadio? If you're using [Wavelog's web based Logging Software](https://www.wavelog.org) this tool eliminates the need for CAT software by directly syncing your radio and logging software. **Wave-Flex Integrator** connects to a DX Cluster, processes incoming spots, and enhances them with additional information via the Wavelog API before sending them to your FlexRadio.
-
-When a spot appears on your SmartSDR panadapter, you can click it, and a prefilled Wavelog logging window will open, ready to log the QSO. This application works exclusively with **Wavelog** and **FlexRadio**, and we are not affiliated with either of them. Currently, it supports no other logging software.
-
-## Features
-
-- **DX Cluster Integration**: Automatically connect to a DX Cluster to receive real-time spot data.
-- **Spot Augmentation**:
-  - Enriches spot data using the Wavelog API, showing whether a callsign’s DXCC is needed for the band or mode, and whether they are a LoTW (Logbook of The World) member.
-  - Sends color-coded spots to FlexRadio’s SmartSDR panadapter. Colors can be customized based on DXCC, worked-before status, and LoTW membership.
-- **One-Click Logging**: Clicking a spot in SmartSDR opens a Wavelog logging window with the callsign and relevant data prefilled.
-- **Error Handling**: Automatically reconnects to the DX Cluster and FlexRadio if the connection drops.
-- **Seamless FlexRadio and Wavelog Sync**: Automatically syncs frequency and mode between FlexRadio and Wavelog without the need for CAT software.
-- **Cross-Platform Support**: Aims to support Windows, macOS, and Linux.
-
-## Requirements
-
-- **Node.js**: Version 12 or higher for running the application.
-- **NPM**: Node Package Manager for installing dependencies.
-- **FlexRadio**: Compatible FlexRadio device connected to your LAN or reachable on the Internet over TCP-IP.
-- **SmartSDR**: Installed and running on your local machine.
-- **WaveLog**: Installed and running with the `dev` branch checked out [as described above](#how-to-switch-to-the-wavelog-dev-branch)
-- **DX Cluster Access**: Your callsign will be used to access a DX Cluster server of your choice.
-
-> **Note:** While we provide the source code for those who want to run it via Node.js, we will soon offer binaries for easier installation. At the time of writing, Wavelog’s main repository has not yet merged the new API features required. You can, however, use Wavelog’s development branch, where these features are already included. Stay tuned for updates on this.
-
 ## Prerequisites for Windows Installation
 
-Before installing, ensure the following prerequisites are met:
+Before installing, ensure the general [requirements](#requirements) and additionaly that:
 
 - **Node.js**: Download and install the latest version of Node.js [here](https://nodejs.org/). The application requires at least version 12.
 - **NPM**: Installed automatically with Node.js. Verify your version using `npm -v` and update it if necessary by running `npm install -g npm`.
 - **Git**: Install Git for version control and repository cloning from [here](https://git-scm.com/).
-- **FlexRadio**: Your FlexRadio device must be connected to the same network as your computer, or accessible via TCP/IP.
-- **SmartSDR**: Ensure SmartSDR is installed and configured on your local computer to interact with FlexRadio.
 
 ## Installation
 
