@@ -133,7 +133,7 @@ If you encounter any issues while using **Wave-Flex Integrator**, follow the ste
 
 ### **1. Enable Debug Mode**
 
-To generate detailed logs that can assist in troubleshooting, you need to run the application in debug mode. This will create a `debug.log` file containing comprehensive information about the application's operations.
+To generate detailed logs that can assist in troubleshooting, you need to run the application in debug mode. This will create a `debug.log` file containing comprehensive information about the application's operations. Do not run in debug mode unless you need to because it will build a log file that can become large if it runs for a long time.
 
 **Run the Application in Debug Mode:**
 

@@ -178,7 +178,6 @@ class AugmentedSpotCache {
 
       // Ensure the URL ends without a trailing slash
       const baseURL = this.config.wavelogAPI.URL.replace(/\/$/, '');
-      // Append '/api/lookup'
       const fullURL = `${baseURL}/api/private_lookup`;
 
       const response = await fetch(fullURL, {
@@ -191,6 +190,7 @@ class AugmentedSpotCache {
 
       if (!response.ok) {
         this.logger.error(`Wavelog enrichment failed for Spot ID: ${spotId} (${cleanedCallsign}): ${response.statusText}`);
+        this.logger.error(`URL : ${fullURL} Payload: ${JSON.stringify(payload)}`);
         return null;
       }
 

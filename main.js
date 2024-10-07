@@ -30,15 +30,40 @@ if (isDebug) {
   console.log('Running in normal mode');
 }
 
-/**
- * Customizer function for lodash.mergeWith to handle array merging
- * Ensure stored arrays are preserved (including empty arrays) and completely replace default arrays
- */
-function customizer(objValue, srcValue) {
+function redactSensitiveInfo(config) {
+  const sensitiveKeys = ['apiKey', 'password', 'token']; // Add other sensitive keys as needed
+
+  function redact(obj) {
+    for (let key in obj) {
+      if (sensitiveKeys.includes(key)) {
+        obj[key] = '[REDACTED]'; // Redact the sensitive value
+      } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+        redact(obj[key]); // Recursively check nested objects
+      }
+    }
+  }
+
+  // Create a deep copy of the config object
+  let safeConfig = JSON.parse(JSON.stringify(config));
+  redact(safeConfig);
+  return safeConfig;
+}
+
+function customizer(objValue, srcValue, key) {
+  // Check for the specific key 'commandsAfterLogin' and handle empty array case
+  if (key === 'commandsAfterLogin' && Array.isArray(srcValue)) {
+    if (srcValue.length === 0) {
+      console.log(`Custom merge: Keeping the empty array for ${key}`);
+      return srcValue; // Keep the empty array if it exists in the stored config
+    }
+  }
+
   if (Array.isArray(objValue) && Array.isArray(srcValue)) {
+    console.log(`Custom merge: Replacing array for ${key}`);
     return srcValue; // Replace default array with stored array
   }
 }
+
 
 /**
  * Loads the default configuration and merges it with local configuration if available.
@@ -108,6 +133,9 @@ function loadConfig() {
             console.log(`Missing key in stored configuration: ${key}. Adding default value.`);
             storedObj[key] = defaultObj[key];
             configUpdated = true;
+          } else if (Array.isArray(defaultObj[key]) && Array.isArray(storedObj[key])) {
+            // Do nothing; accept stored array as is
+            // If the stored array is intentionally shorter, we respect that
           } else if (typeof defaultObj[key] === 'object' && defaultObj[key] !== null) {
             if (typeof storedObj[key] !== 'object' || storedObj[key] === null) {
               console.log(`Mismatched type for key ${key}. Overwriting with default value.`);
@@ -132,11 +160,32 @@ function loadConfig() {
         });
       }
 
+      // Merge again to include any updates made during checkAndUpdateConfig
       config = mergeWith({}, defaultConfig, storedConfig, customizer);
-      
+
       resolve(config);
     });
   });
+}
+
+/**
+ * Customizer function for lodash.mergeWith to handle array merging
+ * Ensure stored arrays are preserved (including empty arrays) and completely replace default arrays
+ */
+function customizer(objValue, srcValue, key) {
+  // Special handling for 'commandsAfterLogin' key to retain empty arrays
+  if (key === 'commandsAfterLogin' && Array.isArray(srcValue)) {
+    if (srcValue.length === 0) {
+      //console.log(`Custom merge: Keeping the empty array for ${key}`);
+      return srcValue; // Keep the empty array if it exists in the stored config
+    }
+  }
+
+  // Replace default arrays with stored arrays (including empty arrays)
+  if (Array.isArray(objValue) && Array.isArray(srcValue)) {
+    //console.log(`Custom merge: Replacing array for ${key}`);
+    return srcValue;
+  }
 }
 
 /**
@@ -166,7 +215,8 @@ app.on('ready', () => {
           ]
         });
         
-        logger.debug(`Final Merged Configuration: ${JSON.stringify(config, null, 2)}`);
+        let safeConfig = redactSensitiveInfo(config);
+        logger.debug(`Final Merged Configuration: ${JSON.stringify(safeConfig, null, 2)}`);
 
         setUtilLogger(logger);
 
