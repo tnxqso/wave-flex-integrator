@@ -21,6 +21,7 @@ A powerful tool that connects your FlexRadio to the Wavelog logging software, in
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Usage](#usage)
+- [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 - [License](#license)
 - [Acknowledgments](#acknowledgments)
@@ -47,7 +48,7 @@ When a spot appears on your SmartSDR panadapter, you can click it, and a prefill
 - **Node.js**: Version 12 or higher for running the application.
 - **NPM**: Node Package Manager for installing dependencies.
 - **FlexRadio**: Compatible FlexRadio device connected to your LAN or reachable on the Internet over TCP-IP. You sholud enable spots in Settings --> Spots. Do not override colors or background.
-- **SmartSDR**: Installed and running on your local machine. Version 3.7.4 or higher is tested. Find your version in Settings --> Radio setup --> Radio tab -->Radio Hardware version, (Yes, Radio Hardware version) which is the version of SmartSDR that is running and the associated radio firmware.
+- **SmartSDR**: Installed and running on your local machine. Version 3.7.4 or higher for Windows is tested. Find your version in Settings --> Radio setup --> Radio tab -->Radio Hardware version, (Yes, Radio Hardware version) which is the version of SmartSDR that is running and the associated radio firmware.
 - **WaveLog**: Installed and running with the `dev` branch checked out [as described above](#how-to-switch-to-the-wavelog-dev-branch)
 - **DX Cluster Access**: Your callsign will be used to access a DX Cluster server of your choice.
 
@@ -119,7 +120,7 @@ Upon first startup, you will need to configure the application via the **Configu
 ### Configuration Parameters
 
 - **DX Cluster Settings**:
-  - `Host`: The hostname or IP address of your DX Cluster server.
+  - `Host`: The hostname or IP address of your DX Cluster server. Note! Do not log in to the same DX Cluster server from multiple applications simultaneously. Use a separate DX Cluster Server for Wave-Flex Integrator or you will face repeted reconnection attempts.
   - `Port`: The port number of your DX Cluster server.
   - `Callsign`: Your amateur radio callsign used for login.
   - `Login Prompt`: The login prompt format for your DX Cluster (optional).
@@ -175,6 +176,11 @@ For binary installations, details will be provided soon.
 
 This ensures your local repository is now an exact match with the remote Wave-Flex Integrator branch.
 
+
+## Troubleshooting
+
+- If you get repeated disconnects from the DX Cluster server, make sure that you are not logged in to the same DX Cluster server from another program simultaneously. If that is the case the DX Cluster server will disconnect you. Wave-Flex Integrator will try to reconnect but will be thrown out from the DX Cluster server again.
+- If you have any issues connecting to either the DX Cluster Server or to the Flexradio, you can use a simple telnet client, for example [Putty](https://www.putty.org/) to connect to the server using its name and the port. Enter Host Name, Port and set the connection type to Telnet. If this isn't working then you either have the wrong connections settings or there is a network issue. If your Telenet client can't connnect, so won't Wave-Flex Integrator.
 
 ## Contributing
 
