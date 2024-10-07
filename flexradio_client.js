@@ -666,7 +666,7 @@ module.exports = class FlexRadioClient extends EventEmitter {
       };
 
       if (this.flexSpotsBySpotID.has(processedSpot.id)) {
-        this.logger.info(
+        this.logger.debug(
           `Existing spot found, need to remove it before adding a new spot: ${processedSpot.id}`
         );
         const existingSpotData = this.flexSpotsBySpotID.get(processedSpot.id);

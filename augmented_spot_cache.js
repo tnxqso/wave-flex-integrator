@@ -160,7 +160,7 @@ class AugmentedSpotCache {
 
       // Check if enriched data is already in the cache using Spot ID
       if (this.cache.has(spotId)) {
-        this.logger.info(`Augmented Spot Data Cache HIT for Spot ID: ${spotId}`);
+        this.logger.debug(`Augmented Spot Data Cache HIT for Spot ID: ${spotId}`);
         this.cacheHits++;
         return this.cache.get(spotId);
       } else {

@@ -7,7 +7,7 @@ A powerful tool that connects your FlexRadio to the Wavelog logging software, in
 
 > **Note:** This software is currently in beta testing, and the information below may be updated frequently as the project evolves.
 
-> **Note:** The TNXQSO team is not affiliated with **Wavelog** or **FlexRadio**. This project is independently developed to integrate these tools for the ham radio community.
+> **Note:** The TNXQSO team is not affiliated with **Wavelog** or **FlexRadio**. This project is independently developed to integrate these tools for the ham radio community. The TNXQSO team is not affiliated to the website with similar name. We exist only here at GitHub.
 
 > **Note:** This software is currently not listening for logging ADIF brodcasts from programs like WSJT-X but it's a feature that we are considering to add. If you run digital modes, you might want to wait until we've added that functionality.
 
@@ -21,6 +21,7 @@ A powerful tool that connects your FlexRadio to the Wavelog logging software, in
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Usage](#usage)
+- [Debugging and Troubleshooting](#debugging-and-troubleshooting)
 - [Contributing](#contributing)
 - [License](#license)
 - [Acknowledgments](#acknowledgments)
@@ -47,49 +48,25 @@ When a spot appears on your SmartSDR panadapter, you can click it, and a prefill
 - **Node.js**: Version 12 or higher for running the application.
 - **NPM**: Node Package Manager for installing dependencies.
 - **FlexRadio**: Compatible FlexRadio device connected to your LAN or reachable on the Internet over TCP-IP. You sholud enable spots in Settings --> Spots. Do not override colors or background.
-- **SmartSDR**: Installed and running on your local machine. Version 3.7.4 or higher is tested. Find your version in Settings --> Radio setup --> Radio tab -->Radio Hardware version, (Yes, Radio Hardware version) which is the version of SmartSDR that is running and the associated radio firmware.
-- **WaveLog**: Installed and running with the `dev` branch checked out [as described above](#how-to-switch-to-the-wavelog-dev-branch)
+- **SmartSDR**: Installed and running on your local machine. Version 3.7.4 or higher for Windows is tested. Find your version in Settings --> Radio setup --> Radio tab -->Radio Hardware version, (Yes, Radio Hardware version) which is the version of SmartSDR that is running and the associated radio firmware.
+- **WaveLog**: Installed and running @ Version 1.8.6 or later.
 - **DX Cluster Access**: Your callsign will be used to access a DX Cluster server of your choice.
 
-> **Note:** While we provide the source code for those who want to run it via Node.js, we will soon offer binaries for easier installation. At the time of writing, Wavelog’s main repository has not yet merged the new API features required. You can, however, use Wavelog’s development branch, where these features are already included. Stay tuned for updates on this.
+> **Note:** While we provide the source code for those who want to run it via Node.js, we will soon offer binaries for easier installation. 
 
 ## What is Wavelog?
 
 **Wavelog** is a free, web-based logging software designed for ham radio enthusiasts. It’s feature-rich and easy to set up on your own server at no cost. Whether you prefer managing your own installation or having someone else handle the technical details, Wavelog offers flexible options:
 
 - **Install on your own server:** You can set up your own Wavelog server by following the installation instructions. This allows you to have full control over your logging software, and it's completely free to do so.
-- **Hosted solutions:** If you’d rather not worry about server administration, there are hosting services available at a cost. These services handle everything for you, including LAMP stack administration and regular Wavelog updates, so you can focus on using the software without technical concerns.
+
+- **Hosted solutions:** If you’d rather not worry about server administration, there are good hosting services available at a low cost. These services handle everything for you, including LAMP stack administration and regular Wavelog updates, so you can focus on using the software without technical concerns. 
 
 ### Try Wavelog Before You Commit
 
 If you're new to Wavelog and want to try it out before setting up your own server, you can explore its features on their demo page. Simply visit the [Wavelog demo](https://demo.wavelog.org/user/login) to log in and see how it works in practice. The demo gives you a great feel for what Wavelog can do and whether it suits your needs.
 
 Whether you choose to run your own installation or use a hosting service, Wavelog is a powerful and versatile tool for logging and managing your ham radio contacts.
-
-## Important Notice: Required Wavelog Features
-
-To ensure the **Wave-Flex Integrator** works properly, two key features from Wavelog must be in place. As of now, these features are only available in Wavelog’s development (`dev`) branch. If you set up your own Wavelog server, you will need to switch to this branch to access them. However, if you use a hosted Wavelog server, you should ask the server administrator if they have implemented the "log_qso" API yet. It's because that is a key feature that is quite new and it's not sure that they have applied that yet.
-
-### Important Disclaimer
-
-Please be aware that using the `dev` branch means you are working with code that is under active development. This branch may include experimental features, incomplete functionality, or potential bugs that have not yet been thoroughly tested. By switching to the Wavelog `dev` branch:
-
-- **You accept the risks** that come with using a development version of the software.
-- **The responsibility for any issues** arising from the use of the `dev` branch lies with the user.
-- **The Wavelog team and the Wave-Flex Integrator project** cannot guarantee support or stability when using the `dev` branch.
-
-Proceed with caution, and make sure you understand how to switch back to the stable version if necessary.
-
-### How to Switch to the Wavelog dev Branch
-
-Follow these steps to update your Wavelog installation on the Wavelog server to the latest `dev` branch. Please note, in some cases, these steps may vary depending on your setup or any customizations you may have:
-
-   ```bash
-   cd /var/www/wavelog # Replace path with your installation folder if necessary
-   git fetch # Fetch the latest updates from the Wavelog repository
-   git checkout dev # Fetch the latest updates from the Wavelog repository
-   git pull origin dev # Pull the latest changes to ensure your Wavelog is up-to-date:
-   ```
 
 ## Prerequisites for Windows Installation
 
@@ -119,7 +96,7 @@ Upon first startup, you will need to configure the application via the **Configu
 ### Configuration Parameters
 
 - **DX Cluster Settings**:
-  - `Host`: The hostname or IP address of your DX Cluster server.
+  - `Host`: The hostname or IP address of your DX Cluster server. Note! Do not log in to the same DX Cluster server from multiple applications simultaneously. Use a separate DX Cluster Server for Wave-Flex Integrator or you will face repeted reconnection attempts.
   - `Port`: The port number of your DX Cluster server.
   - `Callsign`: Your amateur radio callsign used for login.
   - `Login Prompt`: The login prompt format for your DX Cluster (optional).
@@ -141,10 +118,6 @@ Upon first startup, you will need to configure the application via the **Configu
   - `API Key`: Your Wavelog API key. You can generate one by clicking your account at top right corner --> API Keys
   - `Station Location IDs`: A comma-separated list of station location IDs (optional). If you don't want the API to search all your station locations defined in Wavelog, otherwise leave blank.
 
-- **Logging Settings**:
-  - `Level`: Set the logging level (error, warn, info, debug).
-  - `Debug Mode`: Enable or disable debug logging. Warning, debug mode is very verbose.
-
 ## Usage
 
 Simply run the application after configuring it:
@@ -153,7 +126,87 @@ Simply run the application after configuring it:
 npm start
 ```
 
-For binary installations, details will be provided soon.
+
+## Debugging and Troubleshooting
+
+If you encounter any issues while using **Wave-Flex Integrator**, follow the steps below to help us diagnose and resolve the problem effectively.
+
+### **1. Enable Debug Mode**
+
+To generate detailed logs that can assist in troubleshooting, you need to run the application in debug mode. This will create a `debug.log` file containing comprehensive information about the application's operations.
+
+**Run the Application in Debug Mode:**
+
+```bash
+npm start -- -- --debug
+```
+
+> **Note:** This command will start the application with debug logging enabled. The `debug.log` file will be created in the application's data directory and will be **overwritten** each time you start a new debug session.
+
+### **2. Reproduce the Issue**
+
+Use the application as you normally would until you encounter the problem you need help with. Performing the actions that lead to the issue ensures that relevant information is captured in the `debug.log` file.
+
+### **3. Locate the `debug.log` File**
+
+After reproducing the issue, locate the `debug.log` file to send it for analysis.
+
+- **Windows:**
+  ```
+  C:\Users\<YourUsername>\AppData\Roaming\wave-flex-integrator\debug.log
+  ```
+
+- **macOS:**
+  ```
+  ~/Library/Application Support/wave-flex-integrator/debug.log
+  ```
+
+- **Linux:**
+  ```
+  ~/.config/wave-flex-integrator/debug.log
+  ```
+
+> **Tip:** If you're unsure how to navigate to these directories, you can copy the path and paste it into your file explorer's address bar to access it directly.
+
+### **4. Send the `debug.log` File**
+
+When you reach out for support, but **ONLY WHEN YOU ARE ASKED TO** you can provide the `debug.log` file, follow these steps to send it:
+
+1. **Open Your Email Client:**
+   - Use your preferred email application (e.g., Outlook, Gmail, Thunderbird).
+
+2. **Compose a New Email:**
+   - **To:** **ankeborg AT DUCK DOT COM**
+   - **Subject:** Wave-Flex Integrator Debug Log
+   - **Body:** Briefly describe the issue you're experiencing.
+
+3. **Attach the `debug.log` File:**
+   - Click on the attachment icon (usually represented by a paperclip).
+   - Navigate to the location of the `debug.log` file as outlined above.
+   - Select the `debug.log` file and attach it to the email.
+
+4. **Send the Email:**
+   - Once the file is attached and you've provided a description of the issue, send the email to us.
+
+> **Important:** The `debug.log` file will be **overwritten** each time you start the application in debug mode. Ensure you send the log file **immediately** after encountering the issue to retain the most relevant information.
+
+### **5. Additional Troubleshooting Tips**
+
+- **Repeated Disconnects from DX Cluster Server:**
+  - Ensure you're not logged into the same DX Cluster server from multiple applications simultaneously. Using a separate DX Cluster server for Wave-Flex Integrator can prevent repeated reconnection attempts.
+
+- **Connection Issues with FlexRadio or DX Cluster:**
+  - Use a Telnet client like [Putty](https://www.putty.org/) to verify your connection settings:
+    1. **Open Putty.**
+    2. **Enter Host Name/IP Address:** Your DX Cluster or FlexRadio server.
+    3. **Enter Port Number:** As specified in your configuration.
+    4. **Select Connection Type:** Telnet.
+    5. **Click "Open"** to attempt the connection.
+    
+    If Putty cannot establish a connection, double-check your settings.
+
+- **No Logs Generated:**
+  - Ensure that debug mode was successfully enabled by verifying the presence of the `debug.log` file in the specified directory after starting the application with the debug flag.
 
 
 ## Upgrading Wave-Flex Integrator
@@ -175,6 +228,11 @@ For binary installations, details will be provided soon.
 
 This ensures your local repository is now an exact match with the remote Wave-Flex Integrator branch.
 
+
+## Troubleshooting
+
+- If you get repeated disconnects from the DX Cluster server, make sure that you are not logged in to the same DX Cluster server from another program simultaneously. If that is the case the DX Cluster server will disconnect you. Wave-Flex Integrator will try to reconnect but will be thrown out from the DX Cluster server again.
+- If you have any issues connecting to either the DX Cluster Server or to the Flexradio, you can use a simple telnet client, for example [Putty](https://www.putty.org/) to connect to the server using its name and the port. Enter Host Name, Port and set the connection type to Telnet. If this isn't working then you either have the wrong connections settings or there is a network issue. If your Telenet client can't connnect, so won't Wave-Flex Integrator.
 
 ## Contributing
 

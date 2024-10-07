@@ -105,13 +105,6 @@ const defaultConfig = {
     max_days_lotw_considered_true: 200,
   },
 
-  // ==============================
-  // Logging Configuration
-  // ==============================
-  logging: {
-    debug: true,            // Enable or disable debug logging
-    level: 'info',         // Logging level: 'debug', 'info', 'warn', 'error'
-  },
 };
 
 module.exports = defaultConfig;

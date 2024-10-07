@@ -6,3 +6,4 @@ package-lock.json
 build.bat
 localConfig.js
 PRIVATE_README.md
+*.log
