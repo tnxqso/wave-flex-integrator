@@ -134,14 +134,8 @@ function loadConfig() {
             storedObj[key] = defaultObj[key];
             configUpdated = true;
           } else if (Array.isArray(defaultObj[key]) && Array.isArray(storedObj[key])) {
-            // If it's an array, we only add default values if the stored array is null or undefined
-            if (storedObj[key].length === 0) {
-              //console.log(`Array for ${key} is empty but intentional. Keeping the empty array.`);
-            } else if (storedObj[key].length < defaultObj[key].length) {
-              //console.log(`Array for ${key} is smaller than default. Filling missing elements.`);
-              storedObj[key] = [...storedObj[key], ...defaultObj[key].slice(storedObj[key].length)];
-              configUpdated = true;
-            }
+            // Do nothing; accept stored array as is
+            // If the stored array is intentionally shorter, we respect that
           } else if (typeof defaultObj[key] === 'object' && defaultObj[key] !== null) {
             if (typeof storedObj[key] !== 'object' || storedObj[key] === null) {
               console.log(`Mismatched type for key ${key}. Overwriting with default value.`);
@@ -169,9 +163,6 @@ function loadConfig() {
       // Merge again to include any updates made during checkAndUpdateConfig
       config = mergeWith({}, defaultConfig, storedConfig, customizer);
 
-      // Debug message to check final merged configuration
-      //console.log('Final Merged Configuration:', JSON.stringify(config, null, 2));
-
       resolve(config);
     });
   });
@@ -196,7 +187,6 @@ function customizer(objValue, srcValue, key) {
     return srcValue;
   }
 }
-
 
 /**
  * Initializes the application once Electron is ready.
