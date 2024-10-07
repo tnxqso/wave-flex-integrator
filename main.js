@@ -43,7 +43,8 @@ function redactSensitiveInfo(config) {
     }
   }
 
-  let safeConfig = { ...config };
+  // Create a deep copy of the config object
+  let safeConfig = JSON.parse(JSON.stringify(config));
   redact(safeConfig);
   return safeConfig;
 }
