@@ -33,7 +33,8 @@
     "lodash": "^4.17.21",
     "lodash.mergewith": "^4.6.2",
     "node-fetch": "^2.7.0",
-    "winston": "^3.14.2"
+    "winston": "^3.14.2",
+    "yargs": "^17.7.2"
   },
   "devDependencies": {
     "electron": "^32.1.2",

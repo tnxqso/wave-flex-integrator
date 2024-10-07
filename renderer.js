@@ -94,18 +94,6 @@ function populateForm(config) {
     return;
   }
 
-  // Populate Logging Level
-  const loggingLevelSelect = document.getElementById('loggingLevel');
-  if (loggingLevelSelect) {
-    loggingLevelSelect.value = config.logging.level;
-  }
-
-  // Populate Logging Debug Mode
-  const loggingDebugSelect = document.getElementById('loggingDebug');
-  if (loggingDebugSelect) {
-    loggingDebugSelect.value = config.logging.debug.toString();
-  }
-
   // Populate Augmented Spot Cache Max Size
   const augmentedSpotCacheMaxSizeInput = document.getElementById('augmentedSpotCacheMaxSize');
   if (augmentedSpotCacheMaxSizeInput) {
@@ -367,10 +355,6 @@ if (configForm) {
 
     // Build the new configuration object from the form values
     const newConfig = {
-      logging: {
-        level: document.getElementById('loggingLevel').value,
-        debug: document.getElementById('loggingDebug').value === 'true',
-      },
       augmentedSpotCache: {
         maxSize: parseInt(document.getElementById('augmentedSpotCacheMaxSize').value, 10),
       },
