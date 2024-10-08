@@ -1,6 +1,7 @@
 'use strict';
 
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 const storage = require('electron-json-storage');
@@ -115,6 +116,21 @@ function createWindow() {
       }
       mainWindow.show();
     }, 3500); // Adjust the delay as needed
+  });
+
+  // Auto-updater check for updates
+  autoUpdater.checkForUpdatesAndNotify();
+
+  // Handle auto-update events
+  autoUpdater.on('update-available', () => {
+    mainWindow.webContents.send('update_available');
+    logger.info('A new update is available.');
+  });
+
+  autoUpdater.on('update-downloaded', () => {
+    mainWindow.webContents.send('update_downloaded');
+    logger.info('Update downloaded. The application will now restart to install it.');
+    autoUpdater.quitAndInstall(); // Automatically quit and install the update
   });
 }
 

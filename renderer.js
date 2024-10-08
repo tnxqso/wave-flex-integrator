@@ -738,3 +738,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+
+// Listen for update events
+ipcRenderer.on('update_available', () => {
+  alert('A new update is available. It will be downloaded automatically.');
+});
+
+ipcRenderer.on('update_downloaded', () => {
+  alert('Update downloaded. The application will now restart to install it.');
+});

@@ -1,7 +1,7 @@
 {
   "name": "wave-flex-integrator",
-  "version": "0.2.0",
-  "description": "Seamlessly integrates Wavelog with FlexRadio SmartSDR, enriching DXCluster spots and sending them to SmartSDR's panadapter.",
+  "version": "0.3.0",
+  "description": "A seamless bridge between your FlexRadio and Wavelog logging software, integrating DX Cluster data, and synchronizing frequency and mode, all without traditional CAT software.",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -17,21 +17,21 @@
     "integration",
     "radio-automation"
   ],
-  "author": "B Synnerlig <your.email@example.com>",
+  "author": "B Synnerlig ankeborg@duck.com",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/wave-flex-integrator.git"
+    "url": "https://github.com/tnxqso/wave-flex-integrator.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/wave-flex-integrator/issues"
+    "url": "https://github.com/tnxqso/wave-flex-integrator/issues"
   },
-  "homepage": "https://github.com/yourusername/wave-flex-integrator#readme",
+  "homepage": "https://github.com/tnxqso/wave-flex-integrator/blob/main/README.md",
   "dependencies": {
     "dotenv": "^16.4.5",
-    "electron": "^32.1.2",
     "electron-json-storage": "^4.6.0",
     "electron-store": "^10.0.0",
+    "electron-updater": "^6.3.9",
     "lodash": "^4.17.21",
     "lodash.mergewith": "^4.6.2",
     "node-fetch": "^2.7.0",
@@ -39,6 +39,7 @@
     "yargs": "^17.7.2"
   },
   "devDependencies": {
+    "electron": "^32.1.2",
     "electron-builder": "^24.13.3",
     "nodemon": "^3.0.1"
   },
@@ -53,6 +54,8 @@
     },
     "files": [
       "*.js",
+      "*.html",
+      "*.css",
       "!localConfig.js",
       "build/**/*",
       "main.js",
@@ -62,6 +65,13 @@
       "!localConfig.js",
       "!**/*.log",
       "!PRIVATE_README.md"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "tnxqso",
+        "repo": "wave-flex-integrator"
+      }
     ],
     "win": {
       "target": "nsis",
