@@ -8,3 +8,10 @@ localConfig.js
 PRIVATE_README.md
 *.log
 desktop.ini
+.DS_Store
+dist/
+build/
+out/
+*.map
+/electron-builder.json
+/releases/
