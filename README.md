@@ -1,3 +1,4 @@
+
 # Wave-Flex Integrator
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -23,19 +24,20 @@
   - [FlexRadio Compatibility](#flexradio-compatibility)
   - [SmartSDR Versions and Compatibility](#smartsdr-versions-and-compatibility)
 - [Installation](#installation)
-  - [Prerequisites for Windows Installation](#prerequisites-for-windows-installation)
-  - [Windows NPM Installation](#windows-npm-installation)
+  - [Windows Installation](#windows-installation)
+  - [Linux Installation](#linux-installation)
+  - [macOS Installation](#macos-installation)
+- [Auto-Updating](#auto-updating)
 - [Configuration](#configuration)
   - [Configuration Parameters](#configuration-parameters)
 - [Usage](#usage)
 - [How DXCC Confirmation is Determined](#how-dxcc-confirmation-is-determined)
 - [Debugging and Troubleshooting](#debugging-and-troubleshooting)
-  - [Enable Debug Mode](#1-enable-debug-mode)
-  - [Reproduce the Issue](#2-reproduce-the-issue)
-  - [Locate the `debug.log` File](#3-locate-the-debuglog-file)
-  - [Send the `debug.log` File](#4-send-the-debuglog-file)
-  - [Additional Troubleshooting Tips](#5-additional-troubleshooting-tips)
-- [Upgrading Wave-Flex Integrator](#upgrading-wave-flex-integrator)
+  - [Enable Debug Mode](#enable-debug-mode)
+  - [Reproduce the Issue](#reproduce-the-issue)
+  - [Locate the `debug.log` File](#locate-the-debuglog-file)
+  - [Send the `debug.log` File](#send-the-debuglog-file)
+  - [Additional Troubleshooting Tips](#additional-troubleshooting-tips)
 - [Contributing](#contributing)
 - [License](#license)
 - [Acknowledgments](#acknowledgments)
@@ -102,8 +104,6 @@ The demo provides a hands-on experience to see if Wavelog suits your needs.
 
 ## Requirements
 
-- **Node.js**: Version 12 or higher.
-- **NPM**: Node Package Manager.
 - **FlexRadio**: Compatible FlexRadio device (FLEX-6000-series) connected to your LAN or reachable over TCP/IP.
 - **SmartSDR**: Installed and running on your local machine. Compatibility varies by version (see below).
 - **Wavelog**: Installed and running (Version 1.8.6 or later).
@@ -139,32 +139,53 @@ Wave-Flex Integrator communicates directly with the FlexRadio hardware, making i
 
 ## Installation
 
-### Prerequisites for Windows Installation
+### Windows Installation
 
-Before installing, ensure you have the following:
+Wave-Flex Integrator binaries for Windows are available on the [GitHub Releases](https://github.com/tnxqso/wave-flex-integrator/releases) page.
 
-- **Node.js**: Download and install the latest version from [nodejs.org](https://nodejs.org/).
-- **NPM**: Comes bundled with Node.js. Verify with `npm -v`.
-- **Git**: Install Git from [git-scm.com](https://git-scm.com/).
+1. **Download**: Get the latest Windows installer (`.exe` file) from the [Releases](https://github.com/tnxqso/wave-flex-integrator/releases) page.
 
-### Windows NPM Installation
+2. **Install**: Run the installer and follow the on-screen instructions.
 
-Open Command Prompt and execute:
+3. **Launch**: After installation, launch Wave-Flex Integrator from the Start Menu or Desktop shortcut.
 
-```bash
-git clone https://github.com/tnxqso/wave-flex-integrator.git
-cd wave-flex-integrator
-npm install
-npm start
-```
+### Linux Installation
 
-> **Note:** Binaries for different platforms (Windows, macOS, Linux) and easier installation methods will be provided soon.
+Wave-Flex Integrator binaries for Linux are available on the [GitHub Releases](https://github.com/tnxqso/wave-flex-integrator/releases) page.
+
+1. **Download**: Get the latest Linux package from the [Releases](https://github.com/tnxqso/wave-flex-integrator/releases) page.
+
+2. **Install**: Use your distribution's package manager to install the application.
+
+   For Debian-based distributions (Ubuntu, Debian):
+
+   ```bash
+   sudo dpkg -i wave-flex-integrator_1.0.0_amd64.deb
+   ```
+
+   For RPM-based distributions (Fedora, CentOS):
+
+   ```bash
+   sudo rpm -i wave-flex-integrator-1.0.0.x86_64.rpm
+   ```
+
+3. **Launch**: Start Wave-Flex Integrator from your applications menu or by running `wave-flex-integrator` from the terminal.
+
+### macOS Installation
+
+Currently, pre-built binaries for macOS are not available. Mac users can install Wave-Flex Integrator manually by following the instructions in the [Manual Installation Guide](README-MANUAL-INSTALL.md).
+
+---
+
+## Auto-Updating
+
+Wave-Flex Integrator includes an auto-update feature that automatically downloads and installs new versions as they become available. Simply restart the application to apply updates—no manual intervention is required.
 
 ---
 
 ## Configuration
 
-Upon first startup, ann error medsage will popup due to missing configuration. That is normal, configure the application via the **Configuration Tab**, save your settings and restart.
+Upon first startup, an error message may appear due to missing configuration. This is normal. Configure the application via the **Configuration Tab**, save your settings, and restart.
 
 ### Configuration Parameters
 
@@ -198,13 +219,9 @@ Upon first startup, ann error medsage will popup due to missing configuration. T
 
 ## Usage
 
-Start the application:
+Start the application by launching it from the Start Menu (Windows), applications menu (Linux), or following the manual start procedure for macOS users.
 
-```bash
-npm start
-```
-
-Wave-Flex Integrator will begin connecting to your DX Cluster and FlexRadio, enhancing spots, and synchronizing with Wavelog.
+Wave-Flex Integrator will connect to your DX Cluster and FlexRadio, enhance spots, and synchronize with Wavelog.
 
 ---
 
@@ -222,36 +239,51 @@ The QSL methods you have defined as default will dictate how DXCC confirmations 
 
 If you encounter issues, follow these steps to help diagnose and resolve them effectively.
 
-### 1. Enable Debug Mode
+### Enable Debug Mode
 
 Run the application with debug logging:
 
-```bash
-npm start -- -- --debug
-```
+- **Windows**: Launch the application from the command prompt with the `-- -- --debug` flag.
+
+  ```bash
+  "C:\Program Files\Wave-Flex Integrator\wave-flex-integrator.exe" -- -- --debug
+  ```
+
+- **Linux**: Run from terminal with the `-- -- --debug` flag.
+
+  ```bash
+  wave-flex-integrator -- -- --debug
+  ```
+
+- **macOS**: Refer to the [Manual Installation Guide](README-MANUAL-INSTALL.md) for debug instructions.
 
 This creates a `debug.log` file with detailed logs.
 
-### 2. Reproduce the Issue
+### Reproduce the Issue
 
 Use the application until the problem occurs to ensure relevant information is logged.
 
-### 3. Locate the `debug.log` File
+### Locate the `debug.log` File
 
 - **Windows**:
+
   ```
-  C:\Users\<YourUsername>\wave-flex-integrator\debug.log
-  ```
-- **macOS**:
-  ```
-  ~/wave-flex-integrator/debug.log
-  ```
-- **Linux**:
-  ```
-  ~/wave-flex-integrator/debug.log
+  C:\Users\<YourUsername>\AppData\Roaming\wave-flex-integrator\debug.log
   ```
 
-### 4. Send the `debug.log` File
+- **Linux**:
+
+  ```
+  ~/.config/wave-flex-integrator/debug.log
+  ```
+
+- **macOS**:
+
+  ```
+  ~/Library/Application Support/wave-flex-integrator/debug.log
+  ```
+
+### Send the `debug.log` File
 
 Email the `debug.log` file to us for analysis:
 
@@ -262,7 +294,7 @@ Email the `debug.log` file to us for analysis:
 
 > **Note:** The `debug.log` file is overwritten each time you start a new debug session.
 
-### 5. Additional Troubleshooting Tips
+### Additional Troubleshooting Tips
 
 - **Repeated Disconnects**:
   - Ensure you're not connected to the same DX Cluster from multiple applications.
@@ -270,20 +302,6 @@ Email the `debug.log` file to us for analysis:
 - **Connection Issues**:
   - Test connectivity with Telnet or PuTTY.
   - Verify network settings and firewall configurations.
-
----
-
-## Upgrading Wave-Flex Integrator
-
-To update to the latest version:
-
-```bash
-cd wave-flex-integrator
-git reset --hard
-git pull origin main
-npm install
-npm start
-```
 
 ---
 
