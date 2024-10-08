@@ -47,7 +47,11 @@ Wave-Flex Integrator simplifies your ham radio setup by directly connecting your
 
 ![SmartSDR Panadapter with Color-Coded Spots](assets/panadapter.png)
 
-When a spot appears on your SmartSDR panadapter, you can click it, and a pre-filled Wavelog logging window opens in your browser, ready to log the QSO. This seamless integration allows you to focus more on operating and less on managing multiple applications.
+When a spot appears on your SmartSDR panadapter, not only does it display important information through color-coding and opacity, but hovering your mouse pointer over the spot will also reveal a popup with detailed information about the station, including DXCC status, worked-before status, and LoTW membership. This provides an immediate, clear overview of each spot without having to rely solely on visual cues.
+
+![SmartSDR Popup Info](assets/popup-info.png)
+
+Additionally, when you click on a spot, a pre-filled Wavelog logging window will automatically open in your browser, ready to log the QSO. This seamless integration allows you to focus more on operating and less on managing multiple applications.
 
 > **Note:** The TNXQSO team is not affiliated with **Wavelog** or **FlexRadio**. This project is independently developed to integrate free of charge tools for the ham radio community. We exist only here on GitHub.
 
@@ -102,7 +106,7 @@ The demo provides a hands-on experience to see if Wavelog suits your needs.
 - **FlexRadio**: Compatible FlexRadio device (FLEX-6000-series) connected to your LAN or reachable over TCP/IP.
 - **SmartSDR**: Installed and running on your local machine. Compatibility varies by version (see below).
 - **Wavelog**: Installed and running (Version 1.8.6 or later).
-- **DX Cluster Access**: A DX Cluster server accessible via Telnet.
+- **DX Cluster Access**: A DX Cluster server accessible via Telnet. Find one [here](http://www.dxcluster.info/telnet/index.php).
 
 ### FlexRadio Compatibility
 
