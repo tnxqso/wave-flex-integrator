@@ -191,15 +191,16 @@ Upon first startup, an error message may appear due to missing configuration. Th
 
 #### DX Cluster Settings
 
-- **Host**: DX Cluster server hostname or IP address.
-- **Port**: Port number (default is usually 7300 or 7373).
+- **Host**: The hostname or IP address of the DX Cluster server.
+- **Port**: The port number for the server connection (typically 7300 or 7373).
 - **Callsign**: Your amateur radio callsign.
-- **Login Prompt**: Custom login prompt format (optional).
-- **Commands After Login**: Commands to execute after logging in (optional).
-- **Reconnect Settings**: Configure reconnection behavior.
+- **Login Prompt**: The prompt format expected by the server for login, such as `login:`, `User:`, or `Login:`. The default is usually `login:`. Make sure the letter case and use of `:` are correct. You can verify the prompt using a Telnet client like [PuTTY](https://www.putty.org/) if connecting to a different server.
+- **Commands After Login**: Optional commands to be executed after logging in. Provide a comma-separated list of commands. The default commands are recommended unless you need specific customizations. You should alter it to reflect your details though.
+- **Reconnect Settings**: Configure the reconnection behavior if the connection is lost.
 
-> **Tip:** Use a separate DX Cluster server for Wave-Flex Integrator to avoid conflicts with other applications. Test connectivity using a Telnet client like [PuTTY](https://www.putty.org/).
+> **Tip:** Use a separate DX Cluster server for Wave-Flex Integrator to prevent conflicts with other applications. You can test connectivity using a Telnet client like [PuTTY](https://www.putty.org/).
 
+g/
 #### FlexRadio Settings
 
 - **Enabled**: Toggle FlexRadio integration.
@@ -222,6 +223,8 @@ Upon first startup, an error message may appear due to missing configuration. Th
 Start the application by launching it from the Start Menu (Windows), applications menu (Linux), or following the manual start procedure for macOS users.
 
 Wave-Flex Integrator will connect to your DX Cluster and FlexRadio, enhance spots, and synchronize with Wavelog.
+
+> **Note:** After Wave-Flex Integrator has started up for the first time and the first spot has been augmented by Wavelog, you need to go into Wavelog and navigate to Account > Hardware Interfaces. Select the newly created wave-flex-integrator to become the default interface.
 
 ---
 
