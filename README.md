@@ -28,6 +28,7 @@
 - [Configuration](#configuration)
   - [Configuration Parameters](#configuration-parameters)
 - [Usage](#usage)
+- [How DXCC Confirmation is Determined](#how-dxcc-confirmation-is-determined)
 - [Debugging and Troubleshooting](#debugging-and-troubleshooting)
   - [Enable Debug Mode](#1-enable-debug-mode)
   - [Reproduce the Issue](#2-reproduce-the-issue)
@@ -204,6 +205,16 @@ npm start
 ```
 
 Wave-Flex Integrator will begin connecting to your DX Cluster and FlexRadio, enhancing spots, and synchronizing with Wavelog.
+
+---
+
+## How DXCC Confirmation is Determined
+
+Wave-Flex Integrator seamlessly determines whether a DXCC entity is confirmed by querying your **Wavelog** installation. Wavelog, in turn, checks your configured QSL services to verify DXCC status. These settings can be found and adjusted in **Wavelog** under:
+
+**Account** → **Default Values** → **Default QSL-Methods**
+
+The QSL methods you have defined as default will dictate how DXCC confirmations are processed. For operators looking to apply for a **DXCC Award**, it's common to set **LoTW (Logbook of The World)** as the only QSL method, as LoTW is the official authority that grants DXCC awards. However, you can customize these methods based on your preferences and the types of confirmations you accept.
 
 ---
 
