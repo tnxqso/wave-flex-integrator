@@ -4,7 +4,8 @@
   "description": "Seamlessly integrates Wavelog with FlexRadio SmartSDR, enriching DXCluster spots and sending them to SmartSDR's panadapter.",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "build": "electron-builder"
   },
   "keywords": [
     "dxcluster",
@@ -28,6 +29,7 @@
   "homepage": "https://github.com/yourusername/wave-flex-integrator#readme",
   "dependencies": {
     "dotenv": "^16.4.5",
+    "electron": "^32.1.2",
     "electron-json-storage": "^4.6.0",
     "electron-store": "^10.0.0",
     "lodash": "^4.17.21",
@@ -37,10 +39,41 @@
     "yargs": "^17.7.2"
   },
   "devDependencies": {
-    "electron": "^32.1.2",
+    "electron-builder": "^24.13.3",
     "nodemon": "^3.0.1"
   },
   "engines": {
     "node": ">=14.0.0"
+  },
+  "build": {
+    "appId": "com.waveflex.integrator",
+    "productName": "WaveFlexIntegrator",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "*.js",
+      "!localConfig.js",
+      "build/**/*",
+      "main.js",
+      "package.json",
+      "src/**/*",
+      "assets/**/*",
+      "!localConfig.js",
+      "!**/*.log",
+      "!PRIVATE_README.md"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icons/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "build/icons/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "build/icons/icon.png"
+    }
   }
 }
