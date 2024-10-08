@@ -17,6 +17,7 @@ const argv = require('yargs').argv;
 
 let logger;
 let mainWindow;
+let splashWindow;
 let isLoggedIn = false;
 let commandsSent = false;
 let dxClusterClient, flexRadioClient, augmentedSpotCache;
@@ -87,18 +88,54 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
+    show: false, // Start hidden if using a splash screen
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
     },
+    autoHideMenuBar: true, // This hides the menu bar
   });
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
+
+  // Remove the menu completely
+  mainWindow.removeMenu();
+
   mainWindow.on('closed', function () {
     mainWindow = null;
   });
 
   uiManager = new UIManager(mainWindow, logger);
+
+  // Show the main window after the splash screen
+  mainWindow.once('ready-to-show', () => {
+    setTimeout(() => {
+      if (splashWindow) {
+        splashWindow.close();
+      }
+      mainWindow.show();
+    }, 3500); // Adjust the delay as needed
+  });
+}
+
+function createSplashWindow() {
+  const appVersion = app.getVersion();
+
+  splashWindow = new BrowserWindow({
+    width: 400, // Adjust the size as needed
+    height: 300,
+    transparent: true,
+    frame: false,
+    alwaysOnTop: true,
+    webPreferences: {
+      nodeIntegration: false, // For security
+      contextIsolation: true, // For security
+    },
+  });
+
+  // Load the splash.html with the version as a query parameter
+  splashWindow.loadFile(path.join(__dirname, 'splash.html'), { query: { version: appVersion } });
+  splashWindow.center();
 }
 
 /**
@@ -192,6 +229,7 @@ function customizer(objValue, srcValue, key) {
  * Initializes the application once Electron is ready.
  */
 app.on('ready', () => {
+  createSplashWindow();
   loadConfig()
     .then((config) => {
       if (isConfigValid(config)) {
@@ -424,6 +462,14 @@ async function shutdown() {
 
     if (flexRadioClient) {
       await flexRadioClient.disconnect();
+    }
+
+    if (mainWindow) {
+      mainWindow.close();
+    }
+
+    if (splashWindow) {
+      splashWindow.close();
     }
 
     if (logger) {

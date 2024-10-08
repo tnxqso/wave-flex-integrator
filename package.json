@@ -1,6 +1,6 @@
 {
   "name": "wave-flex-integrator",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Seamlessly integrates Wavelog with FlexRadio SmartSDR, enriching DXCluster spots and sending them to SmartSDR's panadapter.",
   "main": "main.js",
   "scripts": {
