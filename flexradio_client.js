@@ -8,6 +8,8 @@ const Slice = require('./slice');
 const { exec } = require('child_process');
 const os = require('os');
 const fetch = require('node-fetch');
+const utils = require('./utils');
+const WavelogClient = require('./wavelog_client');
 
 module.exports = class FlexRadioClient extends EventEmitter {
   /**
@@ -38,6 +40,7 @@ module.exports = class FlexRadioClient extends EventEmitter {
     this.activeTXSlice = null;
 
     this.messageParser = new FlexRadioMessageParser();
+    this.wavelogClient = new WavelogClient(this.config, this.logger);
 
     this.messageParser.on('error', (error) => {
       this.logger.error(`Parser error: ${error.message}`);
@@ -256,43 +259,11 @@ module.exports = class FlexRadioClient extends EventEmitter {
     }
   }
 
-  /**
-   * Sends the active TX slice information to the Wavelog server.
-   * @param {Slice} activeTXSlice - The active TX slice object.
-   * @returns {Promise<void>} - Resolves when the data is sent.
-   */
   async sendActiveSliceToWavelog(activeTXSlice) {
     try {
-      const xitAdjustment = activeTXSlice.xit_on ? activeTXSlice.xit_freq : 0;
-      const adjustedFrequencyHz = Math.round(
-        activeTXSlice.frequency * 1e6 + xitAdjustment
-      );
-
-      const payload = {
-        key: this.config.wavelogAPI.apiKey,
-        radio: 'wave-flex-integrator',
-        frequency: adjustedFrequencyHz,
-        mode: activeTXSlice.mode,
-      };
-
-      const baseURL = this.config.wavelogAPI.URL.replace(/\/$/, '');
-      const fullURL = `${baseURL}/api/radio`;
-
-      const response = await fetch(fullURL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        this.logger.error(`Failed to send active TX slice to Wavelog: ${response.statusText}`);
-      } else {
-        this.logger.info(`Successfully sent active TX slice to Wavelog: Frequency ${adjustedFrequencyHz} Hz, Mode ${activeTXSlice.mode}`);
-      }
+      await this.wavelogClient.sendActiveSliceToWavelog(activeTXSlice);
     } catch (error) {
-      this.logger.error(`Error in sendActiveSliceToWavelog: ${error.message}`);
+      this.logger.error(`Error handling active TX slice: ${error.message}`);
     }
   }
 
@@ -305,28 +276,7 @@ module.exports = class FlexRadioClient extends EventEmitter {
     const spotData = this.flexSpotsByID.get(index);
     if (spotData) {
       this.logger.info(`Spot triggered: callsign=${spotData.callsign}, index=${index}`);
-
-      const baseURL = this.config.wavelogAPI.URL.replace(/\/$/, '');
-      const callsignEncoded = encodeURIComponent(spotData.callsign);
-      const fullURL = `${baseURL}/qso/log_qso?callsign=${callsignEncoded}`;
-
-      let command;
-      const platform = os.platform();
-      if (platform === 'win32') {
-        command = `start "" "${fullURL}"`;
-      } else if (platform === 'darwin') {
-        command = `open "${fullURL}"`;
-      } else {
-        command = `xdg-open "${fullURL}"`;
-      }
-
-      exec(command, (err) => {
-        if (err) {
-          this.logger.error(`Failed to open URL: ${err.message}`);
-        } else {
-          this.logger.info(`Opened URL: ${fullURL}`);
-        }
-      });
+      utils.openLogQSO(spotData.callsign, this.config);
     } else {
       this.logger.warn(`No spot data found for FlexRadio Spot ID ${index}`);
     }

@@ -7,9 +7,12 @@ const fs = require('fs');
 const storage = require('electron-json-storage');
 const DXClusterClient = require('./dx_cluster_client');
 const FlexRadioClient = require('./flexradio_client');
+const WSJTClient = require('./wsjt');
+const WavelogClient = require('./wavelog_client');
 const AugmentedSpotCache = require('./augmented_spot_cache');
 const winston = require('winston');
 const util = require('util');
+const utils = require('./utils');
 const sleep = util.promisify(setTimeout);
 const { setUtilLogger } = require('./utils');
 const UIManager = require('./ui_manager');
@@ -22,6 +25,8 @@ let splashWindow;
 let isLoggedIn = false;
 let commandsSent = false;
 let dxClusterClient, flexRadioClient, augmentedSpotCache;
+let wsjtClient;
+let wavelogClient;
 let uiManager;
 let isShuttingDown = false;
 
@@ -277,6 +282,17 @@ app.on('ready', () => {
         dxClusterClient = new DXClusterClient(config, logger);
         augmentedSpotCache = new AugmentedSpotCache(config.augmentedSpotCache.maxSize, logger, config);
         flexRadioClient = new FlexRadioClient(config, logger);
+        wavelogClient = new WavelogClient(config, logger);
+
+        // Initialize WSJT-X client if enabled in the config
+        if (config.wsjt.enabled) {
+          logger.info('WSJT-X integration is enabled.');
+          wsjtClient = new WSJTClient(config, logger);
+          wsjtClient.start();
+          attachWSJTEventListeners(config);
+        } else {
+          logger.info('WSJT-X integration is disabled.');
+        }
 
         createWindow();
         attachEventListeners();
@@ -366,6 +382,87 @@ function attachEventListeners() {
   flexRadioClient.on('error', (error) => {
     logger.error(`FlexRadio error: ${error.message}`);
     uiManager.updateFlexRadioStatus('flexRadioError', error);
+  });
+}
+
+function bigIntReplacer(key, value) {
+  return typeof value === 'bigint' ? value.toString() : value;
+}
+
+/**
+ * Attaches event listeners for WSJTClient.
+ */
+let activeQSO = false;
+
+function attachWSJTEventListeners(config) {
+  wsjtClient.on('heartbeat', (message) => {
+    logger.debug(`WSJT-X Heartbeat received: ${JSON.stringify(message, bigIntReplacer)}`);
+  });
+
+  wsjtClient.on('status', (message) => {
+    const { dxCall, deCall, txEnabled } = message;
+    logger.debug(`WSJT-X Status received: ${JSON.stringify(message, bigIntReplacer)}`);
+
+    if (config.wsjt.showQSO) {
+      if (dxCall && deCall && txEnabled && !activeQSO) {
+        activeQSO = true;
+        logger.info(`WSJT-X QSO started with ${dxCall}`);
+        utils.openLogQSO(dxCall, config);
+      } else if (!txEnabled && activeQSO) {
+        activeQSO = false;
+        logger.info(`QSO ended with ${dxCall}`);
+      }
+    }
+  });
+
+  wsjtClient.on('decode', (message) => {
+    logger.debug(`WSJT-X Decode received: ${JSON.stringify(message, bigIntReplacer)}`);
+  });
+
+  wsjtClient.on('clear', (message) => {
+    logger.debug('WSJT-X Clear message received');
+  });
+
+  wsjtClient.on('qso_logged', (message) => {
+    if (config.wsjt.logQSO) {
+      // Handle QSO logged message here if needed
+      logger.debug(`QSO Logged with ${message.dxCall}`);
+      // Do not attempt to access message.adifText here
+    }
+  });
+
+  wsjtClient.on('logged_adif', (message) => {
+    if (config.wsjt.logQSO) {
+      const adifText = message.adifText;
+  
+      function extractField(adifText, field) {
+        const regex = new RegExp(`<${field}:[^>]*>([^<]*)`, 'i');
+        const match = adifText.match(regex);
+        return match ? match[1].trim() : null;
+      }
+  
+      const dxCallsign = extractField(adifText, 'call');
+      const mode = extractField(adifText, 'mode');
+      const reportSent = extractField(adifText, 'rst_sent');
+      const reportReceived = extractField(adifText, 'rst_rcvd');
+  
+      // Log the QSO details
+      logger.info(`Request from WSJT-X to log QSO with ${dxCallsign} using mode ${mode}. Sent: ${reportSent}, Received: ${reportReceived}`);
+      logger.debug(adifText);
+  
+      wavelogClient.sendAdifToWavelog(adifText)
+        .then(() => {
+          logger.debug(`Successfully processed QSO with ${dxCallsign}. Sent: ${reportSent}, Received: ${reportReceived}`);
+        })
+        .catch((error) => {
+          logger.error(`Error sending ADIF record: ${error.message}`);
+        });
+    }
+  });
+  
+
+  wsjtClient.on('wspr_decode', (message) => {
+    logger.debug('WSJT-X WSPR Decode message received');
   });
 }
 
@@ -478,6 +575,10 @@ async function shutdown() {
 
     if (flexRadioClient) {
       await flexRadioClient.disconnect();
+    }
+
+    if (wsjtClient) {
+      wsjtClient.stop();
     }
 
     if (mainWindow) {

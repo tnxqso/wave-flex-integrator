@@ -105,6 +105,16 @@ const defaultConfig = {
     max_days_lotw_considered_true: 200,
   },
 
+  // ==============================
+  // WSJT-X Configuration
+  // ==============================
+  wsjt: {
+    enabled: false,
+    port: 2237,
+    showQSO: true,
+    logQSO: true,
+  },
+
 };
 
 module.exports = defaultConfig;
