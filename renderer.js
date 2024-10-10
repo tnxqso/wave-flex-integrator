@@ -176,6 +176,27 @@ function populateForm(config) {
     spotCleanupIntervalInput.value = config.flexRadio.spotManagement.cleanupIntervalSeconds;
   }
 
+  // Populate WSJT-X Configuration
+  const wsjtEnabledSelect = document.getElementById('wsjtEnabled');
+  if (wsjtEnabledSelect) {
+    wsjtEnabledSelect.value = config.wsjt.enabled.toString();
+  }
+
+  const wsjtPortInput = document.getElementById('wsjtPort');
+  if (wsjtPortInput) {
+    wsjtPortInput.value = config.wsjt.port;
+  }
+
+  const wsjtShowQSOSelect = document.getElementById('wsjtShowQSO');
+  if (wsjtShowQSOSelect) {
+    wsjtShowQSOSelect.value = config.wsjt.showQSO.toString();
+  }
+
+  const wsjtLogQSOSelect = document.getElementById('wsjtLogQSO');
+  if (wsjtLogQSOSelect) {
+    wsjtLogQSOSelect.value = config.wsjt.logQSO.toString();
+  }
+
   // Helper Function to set color inputs
   function setColorInput(elementId, colorValue) {
     const input = document.getElementById(elementId);
@@ -463,12 +484,18 @@ if (configForm) {
           10
         ),
       },
+      wsjt: {
+        enabled: document.getElementById('wsjtEnabled').value === 'true',
+        port: parseInt(document.getElementById('wsjtPort').value, 10),
+        showQSO: document.getElementById('wsjtShowQSO').value === 'true',
+        logQSO: document.getElementById('wsjtLogQSO').value === 'true',
+      },
     };
 
     // Send the updated config back to the main process
     try {
       await ipcRenderer.invoke('update-config', newConfig);
-      showAlert('Configuration updated successfully!', 'success');
+      showAlert('Configuration updated successfully! You should now restart the application!', 'success');
     } catch (error) {
       showAlert('Failed to update configuration.', 'danger');
     }

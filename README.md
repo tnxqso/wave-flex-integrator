@@ -5,7 +5,7 @@
 [![Node.js Version](https://img.shields.io/badge/node.js-12%2B-green.svg)](https://nodejs.org/)
 [![Beta Status](https://img.shields.io/badge/status-beta-orange.svg)](#)
 
-*A seamless bridge between your FlexRadio and Wavelog logging software, integrating DX Cluster data, and synchronizing frequency and mode, all without traditional CAT software.*
+*A seamless bridge between your FlexRadio and Wavelog logging software, integrating DX Cluster data, WSJT-X and synchronizing frequency and mode, all without traditional CAT software.*
 
 ![Wave-Flex Integrator Logo](assets/wave-flex-integrator-logo.png)
 
@@ -67,6 +67,9 @@ Additionally, when you click on a spot, a pre-filled Wavelog logging window will
   - Enriches spot data using the Wavelog API.
   - Indicates whether a callsign's DXCC is needed for the band or mode.
   - Shows if the station is a **LoTW** (Logbook of The World) member.
+- **WSJT-X Integration**:
+  - Detects active QSOs and displays details of the current callsign being worked in Wavelog's live logging tab (fully configurable and optional).
+  - Automatically logs completed QSOs from WSJT-X ADIF broadcasts directly into Wavelog (fully configurable and optional).
 - **Color-Coded Spots**:
   - Sends data enriched, color-coded spots to your FlexRadio, visible on your SmartSDR panadapter.
   - Customize colors and transparency based on DXCC status, worked-before status, and LoTW membership.
@@ -194,13 +197,12 @@ Upon first startup, an error message may appear due to missing configuration. Th
 - **Host**: The hostname or IP address of the DX Cluster server.
 - **Port**: The port number for the server connection (typically 7300 or 7373).
 - **Callsign**: Your amateur radio callsign.
-- **Login Prompt**: The prompt format expected by the server for login, such as `login:`, `User:`, or `Login:`. The default is usually `login:`. Make sure the letter case and use of `:` are correct. You can verify the prompt using a Telnet client like [PuTTY](https://www.putty.org/) if connecting to a different server.
+- **Login Prompt**: The prompt expected from the server for login, such as `login:`, `User:`, or `Login:`. The default is usually `login:`. Make sure the letter case and use of `:` are correct. You can verify the prompt using a Telnet client like [PuTTY](https://www.putty.org/) if connecting to a different server.
 - **Commands After Login**: Optional commands to be executed after logging in. Provide a comma-separated list of commands. The default commands are recommended unless you need specific customizations. You should alter it to reflect your details though.
 - **Reconnect Settings**: Configure the reconnection behavior if the connection is lost.
 
 > **Tip:** Use a separate DX Cluster server for Wave-Flex Integrator to prevent conflicts with other applications. You can test connectivity using a Telnet client like [PuTTY](https://www.putty.org/).
 
-g/
 #### FlexRadio Settings
 
 - **Enabled**: Toggle FlexRadio integration.
@@ -215,6 +217,20 @@ g/
 - **BASE URL**: Your Wavelog API base URL (e.g., `https://YOURSERVER/index.php`). Typically, the ending part `/index.php` should be kept.
 - **API Key**: Obtain from Wavelog under your account settings.
 - **Station Location IDs**: Comma-separated IDs (optional).
+
+#### WSJT-X Configuration
+
+- **WSJT-X integration Enabled**: Toggle WSJT-X integration. If this is set to `false`, all WSJT-X functionality (including `Show QSO` and `Log QSO`) will be disabled, regardless of their individual settings.
+- **UDP Listen Port**: The port on which the application listens for ADIF broadcasts from WSJT-X (default is 2237). Ensure this matches the port configured in WSJT-X for sending ADIF messages.
+- **Show ongoing WSJT-X QSO in Wavelog live logging**: When this option and `WSJT-X integration Enabled` are both set to `true`, the details of the ongoing QSO will be displayed in Wavelog's live logging tab.
+
+  While a logging window is opened in Wavelog for the purpose of displaying information about the callsign currently being worked, you are not required to manually complete the logging process in Wavelog. 
+
+  Although it is technically possible to manually log the QSO at this stage, it is not necessary, nor recommended. The actual logging will happen automatically if you have enabled the `Log WSJT-X QSO in Wavelog` option. This automatic logging is triggered when WSJT-X sends an ADIF logging message at the end of the QSO.
+
+- **Log WSJT-X QSO in Wavelog**: When both this option and ` WSJT-X integration Enabled` are set to `true`, completed QSOs from WSJT-X ADIF broadcasts will be automatically logged in Wavelog. The log record will be stored for the Station Location marked as `Active Station` in Wavelog settings. Furthermore the `Station Callsign` associated with the `Active Station` will be used for logging the QSO regardless of the settings in WSJT-X. If the `Avtive Station` is changed in Wavelog, Wave-Flex Integrator should be restarted to pick up the changes.
+
+> **Note:** Both **Show ongoing WSJT-X QSO in Wavelog live logging** and **Log WSJT-X QSO in Wavelog** options only take effect if WSJT-X integration (` WSJT-X integration Enabled`) is set to `true`. If WSJT-X integration is disabled, these features will not function, even if individually enabled.
 
 ---
 
@@ -327,6 +343,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 - [FlexRadio Systems](https://www.flexradio.com/)
 - [Wavelog Logging Software](https://www.wavelog.org)
 - [DX Cluster Networks](http://www.dxcluster.info/)
+- [WSJT-X](https://wsjt.sourceforge.io/wsjtx.html)
 - **Community Contributors**: Thanks to all who support and improve this project.
 
 ---

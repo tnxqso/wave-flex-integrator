@@ -324,6 +324,34 @@
               <label for="maxDaysConsideredTrue" class="form-label">Max Days for LoTW Consideration</label>
               <input type="number" class="form-control" id="maxDaysConsideredTrue" min="1" required placeholder="e.g., 200" />
             </div>
+
+            <!-- WSJT-X Configuration -->
+            <h4 class="mt-4">WSJT-X Configuration</h4>
+            <div class="mb-3">
+              <label for="wsjtEnabled" class="form-label">WSJT-X Integration Enabled</label>
+              <select class="form-select" id="wsjtEnabled" name="wsjtEnabled" required>
+                <option value="true">True</option>
+                <option value="false">False</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="wsjtPort" class="form-label">UDP Listen Port</label>
+              <input type="number" class="form-control" id="wsjtPort" min="1" required placeholder="e.g., 2237" />
+            </div>
+            <div class="mb-3">
+              <label for="wsjtShowQSO" class="form-label">Show ongoing WSJT-X QSO in Wavelog live logging</label>
+              <select class="form-select" id="wsjtShowQSO" name="wsjtShowQSO" required>
+                <option value="true">True</option>
+                <option value="false">False</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="wsjtLogQSO" class="form-label">Log WSJT-X QSO in Wavelog</label>
+              <select class="form-select" id="wsjtLogQSO" name="wsjtLogQSO" required>
+                <option value="true">True</option>
+                <option value="false">False</option>
+              </select>
+            </div>
   
             <!-- Form Action Buttons -->
             <button type="submit" class="btn btn-primary">Save Configuration</button>
