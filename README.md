@@ -46,7 +46,7 @@
 
 ## Introduction
 
-Wave-Flex Integrator simplifies your ham radio setup by directly connecting your **FlexRadio** to the **Wavelog** web-based logging software. It integrates DX Cluster data, enhances spot information, and synchronizes your frequency and mode, all without the need for traditional CAT software.
+Wave-Flex Integrator simplifies your ham radio setup by directly connecting your **FlexRadio** to the **Wavelog** web-based logging software. It integrates DX Cluster data, enhances spot information, and synchronizes your frequency and mode, optionally integrates WSJT-X, all without the need for traditional CAT software.
 
 ![SmartSDR Panadapter with Color-Coded Spots](assets/panadapter.png)
 
@@ -228,7 +228,7 @@ Upon first startup, an error message may appear due to missing configuration. Th
 
   Although it is technically possible to manually log the QSO at this stage, it is not necessary, nor recommended. The actual logging will happen automatically if you have enabled the `Log WSJT-X QSO in Wavelog` option. This automatic logging is triggered when WSJT-X sends an ADIF logging message at the end of the QSO.
 
-- **Log WSJT-X QSO in Wavelog**: When both this option and ` WSJT-X integration Enabled` are set to `true`, completed QSOs from WSJT-X ADIF broadcasts will be automatically logged in Wavelog. The log record will be stored for the Station Location marked as `Active Station` in Wavelog settings. Furthermore the `Station Callsign` associated with the `Active Station` will be used for logging the QSO regardless of the settings in WSJT-X. If the `Avtive Station` is changed in Wavelog, Wave-Flex Integrator should be restarted to pick up the changes.
+- **Log WSJT-X QSO in Wavelog**: When both this option and ` WSJT-X integration Enabled` are set to `true`, completed QSOs from WSJT-X ADIF broadcasts will be automatically logged in Wavelog. In WSJT-X setting, general tab, the station details for `My Call` and `My Grid`must match those set in Wavelog for the Station Location marked as `Active Station`. If the `Avtive Station` is changed in Wavelog, Wave-Flex Integrator should be restarted to pick up the changes.
 
 > **Note:** Both **Show ongoing WSJT-X QSO in Wavelog live logging** and **Log WSJT-X QSO in Wavelog** options only take effect if WSJT-X integration (` WSJT-X integration Enabled`) is set to `true`. If WSJT-X integration is disabled, these features will not function, even if individually enabled.
 

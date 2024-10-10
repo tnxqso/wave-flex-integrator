@@ -282,7 +282,8 @@ app.on('ready', () => {
         dxClusterClient = new DXClusterClient(config, logger);
         augmentedSpotCache = new AugmentedSpotCache(config.augmentedSpotCache.maxSize, logger, config);
         flexRadioClient = new FlexRadioClient(config, logger);
-        wavelogClient = new WavelogClient(config, logger);
+        // Assuming you have created mainWindow already
+        wavelogClient = new WavelogClient(config, logger, mainWindow);
 
         // Initialize WSJT-X client if enabled in the config
         if (config.wsjt.enabled) {
