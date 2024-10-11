@@ -736,6 +736,15 @@ function populateAboutTab() {
   }).catch((error) => {
     console.error('Failed to get app version:', error);
   });
+
+  ipcRenderer.invoke('get-station-details').then((stationDetails) => {
+    const wavelogStationLocationElement = document.getElementById('wavelogStationLocationDetails');
+    if (wavelogStationLocationElement) {
+      wavelogStationLocationElement.textContent = stationDetails;
+    }
+  }).catch((error) => {
+    console.error('Failed to get station details:', error);
+  });
 }
 
 // Initialize the form once the DOM is fully loaded

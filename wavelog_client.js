@@ -77,56 +77,81 @@ class WavelogClient {
       }
     }
 
-    /**
-     * Fetches and caches the active station data from Wavelog API.
-     * @returns {Promise<object>} - The active station data object.
-     */
-    async getActiveStation() {
-      if (this.activeStationData !== null) {
-        return this.activeStationData;
-      }
+  /**
+   * Fetches and caches the active station data from Wavelog API.
+   * @param {boolean} suppressErrors - Whether to suppress showing error dialogs.
+   * @returns {Promise<object>} - The active station data object.
+   */
+  async getActiveStation(suppressErrors = false) {
+    // Return cached data if available
+    if (this.activeStationData !== null) {
+      return this.activeStationData;
+    }
 
-      try {
-        const apiKey = this.config.wavelogAPI.apiKey;
-        const baseURL = this.config.wavelogAPI.URL.replace(/\/$/, '');
-        const fullURL = `${baseURL}/api/station_info/${apiKey}`;
+    // Avoid repeated attempts if fetch has failed before
+    if (this.fetchFailed) {
+      return null;
+    }
 
-        const response = await fetch(fullURL, {
+    const timeoutSeconds = 10; // Hardcoded timeout of 10 seconds
+
+    // Timeout function
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Request timed out')), timeoutSeconds * 1000)
+    );
+
+    // Fetch the station data with a timeout
+    try {
+      const apiKey = this.config.wavelogAPI.apiKey;
+      const baseURL = this.config.wavelogAPI.URL.replace(/\/$/, '');
+      const fullURL = `${baseURL}/api/station_info/${apiKey}`;
+
+      // Race between the fetch call and the timeout
+      const response = await Promise.race([
+        fetch(fullURL, {
           method: 'GET',
           headers: {
             Accept: 'application/json',
           },
-        });
+        }),
+        timeoutPromise,
+      ]);
 
-        if (!response.ok) {
-          const errorMessage = `Failed to fetch station profile info: ${response.statusText}`;
-          this.handleError(errorMessage);
-        }
-
-        const data = await response.json();
-        if (Array.isArray(data)) {
-          const activeStation = data.find(
-            (station) => station.station_active == '1'
-          );
-          if (activeStation) {
-            this.activeStationData = activeStation;
-            this.logger.info(
-              `Active station profile ID is ${this.activeStationData.station_id}`
-            );
-            return this.activeStationData;
-          } else {
-            const errorMessage = 'No active station profile found.';
-            this.handleError(errorMessage);
-          }
-        } else {
-          const errorMessage = 'Invalid response format.';
-          this.handleError(errorMessage);
-        }
-      } catch (error) {
-        const errorMessage = `Error in getActiveStation: ${error.message}`;
-        this.handleError(errorMessage);
+      if (!response.ok) {
+        const errorMessage = `Failed to fetch station profile info: ${response.statusText}`;
+        this.handleError(errorMessage, false, suppressErrors);
+        this.fetchFailed = true;
+        return null;
       }
+
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        const activeStation = data.find((station) => station.station_active == '1');
+        if (activeStation) {
+          this.activeStationData = activeStation;
+          this.logger.info(
+            `Active station profile ID is ${this.activeStationData.station_id}`
+          );
+          return this.activeStationData;
+        } else {
+          const errorMessage = 'No active station profile found.';
+          this.handleError(errorMessage, false, suppressErrors);
+          this.fetchFailed = true;
+          return null;
+        }
+      } else {
+        const errorMessage = 'Invalid response format.';
+        this.handleError(errorMessage, false, suppressErrors);
+        this.fetchFailed = true;
+        return null;
+      }
+    } catch (error) {
+      const errorMessage = `Error in getActiveStation: ${error.message}`;
+      this.handleError(errorMessage, false, suppressErrors);
+      this.fetchFailed = true;
+      return null;
     }
+  }
 
     /**
      * Gets the active station ID.
