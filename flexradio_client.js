@@ -17,10 +17,11 @@ module.exports = class FlexRadioClient extends EventEmitter {
    * @param {object} config - Configuration object.
    * @param {object} logger - Logger instance.
    */
-  constructor(config, logger) {
+  constructor(config, logger, stationCallsign) {
     super();
     this.config = config;
     this.logger = logger;
+    this.stationCallsign = stationCallsign;
 
     this.flexClient = null;
     this.flexBuffer = '';
@@ -489,13 +490,12 @@ module.exports = class FlexRadioClient extends EventEmitter {
       } = augmentedData;
 
       const spottedCallsign = processedSpot.spotted.toUpperCase();
-      const myCallsign = this.config.dxCluster.callsign.toUpperCase();
 
       this.logger.debug(`Processing spot for callsign: ${spottedCallsign}`);
 
       let commentParts = [];
 
-      if (spottedCallsign === myCallsign) {
+      if (spottedCallsign === this.stationCallsign) {
         this.logger.debug("Callsign matches my own callsign.");
         textColor = this.config.flexRadio.spotManagement.colors.myCallsign.textColor;
         backgroundColor = this.config.flexRadio.spotManagement.colors.myCallsign.backgroundColor;

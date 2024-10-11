@@ -30,12 +30,45 @@ let wavelogClient;
 let uiManager;
 let isShuttingDown = false;
 
+let appConfigured = false;
+let stationId = null;
+let stationProfileName = null;
+let stationGridSquare = null;
+let stationCallsign = null;
+
 const isDebug = process.argv.includes('--debug');
 if (isDebug) {
-  console.log('Debug mode is enabled, debug messages can be found in file: debug.log');
+  console.log(
+    'Debug mode is enabled, debug messages can be found in file: debug.log'
+  );
 } else {
   console.log('Running in normal mode');
 }
+
+// Initialize logger at the very beginning
+logger = winston.createLogger({
+  level: isDebug ? 'debug' : 'info', // This sets the base level for the logger
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.printf(({ timestamp, level, message }) => {
+      return `[${timestamp}] - ${level.toUpperCase()}: ${message}`;
+    })
+  ),
+  transports: [
+    new winston.transports.Console({
+      level: 'info', // Only log 'info' and above to the console
+    }),
+    ...(isDebug
+      ? [
+          new winston.transports.File({
+            filename: 'debug.log',
+            level: 'debug',
+            options: { flags: 'w' }, // This ensures the file is overwritten on each start
+          }),
+        ]
+      : []),
+  ],
+});
 
 function redactSensitiveInfo(config) {
   const sensitiveKeys = ['apiKey', 'password', 'token']; // Add other sensitive keys as needed
@@ -56,21 +89,24 @@ function redactSensitiveInfo(config) {
   return safeConfig;
 }
 
+/**
+ * Customizer function for lodash.mergeWith to handle array merging
+ * Ensure stored arrays are preserved (including empty arrays) and completely replace default arrays
+ */
 function customizer(objValue, srcValue, key) {
   // Check for the specific key 'commandsAfterLogin' and handle empty array case
   if (key === 'commandsAfterLogin' && Array.isArray(srcValue)) {
     if (srcValue.length === 0) {
-      console.log(`Custom merge: Keeping the empty array for ${key}`);
+      logger.debug(`Custom merge: Keeping the empty array for ${key}`);
       return srcValue; // Keep the empty array if it exists in the stored config
     }
   }
 
   if (Array.isArray(objValue) && Array.isArray(srcValue)) {
-    console.log(`Custom merge: Replacing array for ${key}`);
+    logger.debug(`Custom merge: Replacing array for ${key}`);
     return srcValue; // Replace default array with stored array
   }
 }
-
 
 /**
  * Loads the default configuration and merges it with local configuration if available.
@@ -134,7 +170,9 @@ function createWindow() {
 
   autoUpdater.on('update-downloaded', () => {
     mainWindow.webContents.send('update_downloaded');
-    logger.info('Update downloaded. The application will now restart to install it.');
+    logger.info(
+      'Update downloaded. The application will now restart to install it.'
+    );
     autoUpdater.quitAndInstall(); // Automatically quit and install the update
   });
 }
@@ -155,7 +193,9 @@ function createSplashWindow() {
   });
 
   // Load the splash.html with the version as a query parameter
-  splashWindow.loadFile(path.join(__dirname, 'splash.html'), { query: { version: appVersion } });
+  splashWindow.loadFile(path.join(__dirname, 'splash.html'), {
+    query: { version: appVersion },
+  });
   splashWindow.center();
 }
 
@@ -173,7 +213,9 @@ function loadConfig() {
 
       // If no stored configuration, use defaultConfig
       if (Object.keys(storedConfig).length === 0) {
-        console.log('No stored configuration found, using default configuration.');
+        console.log(
+          'No stored configuration found, using default configuration.'
+        );
         storedConfig = {};
       } else {
         console.log('Loaded configuration from storage.');
@@ -188,15 +230,25 @@ function loadConfig() {
       function checkAndUpdateConfig(defaultObj, storedObj) {
         for (const key in defaultObj) {
           if (!(key in storedObj)) {
-            console.log(`Missing key in stored configuration: ${key}. Adding default value.`);
+            console.log(
+              `Missing key in stored configuration: ${key}. Adding default value.`
+            );
             storedObj[key] = defaultObj[key];
             configUpdated = true;
-          } else if (Array.isArray(defaultObj[key]) && Array.isArray(storedObj[key])) {
+          } else if (
+            Array.isArray(defaultObj[key]) &&
+            Array.isArray(storedObj[key])
+          ) {
             // Do nothing; accept stored array as is
             // If the stored array is intentionally shorter, we respect that
-          } else if (typeof defaultObj[key] === 'object' && defaultObj[key] !== null) {
+          } else if (
+            typeof defaultObj[key] === 'object' &&
+            defaultObj[key] !== null
+          ) {
             if (typeof storedObj[key] !== 'object' || storedObj[key] === null) {
-              console.log(`Mismatched type for key ${key}. Overwriting with default value.`);
+              console.log(
+                `Mismatched type for key ${key}. Overwriting with default value.`
+              );
               storedObj[key] = defaultObj[key];
               configUpdated = true;
             } else {
@@ -227,22 +279,29 @@ function loadConfig() {
 }
 
 /**
- * Customizer function for lodash.mergeWith to handle array merging
- * Ensure stored arrays are preserved (including empty arrays) and completely replace default arrays
+ * Fetches station information from Wavelog.
+ * @param {boolean} suppressErrors - Whether to suppress error dialogs.
  */
-function customizer(objValue, srcValue, key) {
-  // Special handling for 'commandsAfterLogin' key to retain empty arrays
-  if (key === 'commandsAfterLogin' && Array.isArray(srcValue)) {
-    if (srcValue.length === 0) {
-      //console.log(`Custom merge: Keeping the empty array for ${key}`);
-      return srcValue; // Keep the empty array if it exists in the stored config
-    }
-  }
+async function fetchStationDetails(suppressErrors = false) {
+  try {
+    stationId = await wavelogClient.getStationId(suppressErrors);
+    stationProfileName = await wavelogClient.getStationProfileName(suppressErrors);
+    stationGridSquare = await wavelogClient.getStationGridsquare(suppressErrors);
+    stationCallsign = await wavelogClient.getStationCallsign(suppressErrors);
 
-  // Replace default arrays with stored arrays (including empty arrays)
-  if (Array.isArray(objValue) && Array.isArray(srcValue)) {
-    //console.log(`Custom merge: Replacing array for ${key}`);
-    return srcValue;
+    if (stationId && stationCallsign) {
+      logger.info(`Active Station ID: ${stationId}`);
+      logger.info(`Station Callsign: ${stationCallsign}`);
+      logger.info(`Station Profile Name: ${stationProfileName}`);
+      logger.info(`Station Grid Square: ${stationGridSquare}`);
+    } else {
+      logger.warn('Could not retrieve station information from Wavelog.');
+    }
+  } catch (error) {
+    logger.error(`Error fetching station information from Wavelog: ${error.message}`);
+    if (!suppressErrors) {
+      dialog.showErrorBox('Error', 'Error fetching station details. Please check the configuration.');
+    }
   }
 }
 
@@ -252,37 +311,40 @@ function customizer(objValue, srcValue, key) {
 app.on('ready', () => {
   createSplashWindow();
   loadConfig()
-    .then((config) => {
+    .then(async (config) => {
       if (isConfigValid(config)) {
-        logger = winston.createLogger({
-          level: isDebug ? 'debug' : 'info', // This sets the base level for the logger
-          format: winston.format.combine(
-            winston.format.timestamp(),
-            winston.format.printf(({ timestamp, level, message }) => {
-              return `[${timestamp}] - ${level.toUpperCase()}: ${message}`;
-            })
-          ),
-          transports: [
-            new winston.transports.Console({
-              level: 'info', // Only log 'info' and above to the console
-            }),
-            ...(isDebug ? [new winston.transports.File({ 
-              filename: 'debug.log', 
-              level: 'debug', 
-              options: { flags: 'w' } // This ensures the file is overwritten on each start
-            })] : [])
-          ]
-        });
-        
         let safeConfig = redactSensitiveInfo(config);
-        logger.debug(`Final Merged Configuration: ${JSON.stringify(safeConfig, null, 2)}`);
+        logger.debug(
+          `Final Merged Configuration: ${JSON.stringify(safeConfig, null, 2)}`
+        );
+
+        if (config.dxCluster.callsign === 'YOUR-CALLSIGN-HERE') {
+          logger.warn(
+            'First start of application, configuration has not been done yet.'
+          );
+          appConfigured = false;
+        } else {
+          appConfigured = true;
+        }
 
         setUtilLogger(logger);
 
+        createWindow();
+
+        wavelogClient = new WavelogClient(config, logger, mainWindow);
+
+        // Fetch station information from Wavelog
+        if (appConfigured) {
+          await fetchStationDetails(true); // Suppress errors during startup
+        }
+
         dxClusterClient = new DXClusterClient(config, logger);
-        augmentedSpotCache = new AugmentedSpotCache(config.augmentedSpotCache.maxSize, logger, config);
-        flexRadioClient = new FlexRadioClient(config, logger);
-        wavelogClient = new WavelogClient(config, logger);
+        augmentedSpotCache = new AugmentedSpotCache(
+          config.augmentedSpotCache.maxSize,
+          logger,
+          config
+        );
+        flexRadioClient = new FlexRadioClient(config, logger, stationCallsign);
 
         // Initialize WSJT-X client if enabled in the config
         if (config.wsjt.enabled) {
@@ -294,20 +356,13 @@ app.on('ready', () => {
           logger.info('WSJT-X integration is disabled.');
         }
 
-        createWindow();
         attachEventListeners();
 
-        main(config); // Pass config to main function
-      } else {
-        console.error('Essential configuration is missing. Please configure the application.');
-
-        dialog.showErrorBox('Configuration Error', 'Essential configuration is missing. Please configure the application.');
-        app.quit();
       }
+      main();
     })
     .catch((err) => {
       console.error(`Failed to load config: ${err.message}`);
-      app.quit();
     });
 });
 
@@ -315,13 +370,29 @@ app.on('ready', () => {
  * Checks if the essential configuration is valid.
  */
 function isConfigValid(config) {
-  if (!config.dxCluster || !config.dxCluster.callsign || !config.dxCluster.host || config.dxCluster.callsign.trim() === '') {
+  if (
+    !config.dxCluster ||
+    !config.dxCluster.callsign ||
+    !config.dxCluster.host ||
+    config.dxCluster.callsign.trim() === ''
+  ) {
     return false;
   }
-  if (!config.flexRadio || !config.flexRadio.host || !config.flexRadio.port || config.flexRadio.host.trim() === '') {
+  if (
+    !config.flexRadio ||
+    !config.flexRadio.host ||
+    !config.flexRadio.port ||
+    config.flexRadio.host.trim() === ''
+  ) {
     return false;
   }
-  if (!config.wavelogAPI || !config.wavelogAPI.URL || !config.wavelogAPI.apiKey || config.wavelogAPI.URL.trim() === '' || config.wavelogAPI.apiKey.trim() === '') {
+  if (
+    !config.wavelogAPI ||
+    !config.wavelogAPI.URL ||
+    !config.wavelogAPI.apiKey ||
+    config.wavelogAPI.URL.trim() === '' ||
+    config.wavelogAPI.apiKey.trim() === ''
+  ) {
     return false;
   }
   return true;
@@ -396,12 +467,16 @@ let activeQSO = false;
 
 function attachWSJTEventListeners(config) {
   wsjtClient.on('heartbeat', (message) => {
-    logger.debug(`WSJT-X Heartbeat received: ${JSON.stringify(message, bigIntReplacer)}`);
+    logger.debug(
+      `WSJT-X Heartbeat received: ${JSON.stringify(message, bigIntReplacer)}`
+    );
   });
 
   wsjtClient.on('status', (message) => {
     const { dxCall, deCall, txEnabled } = message;
-    logger.debug(`WSJT-X Status received: ${JSON.stringify(message, bigIntReplacer)}`);
+    logger.debug(
+      `WSJT-X Status received: ${JSON.stringify(message, bigIntReplacer)}`
+    );
 
     if (config.wsjt.showQSO) {
       if (dxCall && deCall && txEnabled && !activeQSO) {
@@ -416,7 +491,9 @@ function attachWSJTEventListeners(config) {
   });
 
   wsjtClient.on('decode', (message) => {
-    logger.debug(`WSJT-X Decode received: ${JSON.stringify(message, bigIntReplacer)}`);
+    logger.debug(
+      `WSJT-X Decode received: ${JSON.stringify(message, bigIntReplacer)}`
+    );
   });
 
   wsjtClient.on('clear', (message) => {
@@ -434,32 +511,36 @@ function attachWSJTEventListeners(config) {
   wsjtClient.on('logged_adif', (message) => {
     if (config.wsjt.logQSO) {
       const adifText = message.adifText;
-  
+
       function extractField(adifText, field) {
         const regex = new RegExp(`<${field}:[^>]*>([^<]*)`, 'i');
         const match = adifText.match(regex);
         return match ? match[1].trim() : null;
       }
-  
+
       const dxCallsign = extractField(adifText, 'call');
       const mode = extractField(adifText, 'mode');
       const reportSent = extractField(adifText, 'rst_sent');
       const reportReceived = extractField(adifText, 'rst_rcvd');
-  
+
       // Log the QSO details
-      logger.info(`Request from WSJT-X to log QSO with ${dxCallsign} using mode ${mode}. Sent: ${reportSent}, Received: ${reportReceived}`);
+      logger.info(
+        `Request from WSJT-X to log QSO with ${dxCallsign} using mode ${mode}. Sent: ${reportSent}, Received: ${reportReceived}`
+      );
       logger.debug(adifText);
-  
-      wavelogClient.sendAdifToWavelog(adifText)
+
+      wavelogClient
+        .sendAdifToWavelog(adifText)
         .then(() => {
-          logger.debug(`Successfully processed QSO with ${dxCallsign}. Sent: ${reportSent}, Received: ${reportReceived}`);
+          logger.debug(
+            `Successfully processed QSO with ${dxCallsign}. Sent: ${reportSent}, Received: ${reportReceived}`
+          );
         })
         .catch((error) => {
           logger.error(`Error sending ADIF record: ${error.message}`);
         });
     }
   });
-  
 
   wsjtClient.on('wspr_decode', (message) => {
     logger.debug('WSJT-X WSPR Decode message received');
@@ -609,16 +690,26 @@ app.on('before-quit', shutdown);
 
 /**
  * Main function to start services.
- * @param {object} config - The configuration object.
  */
-function main(config) {
-  if (config.dxCluster.callsign === 'YOUR-CALLSIGN-HERE') {
-    logger.warn('DXCluster connection attempt skipped due to default callsign "YOUR-CALLSIGN-HERE". Please configure a valid callsign.');
-    dialog.showErrorBox('Configuration Error', 'Essential configuration is missing. Please configure the application.');
-  } else {
-    flexRadioClient.connect();
-    dxClusterClient.connect();
-    logger.info('All services started.');
+function main() {
+  if (appConfigured) {
+    // Now check for missing station values
+    const missingValues = [];
+    if (!stationId) missingValues.push('Station ID');
+    if (!stationProfileName) missingValues.push('Station Profile Name');
+    if (!stationGridSquare) missingValues.push('Station Grid Square');
+    if (!stationCallsign) missingValues.push('Station Callsign');
+
+    if (missingValues.length > 0) {
+      const message = `Some station configuration values normally retrieved from Wavelog are missing: ${missingValues.join(', ')}. Please verify the Station Setup in Wavelog.`;
+      logger.warn(message);
+      dialog.showErrorBox('Station Configuration Error', message);
+    } else {
+      // If everything is configured, start the services
+      flexRadioClient.connect();
+      dxClusterClient.connect();
+      logger.info('All services started successfully.');
+    }
   }
 }
 
@@ -636,7 +727,12 @@ ipcMain.handle('get-config', async (event) => {
         }
         reject(error);
       } else {
-        const mergedConfig = mergeWith({}, defaultConfig, storedConfig, customizer); 
+        const mergedConfig = mergeWith(
+          {},
+          defaultConfig,
+          storedConfig,
+          customizer
+        );
         resolve(mergedConfig);
       }
     });
@@ -665,7 +761,7 @@ ipcMain.handle('reset-config-to-defaults', async (event) => {
  * @returns {Promise<void>} - Resolves when the configuration is updated.
  */
 ipcMain.handle('update-config', async (event, newConfig) => {
-  const updatedConfig = mergeWith({}, defaultConfig, newConfig, customizer); 
+  const updatedConfig = mergeWith({}, defaultConfig, newConfig, customizer);
 
   return new Promise((resolve, reject) => {
     storage.set('config', updatedConfig, (error) => {
@@ -693,6 +789,46 @@ ipcMain.handle('update-config', async (event, newConfig) => {
  */
 ipcMain.handle('get-app-version', async (event) => {
   return app.getVersion();
+});
+
+/**
+ * Handles IPC request to get Station Location details.
+ */
+ipcMain.handle('get-station-details', async (event) => {
+  if (appConfigured) {
+    try {
+      // Check if the station variables are already fetched
+      if (!stationId || !stationProfileName || !stationGridSquare || !stationCallsign) {
+        // Fetch station information from Wavelog
+        await fetchStationDetails(true); // Suppress errors
+      }
+
+      // If we have the station details, format and return them
+      if (stationId && stationProfileName && stationGridSquare && stationCallsign) {
+        const stationDetails = `
+          Station ID: ${stationId}, 
+          Station Name: ${stationProfileName}, 
+          Station Grid Square: ${stationGridSquare}, 
+          Station Callsign: ${stationCallsign}
+        `;
+        return stationDetails.trim(); // Return the formatted string
+      } else {
+        // Identify which values are missing
+        const missingValues = [];
+        if (!stationId) missingValues.push('Station ID');
+        if (!stationProfileName) missingValues.push('Station Name');
+        if (!stationGridSquare) missingValues.push('Station Grid Square');
+        if (!stationCallsign) missingValues.push('Station Callsign');
+
+        const errorMessage = `Missing data: ${missingValues.join(', ')}`;
+        logger.warn(errorMessage);
+        return errorMessage; // Return a message indicating missing values
+      }
+    } catch (error) {
+      logger.error(`Error in get-station-details handler: ${error.message}`);
+      return 'Error fetching station details. Please check the configuration.';
+    }
+  }
 });
 
 // Handle uncaught exceptions
