@@ -188,7 +188,7 @@ Wave-Flex Integrator includes an auto-update feature that automatically download
 
 ## Configuration
 
-Upon first startup, an error message may appear due to missing configuration. This is normal. Configure the application via the **Configuration Tab**, save your settings, and restart.
+Upon first startup, no services gets connected. This is normal. Configure the application via the **Configuration Tab**, save your settings, and restart the application.
 
 ### Configuration Parameters
 
@@ -196,7 +196,7 @@ Upon first startup, an error message may appear due to missing configuration. Th
 
 - **Host**: The hostname or IP address of the DX Cluster server.
 - **Port**: The port number for the server connection (typically 7300 or 7373).
-- **Callsign**: Your amateur radio callsign.
+- **Callsign**: Your amateur radio callsign (for logging in to DX Cluster only).
 - **Login Prompt**: The prompt expected from the server for login, such as `login:`, `User:`, or `Login:`. The default is usually `login:`. Make sure the letter case and use of `:` are correct. You can verify the prompt using a Telnet client like [PuTTY](https://www.putty.org/) if connecting to a different server.
 - **Commands After Login**: Optional commands to be executed after logging in. Provide a comma-separated list of commands. The default commands are recommended unless you need specific customizations. You should alter it to reflect your details though.
 - **Reconnect Settings**: Configure the reconnection behavior if the connection is lost.
@@ -257,6 +257,10 @@ The QSL methods you have defined as default will dictate how DXCC confirmations 
 ## Debugging and Troubleshooting
 
 If you encounter issues, follow these steps to help diagnose and resolve them effectively.
+``
+### Check that Wavelog can be reached on the About tab
+
+On the About tab, below the title **Wavelog Station Location** you should be able to see the `Station ID`, `Station Name`, `Station Grid Square` and `Station Callsign` fetched from the configured Wavelog server's `Active Station` in `Station Setup`. If there is no information you should check that your Wavelog server is up and running and that your configuration is correct. If you change the `Active Station` in Wavelog, you will need to restart the application to fetch the new values. The values you see here will be used by the application in various places.
 
 ### Enable Debug Mode
 
