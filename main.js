@@ -15,13 +15,10 @@ const utils = require('./utils');
 const { setUtilLogger } = require('./utils');
 const UIManager = require('./ui_manager');
 const mergeWith = require('lodash.mergewith');
-const argv = require('yargs').argv;
 
 let logger;
 let mainWindow;
 let splashWindow;
-let isLoggedIn = false;
-let commandsSent = false;
 let dxClusterClient, flexRadioClient, augmentedSpotCache;
 let wsjtClient;
 let wavelogClient;
@@ -402,8 +399,6 @@ function isConfigValid(config) {
 function attachEventListeners() {
   dxClusterClient.on('close', () => {
     uiManager.updateDXClusterStatus('dxClusterDisconnected');
-    isLoggedIn = false;
-    commandsSent = false;
     reconnectToDXCluster();
   });
 
@@ -420,7 +415,6 @@ function attachEventListeners() {
 
   dxClusterClient.on('loggedin', async () => {
     logger.info('Logged in to DXCluster');
-    isLoggedIn = true;
 
     try {
       await dxClusterClient.sendCommandsAfterLogin();
