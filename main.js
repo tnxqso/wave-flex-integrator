@@ -11,9 +11,7 @@ const WSJTClient = require('./wsjt');
 const WavelogClient = require('./wavelog_client');
 const AugmentedSpotCache = require('./augmented_spot_cache');
 const winston = require('winston');
-const util = require('util');
 const utils = require('./utils');
-const sleep = util.promisify(setTimeout);
 const { setUtilLogger } = require('./utils');
 const UIManager = require('./ui_manager');
 const mergeWith = require('lodash.mergewith');
@@ -284,18 +282,18 @@ function loadConfig() {
  */
 async function fetchStationDetails(suppressErrors = false) {
   try {
-    stationId = await wavelogClient.getStationId(suppressErrors);
-    stationProfileName = await wavelogClient.getStationProfileName(suppressErrors);
-    stationGridSquare = await wavelogClient.getStationGridsquare(suppressErrors);
-    stationCallsign = await wavelogClient.getStationCallsign(suppressErrors);
+    if (!stationId || !stationProfileName || !stationGridSquare || !stationCallsign) {
+      // Fetch all station details in one call
+      const activeStation = await wavelogClient.getActiveStation(suppressErrors);
 
-    if (stationId && stationCallsign) {
-      logger.info(`Active Station ID: ${stationId}`);
-      logger.info(`Station Callsign: ${stationCallsign}`);
-      logger.info(`Station Profile Name: ${stationProfileName}`);
-      logger.info(`Station Grid Square: ${stationGridSquare}`);
-    } else {
-      logger.warn('Could not retrieve station information from Wavelog.');
+      if (activeStation) {
+        stationId = activeStation.station_id;
+        stationProfileName = activeStation.station_profile_name;
+        stationGridSquare = activeStation.station_gridsquare;
+        stationCallsign = activeStation.station_callsign;
+      } else {
+        logger.warn('Could not retrieve station information from Wavelog.');
+      }
     }
   } catch (error) {
     logger.error(`Error fetching station information from Wavelog: ${error.message}`);
@@ -419,10 +417,17 @@ function attachEventListeners() {
     reconnectToDXCluster();
   });
 
-  dxClusterClient.on('loggedin', () => {
+
+  dxClusterClient.on('loggedin', async () => {
     logger.info('Logged in to DXCluster');
     isLoggedIn = true;
-    sendCommandsAfterLogin();
+
+    try {
+      await dxClusterClient.sendCommandsAfterLogin();
+    } catch (err) {
+      logger.error(`Error sending commands after login: ${err.message}`);
+    }
+
     setTimeout(() => {
       uiManager.updateDXClusterStatus('dxClusterConnected');
     }, 2000);
@@ -545,36 +550,6 @@ function attachWSJTEventListeners(config) {
   wsjtClient.on('wspr_decode', (message) => {
     logger.debug('WSJT-X WSPR Decode message received');
   });
-}
-
-/**
- * Sends a series of commands after logging into the DXCluster.
- */
-async function sendCommandsAfterLogin() {
-  if (commandsSent) return;
-  commandsSent = true;
-
-  const commands = dxClusterClient.config.dxCluster.commandsAfterLogin;
-  if (!commands || commands.length === 0) {
-    logger.info('No commands to send after login.');
-    return;
-  }
-
-  for (const command of commands) {
-    try {
-      logger.info(`Sending command: ${command}`);
-      dxClusterClient.write(`${command}\n`);
-      await new Promise((resolve) => {
-        dxClusterClient.once('message', (data) => {
-          logger.info(`Received response: ${data.trim()}`);
-          resolve();
-        });
-      });
-      await sleep(500);
-    } catch (err) {
-      logger.error(`Error sending command "${command}": ${err.message}`);
-    }
-  }
 }
 
 /**
@@ -798,10 +773,8 @@ ipcMain.handle('get-station-details', async (event) => {
   if (appConfigured) {
     try {
       // Check if the station variables are already fetched
-      if (!stationId || !stationProfileName || !stationGridSquare || !stationCallsign) {
-        // Fetch station information from Wavelog
-        await fetchStationDetails(true); // Suppress errors
-      }
+
+      await fetchStationDetails(true); // Suppress errors
 
       // If we have the station details, format and return them
       if (stationId && stationProfileName && stationGridSquare && stationCallsign) {
