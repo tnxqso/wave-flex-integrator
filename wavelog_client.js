@@ -1,8 +1,9 @@
 'use strict';
+const { EventEmitter } = require('events');
 const { dialog } = require('electron');
 const fetch = require('node-fetch');
 
-class WavelogClient {
+class WavelogClient extends EventEmitter {
   /**
    * Constructor for the WavelogClient class.
    * @param {object} config - The configuration object containing Wavelog server info.
@@ -10,6 +11,7 @@ class WavelogClient {
    * @param {BrowserWindow} mainWindow - The main Electron BrowserWindow instance.
    */
   constructor(config, logger, mainWindow) {
+    super();
     this.config = config;
     this.logger = logger || console; // Default to console if no logger is provided
     this.activeStationData = null; // Cache the active station data
@@ -122,6 +124,7 @@ class WavelogClient {
           this.fetchFailed = true;
           this.fetchPromise = null; // Reset the fetchPromise
           reject(errorMessage);
+          this.emit('stationFetchError', new Error(response.statusText));
           return;
         }
 
@@ -130,6 +133,7 @@ class WavelogClient {
           const activeStation = data.find((station) => station.station_active == '1');
           if (activeStation) {
             this.activeStationData = activeStation;
+            this.emit('stationFetched');
             this.logger.info(`Active Station ID: ${activeStation.station_id}`);
             this.logger.info(`Station Callsign: ${activeStation.station_callsign}`);
             this.logger.info(`Station Profile Name: ${activeStation.station_profile_name}`);
@@ -155,6 +159,7 @@ class WavelogClient {
         this.handleError(errorMessage, false, suppressErrors);
         this.fetchFailed = true;
         this.fetchPromise = null; // Reset the fetchPromise
+        this.emit('stationFetchError', error);
         reject(error);
       }
     });

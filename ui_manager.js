@@ -47,6 +47,31 @@ class UIManager {
       error: error ? error.message : null,
     });
   }
+  /**
+   * Updates Wavelog API connection status.
+   * @param {string} event - The event name.
+   * @param {Error} [error] - Optional error object.
+   */
+  updateWavelogStatus(event, error = null) {
+    this.logger.debug(`Wavelog status update triggered with event: ${event}`);
+    this.sendStatusUpdate({
+      event: event,
+      error: error ? error.message : null,
+    });
+  }
+
+  /**
+   * Updates WSJT-X listener status.
+   * @param {string} event - The event name.
+   * @param {Error} [error] - Optional error object.
+   */
+  updateWSJTStatus(event, error = null) {
+    this.logger.debug(`WSJT-X status update triggered with event: ${event}`);
+    this.sendStatusUpdate({
+      event: event,
+      error: error ? error.message : null,
+    });
+  }
 
   /**
    * Sends a new spot to the UI.
