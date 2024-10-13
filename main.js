@@ -337,12 +337,10 @@ app.on('ready', () => {
         // Initialize WSJT-X client if enabled
         if (config.wsjt.enabled) {
           logger.info('WSJT-X integration is enabled.');
-          uiManager.updateWSJTStatus('WSJTEnabled');
           wsjtClient = new WSJTClient(config, logger);
           wsjtClient.start();
         } else {
           logger.info('WSJT-X integration is disabled.');
-          uiManager.updateWSJTStatus('WSJTDisabled');
         }
 
         // Attach event listeners for all clients, except flexRadioClient
@@ -469,7 +467,7 @@ function attachEventListeners() {
   // Wavelog API listener
   wavelogClient.on('stationFetched', async () => {
     try {
-      uiManager.updateWavelogStatus('WavelogResponsive');
+      uiManager.updateWavelogStatus('WavelogResponsive', await (wavelogClient.getStationProfileName()));
     } catch (err) {
       logger.error(`Error updating Wavelog status: ${err.message}`);
       uiManager.updateWavelogStatus('WavelogUnresponsive');

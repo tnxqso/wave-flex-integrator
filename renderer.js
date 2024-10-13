@@ -66,7 +66,7 @@ function setStatusElement(element, message) {
   // Reset classes
   element.classList.remove('text-success', 'text-danger', 'text-warning');
 
-  if (message === 'Connected' || message === 'Healthy' || message === 'Responsive') {
+  if (message === 'Connected' || message === 'Healthy' || message === 'Responsive' || message === 'Enabled') {
     element.textContent = message;
     element.classList.add('text-success'); // Green
   } else if (message === 'Disconnected' || message === 'Unhealthy' || message === 'Inresponsive') {
@@ -548,7 +548,7 @@ function handleStatusUpdate(status) {
       updateDXClusterStatus(`Error: ${status.error}`);
       break;
     case 'WavelogResponsive':
-      updateWavelogStatus('Responsive');
+      updateWavelogStatus(status.message);
       break;
     case 'WavelogUnresponsive':
       updateWavelogStatus('Unresponsive');

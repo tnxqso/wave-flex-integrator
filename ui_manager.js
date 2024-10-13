@@ -52,10 +52,11 @@ class UIManager {
    * @param {string} event - The event name.
    * @param {Error} [error] - Optional error object.
    */
-  updateWavelogStatus(event, error = null) {
+  updateWavelogStatus(event, message = null, error = null) {
     this.logger.debug(`Wavelog status update triggered with event: ${event}`);
     this.sendStatusUpdate({
       event: event,
+      message: message ? message : null,
       error: error ? error.message : null,
     });
   }
