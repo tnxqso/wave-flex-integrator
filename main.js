@@ -363,12 +363,21 @@ app.on('ready', () => {
 
         main(); // Now start the main logic
 
-        // We can not do this until the main window shows 
-        if (config.wsjt.enabled) {
-          uiManager.updateWSJTStatus('WSJTEnabled');
-        } else {
-          uiManager.updateWSJTStatus('WSJTDisabled');
-        }
+        // Schedule the WSJT status update and Wavelog status update after n seconds
+        setTimeout(async () => {
+          // We can not do this since the main window shows
+          // earlier attempts may have failed
+          if (config.wsjt.enabled) {
+            uiManager.updateWSJTStatus('WSJTEnabled');
+          } else {
+            uiManager.updateWSJTStatus('WSJTDisabled');
+          }
+
+          if (stationCallsign) {
+            uiManager.updateWavelogStatus('WavelogResponsive', await (wavelogClient.getStationProfileName()));
+          }
+        }, 2000);
+
 
       }
     })
