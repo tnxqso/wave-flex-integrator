@@ -66,12 +66,15 @@ function setStatusElement(element, message) {
   // Reset classes
   element.classList.remove('text-success', 'text-danger', 'text-warning');
 
-  if (message === 'Connected' || message === 'Healthy') {
+  if (message === 'Connected' || message === 'Healthy' || message === 'Responsive' || message === 'Enabled') {
     element.textContent = message;
     element.classList.add('text-success'); // Green
-  } else if (message === 'Disconnected' || message === 'Unhealthy') {
+  } else if (message === 'Disconnected' || message === 'Unhealthy' || message === 'Inresponsive') {
     element.textContent = message;
     element.classList.add('text-danger'); // Red
+  } else if (message === 'Disabled' || message === 'Unitialized') {
+    element.textContent = message;
+    element.style.color = '#d3d3d3'; // Light gray color using inline styles
   } else if (message === 'Building') {
     element.textContent = message;
     element.classList.add('text-warning'); // Orange
@@ -544,6 +547,21 @@ function handleStatusUpdate(status) {
     case 'dxClusterError':
       updateDXClusterStatus(`Error: ${status.error}`);
       break;
+    case 'WavelogResponsive':
+      updateWavelogStatus(status.message);
+      break;
+    case 'WavelogUnresponsive':
+      updateWavelogStatus('Unresponsive');
+      break;
+    case 'WSJTEnabled':
+      updateWSJTStatus('Enabled');
+      break;
+    case 'WSJTDisabled':
+      updateWSJTStatus('Disabled');
+      break;
+    case 'WSJTError':
+      updateWSJTStatus(`Error: ${status.error}`);
+      break;
     case 'newSpot':
       displayNewSpot(status.spot);
       break;
@@ -583,6 +601,28 @@ function updateDXClusterStatus(message) {
   const dxStatus = document.getElementById('dxClusterStatus');
   if (dxStatus) {
     setStatusElement(dxStatus, message);
+  }
+}
+
+/**
+ * Updates Wavelog API connection status in the "Connected Services" tab.
+ * @param {string} message - The status message.
+ */
+function updateWavelogStatus(message) {
+  const wavelogStatus = document.getElementById('wavelogApiStatus');
+  if (wavelogStatus) {
+    setStatusElement(wavelogStatus, message);
+  }
+}
+
+/**
+ * Updates WSJT-X Listener status in the "Connected Services" tab.
+ * @param {string} message - The status message.
+ */
+function updateWSJTStatus(message) {
+  const wsjtStatus = document.getElementById('wsjtxListenerStatus');
+  if (wsjtStatus) {
+    setStatusElement(wsjtStatus, message);
   }
 }
 

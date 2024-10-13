@@ -11,19 +11,14 @@ const WSJTClient = require('./wsjt');
 const WavelogClient = require('./wavelog_client');
 const AugmentedSpotCache = require('./augmented_spot_cache');
 const winston = require('winston');
-const util = require('util');
 const utils = require('./utils');
-const sleep = util.promisify(setTimeout);
 const { setUtilLogger } = require('./utils');
 const UIManager = require('./ui_manager');
 const mergeWith = require('lodash.mergewith');
-const argv = require('yargs').argv;
 
 let logger;
 let mainWindow;
 let splashWindow;
-let isLoggedIn = false;
-let commandsSent = false;
 let dxClusterClient, flexRadioClient, augmentedSpotCache;
 let wsjtClient;
 let wavelogClient;
@@ -35,6 +30,7 @@ let stationId = null;
 let stationProfileName = null;
 let stationGridSquare = null;
 let stationCallsign = null;
+let config = null;
 
 const isDebug = process.argv.includes('--debug');
 if (isDebug) {
@@ -70,7 +66,7 @@ logger = winston.createLogger({
   ],
 });
 
-function redactSensitiveInfo(config) {
+function redactSensitiveInfo() {
   const sensitiveKeys = ['apiKey', 'password', 'token']; // Add other sensitive keys as needed
 
   function redact(obj) {
@@ -222,7 +218,7 @@ function loadConfig() {
       }
 
       // Merge storedConfig with defaultConfig using mergeWith and customizer
-      let config = mergeWith({}, defaultConfig, storedConfig, customizer);
+      config = mergeWith({}, defaultConfig, storedConfig, customizer);
 
       // Check for missing keys in storedConfig and update if necessary
       let configUpdated = false;
@@ -284,21 +280,22 @@ function loadConfig() {
  */
 async function fetchStationDetails(suppressErrors = false) {
   try {
-    stationId = await wavelogClient.getStationId(suppressErrors);
-    stationProfileName = await wavelogClient.getStationProfileName(suppressErrors);
-    stationGridSquare = await wavelogClient.getStationGridsquare(suppressErrors);
-    stationCallsign = await wavelogClient.getStationCallsign(suppressErrors);
+    if (!stationId || !stationProfileName || !stationGridSquare || !stationCallsign) {
+      // Fetch all station details in one call
+      const activeStation = await wavelogClient.getActiveStation(suppressErrors);
 
-    if (stationId && stationCallsign) {
-      logger.info(`Active Station ID: ${stationId}`);
-      logger.info(`Station Callsign: ${stationCallsign}`);
-      logger.info(`Station Profile Name: ${stationProfileName}`);
-      logger.info(`Station Grid Square: ${stationGridSquare}`);
-    } else {
-      logger.warn('Could not retrieve station information from Wavelog.');
+      if (activeStation) {
+        stationId = activeStation.station_id;
+        stationProfileName = activeStation.station_profile_name;
+        stationGridSquare = activeStation.station_gridsquare;
+        stationCallsign = activeStation.station_callsign;
+      } else {
+        logger.warn('Could not retrieve station information from Wavelog.');
+      }
     }
   } catch (error) {
     logger.error(`Error fetching station information from Wavelog: ${error.message}`);
+    wavelogClient.emit('stationFetchError', error); // Trigger error event
     if (!suppressErrors) {
       dialog.showErrorBox('Error', 'Error fetching station details. Please check the configuration.');
     }
@@ -310,10 +307,11 @@ async function fetchStationDetails(suppressErrors = false) {
  */
 app.on('ready', () => {
   createSplashWindow();
+
   loadConfig()
     .then(async (config) => {
-      if (isConfigValid(config)) {
-        let safeConfig = redactSensitiveInfo(config);
+      if (isConfigValid()) {
+        let safeConfig = redactSensitiveInfo();
         logger.debug(
           `Final Merged Configuration: ${JSON.stringify(safeConfig, null, 2)}`
         );
@@ -329,37 +327,50 @@ app.on('ready', () => {
 
         setUtilLogger(logger);
 
-        createWindow();
+        createWindow(); // Create the main window, but don't show it yet
 
+        // Create clients (except flexRadioClient)
         wavelogClient = new WavelogClient(config, logger, mainWindow);
-
-        // Fetch station information from Wavelog
-        if (appConfigured) {
-          await fetchStationDetails(true); // Suppress errors during startup
-        }
-
         dxClusterClient = new DXClusterClient(config, logger);
-        augmentedSpotCache = new AugmentedSpotCache(
-          config.augmentedSpotCache.maxSize,
-          logger,
-          config
-        );
-        flexRadioClient = new FlexRadioClient(config, logger, stationCallsign);
+        augmentedSpotCache = new AugmentedSpotCache(config.augmentedSpotCache.maxSize, logger, config);
 
-        // Initialize WSJT-X client if enabled in the config
+        // Initialize WSJT-X client if enabled
         if (config.wsjt.enabled) {
           logger.info('WSJT-X integration is enabled.');
           wsjtClient = new WSJTClient(config, logger);
           wsjtClient.start();
-          attachWSJTEventListeners(config);
         } else {
           logger.info('WSJT-X integration is disabled.');
         }
 
+        // Attach event listeners for all clients, except flexRadioClient
         attachEventListeners();
 
+        // Fetch station information from Wavelog (stationFetched will be emitted)
+        if (appConfigured) {
+          await fetchStationDetails(true); // Suppress errors during startup
+        }
+
+        // Now that we have stationCallsign, create the flexRadioClient
+        if (stationCallsign) {
+          flexRadioClient = new FlexRadioClient(config, logger, stationCallsign);
+
+          // Attach flexRadioClient-specific event listeners here
+          attachFlexRadioEventListeners();
+        } else {
+          logger.warn('No station callsign found; FlexRadio client will not be initialized.');
+        }
+
+        main(); // Now start the main logic
+
+        // We can not do this until the main window shows 
+        if (config.wsjt.enabled) {
+          uiManager.updateWSJTStatus('WSJTEnabled');
+        } else {
+          uiManager.updateWSJTStatus('WSJTDisabled');
+        }
+
       }
-      main();
     })
     .catch((err) => {
       console.error(`Failed to load config: ${err.message}`);
@@ -369,7 +380,7 @@ app.on('ready', () => {
 /**
  * Checks if the essential configuration is valid.
  */
-function isConfigValid(config) {
+function isConfigValid() {
   if (
     !config.dxCluster ||
     !config.dxCluster.callsign ||
@@ -398,14 +409,21 @@ function isConfigValid(config) {
   return true;
 }
 
+function bigIntReplacer(key, value) {
+  return typeof value === 'bigint' ? value.toString() : value;
+}
+
+/**
+ * Attaches event listeners for WSJTClient.
+ */
+let activeQSO = false;
+
 /**
  * Attaches event listeners for DXClusterClient and FlexRadioClient.
  */
 function attachEventListeners() {
   dxClusterClient.on('close', () => {
     uiManager.updateDXClusterStatus('dxClusterDisconnected');
-    isLoggedIn = false;
-    commandsSent = false;
     reconnectToDXCluster();
   });
 
@@ -419,10 +437,16 @@ function attachEventListeners() {
     reconnectToDXCluster();
   });
 
-  dxClusterClient.on('loggedin', () => {
+
+  dxClusterClient.on('loggedin', async () => {
     logger.info('Logged in to DXCluster');
-    isLoggedIn = true;
-    sendCommandsAfterLogin();
+
+    try {
+      await dxClusterClient.sendCommandsAfterLogin();
+    } catch (err) {
+      logger.error(`Error sending commands after login: ${err.message}`);
+    }
+
     setTimeout(() => {
       uiManager.updateDXClusterStatus('dxClusterConnected');
     }, 2000);
@@ -440,140 +464,136 @@ function attachEventListeners() {
     }
   });
 
-  flexRadioClient.on('connected', () => {
-    logger.info('Connected to FlexRadio server');
-    uiManager.updateFlexRadioStatus('flexRadioConnected');
-  });
-
-  flexRadioClient.on('disconnected', () => {
-    logger.info('Disconnected from FlexRadio server');
-    uiManager.updateFlexRadioStatus('flexRadioDisconnected');
-  });
-
-  flexRadioClient.on('error', (error) => {
-    logger.error(`FlexRadio error: ${error.message}`);
-    uiManager.updateFlexRadioStatus('flexRadioError', error);
-  });
-}
-
-function bigIntReplacer(key, value) {
-  return typeof value === 'bigint' ? value.toString() : value;
-}
-
-/**
- * Attaches event listeners for WSJTClient.
- */
-let activeQSO = false;
-
-function attachWSJTEventListeners(config) {
-  wsjtClient.on('heartbeat', (message) => {
-    logger.debug(
-      `WSJT-X Heartbeat received: ${JSON.stringify(message, bigIntReplacer)}`
-    );
-  });
-
-  wsjtClient.on('status', (message) => {
-    const { dxCall, deCall, txEnabled } = message;
-    logger.debug(
-      `WSJT-X Status received: ${JSON.stringify(message, bigIntReplacer)}`
-    );
-
-    if (config.wsjt.showQSO) {
-      if (dxCall && deCall && txEnabled && !activeQSO) {
-        activeQSO = true;
-        logger.info(`WSJT-X QSO started with ${dxCall}`);
-        utils.openLogQSO(dxCall, config);
-      } else if (!txEnabled && activeQSO) {
-        activeQSO = false;
-        logger.info(`QSO ended with ${dxCall}`);
-      }
-    }
-  });
-
-  wsjtClient.on('decode', (message) => {
-    logger.debug(
-      `WSJT-X Decode received: ${JSON.stringify(message, bigIntReplacer)}`
-    );
-  });
-
-  wsjtClient.on('clear', (message) => {
-    logger.debug('WSJT-X Clear message received');
-  });
-
-  wsjtClient.on('qso_logged', (message) => {
-    if (config.wsjt.logQSO) {
-      // Handle QSO logged message here if needed
-      logger.debug(`QSO Logged with ${message.dxCall}`);
-      // Do not attempt to access message.adifText here
-    }
-  });
-
-  wsjtClient.on('logged_adif', (message) => {
-    if (config.wsjt.logQSO) {
-      const adifText = message.adifText;
-
-      function extractField(adifText, field) {
-        const regex = new RegExp(`<${field}:[^>]*>([^<]*)`, 'i');
-        const match = adifText.match(regex);
-        return match ? match[1].trim() : null;
-      }
-
-      const dxCallsign = extractField(adifText, 'call');
-      const mode = extractField(adifText, 'mode');
-      const reportSent = extractField(adifText, 'rst_sent');
-      const reportReceived = extractField(adifText, 'rst_rcvd');
-
-      // Log the QSO details
-      logger.info(
-        `Request from WSJT-X to log QSO with ${dxCallsign} using mode ${mode}. Sent: ${reportSent}, Received: ${reportReceived}`
-      );
-      logger.debug(adifText);
-
-      wavelogClient
-        .sendAdifToWavelog(adifText)
-        .then(() => {
-          logger.debug(
-            `Successfully processed QSO with ${dxCallsign}. Sent: ${reportSent}, Received: ${reportReceived}`
-          );
-        })
-        .catch((error) => {
-          logger.error(`Error sending ADIF record: ${error.message}`);
-        });
-    }
-  });
-
-  wsjtClient.on('wspr_decode', (message) => {
-    logger.debug('WSJT-X WSPR Decode message received');
-  });
-}
-
-/**
- * Sends a series of commands after logging into the DXCluster.
- */
-async function sendCommandsAfterLogin() {
-  if (commandsSent) return;
-  commandsSent = true;
-
-  const commands = dxClusterClient.config.dxCluster.commandsAfterLogin;
-  if (!commands || commands.length === 0) {
-    logger.info('No commands to send after login.');
-    return;
-  }
-
-  for (const command of commands) {
+  // Wavelog API listener
+  wavelogClient.on('stationFetched', async () => {
     try {
-      logger.info(`Sending command: ${command}`);
-      dxClusterClient.write(`${command}\n`);
-      await new Promise((resolve) => {
-        dxClusterClient.once('message', (data) => {
-          logger.info(`Received response: ${data.trim()}`);
-          resolve();
-        });
-      });
-      await sleep(500);
+      uiManager.updateWavelogStatus('WavelogResponsive', await (wavelogClient.getStationProfileName()));
     } catch (err) {
-      logger.error(`Error sending command "${command}": ${err.message}`);
+      logger.error(`Error updating Wavelog status: ${err.message}`);
+      uiManager.updateWavelogStatus('WavelogUnresponsive');
     }
+  });
+
+  wavelogClient.on('stationFetchError', (error) => {
+    uiManager.updateWavelogStatus('WavelogUnresponsive', error);
+  });
+
+  if (config.wsjt.enabled) {
+    // WSJT-X listener
+    wsjtClient.on('status', (message) => {
+      const { enabled } = message;
+      if (enabled) {
+        logger.info('WSJT-X is enabled');
+        uiManager.updateWSJTStatus('WSJTEnabled');
+      }
+    });
+
+    wsjtClient.on('error', (error) => {
+      logger.error(`WSJT-X error: ${error.message}`);
+      uiManager.updateWSJTStatus('WSJTError', error);
+    });
+
+    wsjtClient.on('heartbeat', (message) => {
+      logger.debug(
+        `WSJT-X Heartbeat received: ${JSON.stringify(message, bigIntReplacer)}`
+      );
+    });
+
+    wsjtClient.on('status', (message) => {
+      const { dxCall, deCall, txEnabled } = message;
+      logger.debug(
+        `WSJT-X Status received: ${JSON.stringify(message, bigIntReplacer)}`
+      );
+
+      if (config.wsjt.showQSO) {
+        if (dxCall && deCall && txEnabled && !activeQSO) {
+          activeQSO = true;
+          logger.info(`WSJT-X QSO started with ${dxCall}`);
+          utils.openLogQSO(dxCall, config);
+        } else if (!txEnabled && activeQSO) {
+          activeQSO = false;
+          logger.info(`QSO ended with ${dxCall}`);
+        }
+      }
+    });
+
+    wsjtClient.on('decode', (message) => {
+      logger.debug(
+        `WSJT-X Decode received: ${JSON.stringify(message, bigIntReplacer)}`
+      );
+    });
+
+    wsjtClient.on('clear', (message) => {
+      logger.debug('WSJT-X Clear message received');
+    });
+
+    wsjtClient.on('qso_logged', (message) => {
+      if (config.wsjt.logQSO) {
+        // Handle QSO logged message here if needed
+        logger.debug(`QSO Logged with ${message.dxCall}`);
+        // Do not attempt to access message.adifText here
+      }
+    });
+
+    wsjtClient.on('logged_adif', (message) => {
+      if (config.wsjt.logQSO) {
+        const adifText = message.adifText;
+
+        function extractField(adifText, field) {
+          const regex = new RegExp(`<${field}:[^>]*>([^<]*)`, 'i');
+          const match = adifText.match(regex);
+          return match ? match[1].trim() : null;
+        }
+
+        const dxCallsign = extractField(adifText, 'call');
+        const mode = extractField(adifText, 'mode');
+        const reportSent = extractField(adifText, 'rst_sent');
+        const reportReceived = extractField(adifText, 'rst_rcvd');
+
+        // Log the QSO details
+        logger.info(
+          `Request from WSJT-X to log QSO with ${dxCallsign} using mode ${mode}. Sent: ${reportSent}, Received: ${reportReceived}`
+        );
+        logger.debug(adifText);
+
+        wavelogClient
+          .sendAdifToWavelog(adifText)
+          .then(() => {
+            logger.debug(
+              `Successfully processed QSO with ${dxCallsign}. Sent: ${reportSent}, Received: ${reportReceived}`
+            );
+          })
+          .catch((error) => {
+            logger.error(`Error sending ADIF record: ${error.message}`);
+          });
+      }
+    });
+
+    wsjtClient.on('wspr_decode', (message) => {
+      logger.debug('WSJT-X WSPR Decode message received');
+    });
+  } else {
+    uiManager.updateWSJTStatus('WSJTDisabled');
+  }
+}
+
+// Attach event listeners specific to flexRadioClient
+function attachFlexRadioEventListeners() {
+  if (flexRadioClient) {
+    flexRadioClient.on('connected', () => {
+      logger.info('Connected to FlexRadio server');
+      uiManager.updateFlexRadioStatus('flexRadioConnected');
+    });
+  
+    flexRadioClient.on('disconnected', () => {
+      logger.info('Disconnected from FlexRadio server');
+      uiManager.updateFlexRadioStatus('flexRadioDisconnected');
+    });
+  
+    flexRadioClient.on('error', (error) => {
+      logger.error(`FlexRadio error: ${error.message}`);
+      uiManager.updateFlexRadioStatus('flexRadioError', error);
+    });
   }
 }
 
@@ -798,10 +818,8 @@ ipcMain.handle('get-station-details', async (event) => {
   if (appConfigured) {
     try {
       // Check if the station variables are already fetched
-      if (!stationId || !stationProfileName || !stationGridSquare || !stationCallsign) {
-        // Fetch station information from Wavelog
-        await fetchStationDetails(true); // Suppress errors
-      }
+
+      await fetchStationDetails(true); // Suppress errors
 
       // If we have the station details, format and return them
       if (stationId && stationProfileName && stationGridSquare && stationCallsign) {

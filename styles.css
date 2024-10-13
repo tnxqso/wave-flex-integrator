@@ -33,3 +33,10 @@ h1 {
   min-width: 100px; /* Adjust this value to control the status message column width */
   text-align: left;  /* Keep the status text left-aligned */
 }
+
+/* Custom styles for banner image */
+.banner-image {
+  width: 100%; /* Set width to 100% of the browser window */
+  margin: 0; /* Remove any margin */
+  padding: 0; /* Remove any padding */
+}

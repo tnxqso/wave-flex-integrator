@@ -2,6 +2,8 @@
 
 const net = require('net');
 const events = require('events');
+const util = require('util');
+const sleep = util.promisify(setTimeout);
 
 /**
  * DXClusterClient class responsible for connecting to a DX Cluster server,
@@ -282,6 +284,34 @@ class DXClusterClient extends events.EventEmitter {
       this.isReconnecting = false;
     }, this.reconnectDelay);
   }
+
+  async sendCommandsAfterLogin() {
+    if (this.commandsSent) return;
+    this.commandsSent = true;
+
+    const commands = this.config.dxCluster.commandsAfterLogin;
+    if (!commands || commands.length === 0) {
+      this.logger.info('No commands to send after login.');
+      return;
+    }
+
+    for (const command of commands) {
+      try {
+        this.logger.info(`Sending command: ${command}`);
+        this.write(`${command}\n`);
+        await new Promise((resolve) => {
+          this.once('message', (data) => {
+            this.logger.info(`Received response: ${data.trim()}`);
+            resolve();
+          });
+        });
+        await sleep(500);
+      } catch (err) {
+        this.logger.error(`Error sending command "${command}": ${err.message}`);
+      }
+    }
+  }
+
 }
 
 module.exports = DXClusterClient;

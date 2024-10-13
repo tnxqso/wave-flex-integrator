@@ -7,7 +7,7 @@
 
 *A seamless bridge between your FlexRadio and Wavelog logging software, integrating DX Cluster data, WSJT-X and synchronizing frequency and mode, all without traditional CAT software.*
 
-![Wave-Flex Integrator Logo](assets/wave-flex-integrator-logo.png)
+![Wave-Flex Integrator main tab](assets/wave-flex-integrator-main-tab.png)
 
 > **Note:** This software is currently in beta testing. Features and documentation may change as the project evolves.
 
@@ -351,3 +351,5 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 - **Community Contributors**: Thanks to all who support and improve this project.
 
 ---
+
+![Wave-Flex Integrator Logo](assets/wave-flex-integrator-logo.png)

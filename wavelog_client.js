@@ -1,8 +1,9 @@
 'use strict';
+const { EventEmitter } = require('events');
 const { dialog } = require('electron');
 const fetch = require('node-fetch');
 
-class WavelogClient {
+class WavelogClient extends EventEmitter {
   /**
    * Constructor for the WavelogClient class.
    * @param {object} config - The configuration object containing Wavelog server info.
@@ -10,10 +11,12 @@ class WavelogClient {
    * @param {BrowserWindow} mainWindow - The main Electron BrowserWindow instance.
    */
   constructor(config, logger, mainWindow) {
+    super();
     this.config = config;
     this.logger = logger || console; // Default to console if no logger is provided
     this.activeStationData = null; // Cache the active station data
     this.mainWindow = mainWindow; // Store reference to main window
+    this.fetchPromise = null; // Promise for ongoing fetch
   }
 
   /**
@@ -33,52 +36,53 @@ class WavelogClient {
     }
   }
 
-    /**
-     * Sends the active TX slice information to the Wavelog server.
-     * @param {Slice} activeTXSlice - The active TX slice object.
-     * @returns {Promise<void>} - Resolves when the data is sent.
-     */
-    async sendActiveSliceToWavelog(activeTXSlice) {
-      try {
-        const xitAdjustment = activeTXSlice.xit_on ? activeTXSlice.xit_freq : 0;
-        const adjustedFrequencyHz = Math.round(
-          activeTXSlice.frequency * 1e6 + xitAdjustment
-        );
+  /**
+   * Sends the active TX slice information to the Wavelog server.
+   * @param {Slice} activeTXSlice - The active TX slice object.
+   * @returns {Promise<void>} - Resolves when the data is sent.
+   */
+  async sendActiveSliceToWavelog(activeTXSlice) {
+    try {
+      const xitAdjustment = activeTXSlice.xit_on ? activeTXSlice.xit_freq : 0;
+      const adjustedFrequencyHz = Math.round(
+        activeTXSlice.frequency * 1e6 + xitAdjustment
+      );
 
-        const payload = {
-          key: this.config.wavelogAPI.apiKey,
-          radio: 'wave-flex-integrator',
-          frequency: adjustedFrequencyHz,
-          mode: activeTXSlice.mode,
-        };
+      const payload = {
+        key: this.config.wavelogAPI.apiKey,
+        radio: 'wave-flex-integrator',
+        frequency: adjustedFrequencyHz,
+        mode: activeTXSlice.mode,
+      };
 
-        const baseURL = this.config.wavelogAPI.URL.replace(/\/$/, '');
-        const fullURL = `${baseURL}/api/radio`;
+      const baseURL = this.config.wavelogAPI.URL.replace(/\/$/, '');
+      const fullURL = `${baseURL}/api/radio`;
 
-        const response = await fetch(fullURL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-        });
+      const response = await fetch(fullURL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
 
-        if (!response.ok) {
-          const errorMessage = `Failed to send active TX slice to Wavelog: ${response.statusText}`;
-          this.handleError(errorMessage);
-        } else {
-          this.logger.info(
-            `Successfully sent active TX slice to Wavelog: Frequency ${adjustedFrequencyHz} Hz, Mode ${activeTXSlice.mode}`
-          );
-        }
-      } catch (error) {
-        const errorMessage = `Error in sendActiveSliceToWavelog: ${error.message}`;
+      if (!response.ok) {
+        const errorMessage = `Failed to send active TX slice to Wavelog: ${response.statusText}`;
         this.handleError(errorMessage);
+      } else {
+        this.logger.info(
+          `Successfully sent active TX slice to Wavelog: Frequency ${adjustedFrequencyHz} Hz, Mode ${activeTXSlice.mode}`
+        );
       }
+    } catch (error) {
+      const errorMessage = `Error in sendActiveSliceToWavelog: ${error.message}`;
+      this.handleError(errorMessage);
     }
+  }
 
   /**
    * Fetches and caches the active station data from Wavelog API.
+   * Implements promise caching to prevent multiple simultaneous fetches.
    * @param {boolean} suppressErrors - Whether to suppress showing error dialogs.
    * @returns {Promise<object>} - The active station data object.
    */
@@ -88,123 +92,133 @@ class WavelogClient {
       return this.activeStationData;
     }
 
-    // Avoid repeated attempts if fetch has failed before
-    if (this.fetchFailed) {
-      return null;
+    // If a fetch is already in progress, return the existing promise
+    if (this.fetchPromise) {
+      return this.fetchPromise;
     }
 
-    const timeoutSeconds = 10; // Hardcoded timeout of 10 seconds
+    // Start a new fetch and store the promise
+    this.fetchPromise = new Promise(async (resolve, reject) => {
+      const timeoutSeconds = 10; // Hardcoded timeout of 10 seconds
 
-    // Timeout function
-    const timeoutPromise = new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Request timed out')), timeoutSeconds * 1000)
-    );
+      try {
+        const apiKey = this.config.wavelogAPI.apiKey;
+        const baseURL = this.config.wavelogAPI.URL.replace(/\/$/, '');
+        const fullURL = `${baseURL}/api/station_info/${apiKey}`;
 
-    // Fetch the station data with a timeout
-    try {
-      const apiKey = this.config.wavelogAPI.apiKey;
-      const baseURL = this.config.wavelogAPI.URL.replace(/\/$/, '');
-      const fullURL = `${baseURL}/api/station_info/${apiKey}`;
+        const response = await Promise.race([
+          fetch(fullURL, {
+            method: 'GET',
+            headers: {
+              Accept: 'application/json',
+            },
+          }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Request timed out')), timeoutSeconds * 1000)
+          ),
+        ]);
 
-      // Race between the fetch call and the timeout
-      const response = await Promise.race([
-        fetch(fullURL, {
-          method: 'GET',
-          headers: {
-            Accept: 'application/json',
-          },
-        }),
-        timeoutPromise,
-      ]);
-
-      if (!response.ok) {
-        const errorMessage = `Failed to fetch station profile info: ${response.statusText}`;
-        this.handleError(errorMessage, false, suppressErrors);
-        this.fetchFailed = true;
-        return null;
-      }
-
-      const data = await response.json();
-      if (Array.isArray(data)) {
-        const activeStation = data.find((station) => station.station_active == '1');
-        if (activeStation) {
-          this.activeStationData = activeStation;
-          this.logger.info(
-            `Active station profile ID is ${this.activeStationData.station_id}`
-          );
-          return this.activeStationData;
-        } else {
-          const errorMessage = 'No active station profile found.';
+        if (!response.ok) {
+          const errorMessage = `Failed to fetch station profile info: ${response.statusText}`;
           this.handleError(errorMessage, false, suppressErrors);
           this.fetchFailed = true;
-          return null;
+          this.fetchPromise = null; // Reset the fetchPromise
+          reject(errorMessage);
+          this.emit('stationFetchError', new Error(response.statusText));
+          return;
         }
-      } else {
-        const errorMessage = 'Invalid response format.';
+
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          const activeStation = data.find((station) => station.station_active == '1');
+          if (activeStation) {
+            this.activeStationData = activeStation;
+            this.emit('stationFetched');
+            this.logger.info(`Active Station ID: ${activeStation.station_id}`);
+            this.logger.info(`Station Callsign: ${activeStation.station_callsign}`);
+            this.logger.info(`Station Profile Name: ${activeStation.station_profile_name}`);
+            this.logger.info(`Station Grid Square: ${activeStation.station_gridsquare}`);
+            this.fetchPromise = null; // Reset the fetchPromise
+            resolve(this.activeStationData);
+          } else {
+            const errorMessage = 'No active station profile found.';
+            this.handleError(errorMessage, false, suppressErrors);
+            this.fetchFailed = true;
+            this.fetchPromise = null; // Reset the fetchPromise
+            resolve(null);
+          }
+        } else {
+          const errorMessage = 'Invalid response format.';
+          this.handleError(errorMessage, false, suppressErrors);
+          this.fetchFailed = true;
+          this.fetchPromise = null; // Reset the fetchPromise
+          resolve(null);
+        }
+      } catch (error) {
+        const errorMessage = `Error in getActiveStation: ${error.message}`;
         this.handleError(errorMessage, false, suppressErrors);
         this.fetchFailed = true;
-        return null;
+        this.fetchPromise = null; // Reset the fetchPromise
+        this.emit('stationFetchError', error);
+        reject(error);
       }
-    } catch (error) {
-      const errorMessage = `Error in getActiveStation: ${error.message}`;
-      this.handleError(errorMessage, false, suppressErrors);
-      this.fetchFailed = true;
-      return null;
-    }
+    });
+
+    return this.fetchPromise;
   }
 
-    /**
-     * Gets the active station ID.
-     * @returns {Promise<string>} - The station ID.
-     */
-    async getStationId() {
-      if (this.activeStationData === null) {
-        await this.getActiveStation();
-      }
-      return this.activeStationData.station_id;
+  /**
+   * Gets the active station ID.
+   * @returns {Promise<string>} - The station ID.
+   */
+  async getStationId() {
+    if (this.activeStationData === null) {
+      await this.getActiveStation();
     }
+    return this.activeStationData.station_id;
+  }
 
-    /**
-     * Gets the active station profile name.
-     * @returns {Promise<string>} - The station profile name.
-     */
-    async getStationProfileName() {
-      if (this.activeStationData === null) {
-        await this.getActiveStation();
-      }
-      return this.activeStationData.station_profile_name;
+  /**
+   * Gets the active station profile name.
+   * @returns {Promise<string>} - The station profile name.
+   */
+  async getStationProfileName() {
+    if (this.activeStationData === null) {
+      await this.getActiveStation();
     }
+    return this.activeStationData.station_profile_name;
+  }
 
-    /**
-     * Gets the active station gridsquare.
-     * @returns {Promise<string>} - The station gridsquare.
-     */
-    async getStationGridsquare() {
-      if (this.activeStationData === null) {
-        await this.getActiveStation();
-      }
-      return this.activeStationData.station_gridsquare;
+  /**
+   * Gets the active station gridsquare.
+   * @returns {Promise<string>} - The station gridsquare.
+   */
+  async getStationGridsquare() {
+    if (this.activeStationData === null) {
+      await this.getActiveStation();
     }
+    return this.activeStationData.station_gridsquare;
+  }
 
-    /**
-     * Gets the active station callsign.
-     * @returns {Promise<string>} - The station callsign.
-     */
-    async getStationCallsign() {
-      if (this.activeStationData === null) {
-        await this.getActiveStation();
-      }
-      return this.activeStationData.station_callsign;
+  /**
+   * Gets the active station callsign.
+   * @returns {Promise<string>} - The station callsign.
+   */
+  async getStationCallsign() {
+    if (this.activeStationData === null) {
+      await this.getActiveStation();
     }
+    return this.activeStationData.station_callsign;
+  }
 
-    /**
-     * Fetches the active station profile ID from Wavelog API.
-     * Caches the result to avoid redundant calls.
-     * @returns {Promise<number>} - The active station profile ID.
-     */
-    async getActiveStationProfileId() {
-      return await this.getStationId();
-    }
+  /**
+   * Fetches the active station profile ID from Wavelog API.
+   * Caches the result to avoid redundant calls.
+   * @returns {Promise<number>} - The active station profile ID.
+   */
+  async getActiveStationProfileId() {
+    return await this.getStationId();
+  }
 
   /**
    * Sends an ADIF record to Wavelog server for logging.
@@ -232,7 +246,10 @@ class WavelogClient {
       const activeStationGridsquare = (await this.getStationGridsquare()).trim();
 
       // Compare the station callsigns, if present, ignoring case
-      if (adifStationCallsign !== null && adifStationCallsign.toLowerCase() !== activeStationCallsign.toLowerCase()) {
+      if (
+        adifStationCallsign !== null &&
+        adifStationCallsign.toLowerCase() !== activeStationCallsign.toLowerCase()
+      ) {
         const errorMessage = `Cannot send ADIF record to Wavelog: The station callsign in the ADIF record (${adifStationCallsign}) does not match the active station callsign in Wavelog (${activeStationCallsign}).`;
         this.handleError(errorMessage, false); // Don't throw the error again
         return; // Stop execution to prevent double error
@@ -241,14 +258,17 @@ class WavelogClient {
       }
 
       // Compare the gridsquares, if present, ignoring case
-      if (adifMyGridsquare !== null && adifMyGridsquare.toLowerCase() !== activeStationGridsquare.toLowerCase()) {
+      if (
+        adifMyGridsquare !== null &&
+        adifMyGridsquare.toLowerCase() !== activeStationGridsquare.toLowerCase()
+      ) {
         const errorMessage = `Cannot send ADIF record to Wavelog: The gridsquare in the ADIF record (${adifMyGridsquare}) does not match the active station gridsquare in Wavelog (${activeStationGridsquare}).`;
         this.handleError(errorMessage, false); // Don't throw the error again
         return; // Stop execution to prevent double error
       } else {
         this.logger.debug('Gridsquares match or not present.');
       }
-  
+
       // Clean up the ADIF string by trimming whitespace or excess newlines
       const cleanAdifString = adifString.replace(/\n/g, ' ').trim();
       this.logger.debug(`Cleaned ADIF String: ${cleanAdifString}`);
@@ -291,15 +311,15 @@ class WavelogClient {
         return; // Stop execution
       } else {
         const responseData = await response.json();
-        this.logger.debug(
-          `Wavelog response: ${JSON.stringify(responseData)}`
-        ); // Log full response data
-      
+        this.logger.debug(`Wavelog response: ${JSON.stringify(responseData)}`); // Log full response data
+
         // Check if the response contains the adif_errors field
         if (responseData.hasOwnProperty('adif_errors')) {
           if (responseData.adif_errors === 0) {
             // ADIF was successfully processed
-            this.logger.debug(`Successfully sent ADIF record to Wavelog with no errors.`);
+            this.logger.debug(
+              `Successfully sent ADIF record to Wavelog with no errors.`
+            );
           } else {
             // There were errors in ADIF processing
             const errorMessage = `Wavelog returned adif_errors: ${responseData.adif_errors}. The ADIF record was not processed successfully.`;
@@ -313,11 +333,13 @@ class WavelogClient {
           // Fallback if adif_errors is not present, but status is OK/created
           this.logger.debug(`Successfully sent ADIF record to Wavelog.`);
         } else {
-          const errorMessage = `Wavelog returned an error: ${JSON.stringify(responseData)}`;
+          const errorMessage = `Wavelog returned an error: ${JSON.stringify(
+            responseData
+          )}`;
           this.handleError(errorMessage, false); // Handle the error, don't throw
           return; // Stop execution
         }
-      }      
+      }
     } catch (error) {
       const errorMessage = `Error in sendAdifToWavelog: ${error.message}`;
       this.handleError(errorMessage);
