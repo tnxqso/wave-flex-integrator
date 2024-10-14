@@ -32,12 +32,14 @@ jobs:
       - name: Build the Electron app
         run: npm run build
 
-      # Step 5: Clean up unpacked files
-      - name: Clean up unpacked files
-        run: |
-          rm -rf dist/win-unpacked
-          rm -rf dist/mac-unpacked
-          rm -rf dist/linux-unpacked
+      # Step 5: Remove unpacked binaries (conditional based on OS)
+      - name: Remove unpacked directories (Linux & macOS)
+        if: runner.os != 'Windows'
+        run: rm -rf dist/*-unpacked
+
+      - name: Remove unpacked directories (Windows)
+        if: runner.os == 'Windows'
+        run: Remove-Item -Recurse -Force dist\*-unpacked
 
       # Step 6: Upload the build artifacts
       - name: Upload build artifacts
