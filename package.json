@@ -67,7 +67,7 @@
       "!**/*.log",
       "!PRIVATE_README.md"
     ],
-    "publish": "never",
+    "publish": [],
     "win": {
       "target": "nsis",
       "icon": "build/icons/icon.ico"
