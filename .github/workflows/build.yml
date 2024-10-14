@@ -39,7 +39,8 @@ jobs:
 
       - name: Remove unpacked directories (Windows)
         if: runner.os == 'Windows'
-        run: Remove-Item -Recurse -Force dist\*-unpacked
+        shell: pwsh  # Use PowerShell for Windows
+        run: Remove-Item -Recurse -Force dist\win-unpacked
 
       # Step 6: Upload the build artifacts
       - name: Upload build artifacts
