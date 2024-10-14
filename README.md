@@ -109,7 +109,7 @@ The demo provides a hands-on experience to see if Wavelog suits your needs.
 ## Requirements
 
 - **FlexRadio**: Compatible FlexRadio device (FLEX-6000-series) connected to your LAN or reachable over TCP/IP.
-- **SmartSDR**: Installed and running on your local machine. Compatibility varies by version (see below).
+- **SmartSDR**: Installed and running on your local machine. Compatibility varies by version (see below). In the SmartSDR menu, make sure to set Settings --> Spots to `Enabled` and make sure you don't override Colors or Background.
 - **Wavelog**: Installed and running (Version 1.8.6 or later).
 - **DX Cluster Access**: A DX Cluster server accessible via Telnet. Find one [here](http://www.dxcluster.info/telnet/index.php).
 
