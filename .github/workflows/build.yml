@@ -35,8 +35,7 @@ jobs:
       # Step 5: Package the Electron app using electron-builder without publishing
       - name: Package Electron app
         run: |
-          npx electron-builder --${{ matrix.os == 'ubuntu-latest' && 'linux' || matrix.os == 'windows-latest' && 'win' || 'mac'}} --publish=never
-        # By adding --publish=never, you prevent electron-builder from trying to publish
+          npx electron-builder --${{ matrix.os == 'ubuntu-latest' && 'linux' || matrix.os == 'windows-latest' && 'win' || 'mac'}}
 
       # Step 6: Upload the build artifacts
       - name: Upload build artifacts
@@ -77,6 +76,6 @@ jobs:
             dist/ubuntu/**/*.AppImage
             dist/windows/**/*.exe
             dist/macos/**/*.dmg
-          generate_release_notes: true
+          generate_release_notes: true  # Automatically generate release notes based on commits and PRs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
