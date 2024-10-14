@@ -22,7 +22,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'  # Ensure Node.js 16 is installed
+          node-version: '20'  # Ensure Node.js 20 is installed
 
       # Step 3: Install npm dependencies
       - name: Install dependencies
@@ -32,12 +32,11 @@ jobs:
       - name: Build the Electron app
         run: npm run build
 
-      # Step 5: Package the Electron app using electron-builder
+      # Step 5: Package the Electron app using electron-builder without publishing
       - name: Package Electron app
         run: |
-          npx electron-builder --${{ matrix.os == 'ubuntu-latest' && 'linux' || matrix.os == 'windows-latest' && 'win' || 'mac'}}
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          npx electron-builder --${{ matrix.os == 'ubuntu-latest' && 'linux' || matrix.os == 'windows-latest' && 'win' || 'mac'}} --publish=never
+        # By adding --publish=never, you prevent electron-builder from trying to publish
 
       # Step 6: Upload the build artifacts
       - name: Upload build artifacts
@@ -51,15 +50,33 @@ jobs:
     needs: build
 
     steps:
-      # Step 1: Check out the repository again
-      - name: Check out repository
-        uses: actions/checkout@v3
+      # Step 1: Download all build artifacts
+      - name: Download Ubuntu artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: WaveFlexIntegrator-ubuntu-latest
+          path: dist/ubuntu
 
-      # Step 2: Create a GitHub release, upload the build artifacts, and generate release notes
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: WaveFlexIntegrator-windows-latest
+          path: dist/windows
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: WaveFlexIntegrator-macos-latest
+          path: dist/macos
+
+      # Step 2: Create GitHub release and upload the build artifacts
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: dist/**/*  # Upload all the build artifacts from dist/
-          generate_release_notes: true  # Automatically generate release notes based on commits and PRs
+          files: |
+            dist/ubuntu/**/*.AppImage
+            dist/windows/**/*.exe
+            dist/macos/**/*.dmg
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
