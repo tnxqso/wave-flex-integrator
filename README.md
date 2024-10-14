@@ -31,6 +31,7 @@
 - [Configuration](#configuration)
   - [Configuration Parameters](#configuration-parameters)
 - [Usage](#usage)
+  - [Security Warning on First Startup (Windows and macOS)](#security-warning-on-first-startup-windows-and-macos)
 - [How DXCC Confirmation is Determined](#how-dxcc-confirmation-is-determined)
 - [Debugging and Troubleshooting](#debugging-and-troubleshooting)
   - [Enable Debug Mode](#enable-debug-mode)
@@ -176,7 +177,13 @@ Wave-Flex Integrator binaries for Linux are available on the [GitHub Releases](h
 
 ### macOS Installation
 
-Currently, pre-built binaries for macOS are not available. Mac users can install Wave-Flex Integrator manually by following the instructions in the [Manual Installation Guide](README-MANUAL-INSTALL.md).
+Wave-Flex Integrator binaries for macOS are available on the [GitHub Releases](https://github.com/tnxqso/wave-flex-integrator/releases) page.
+
+1. **Download**: Get the latest macOS installer (`.dmg` file) from the [Releases](https://github.com/tnxqso/wave-flex-integrator/releases) page.
+
+2. **Install**: Open the downloaded `.dmg` file and drag the Wave-Flex Integrator icon into your `Applications` folder.
+
+3. **Launch**: After installation, you can launch Wave-Flex Integrator from the `Applications` folder or using Spotlight search.
 
 ---
 
@@ -236,11 +243,39 @@ Upon first startup, no services gets connected. This is normal. Configure the ap
 
 ## Usage
 
-Start the application by launching it from the Start Menu (Windows), applications menu (Linux), or following the manual start procedure for macOS users.
+Start the application by launching it from the Start Menu (Windows), the Applications menu (Linux), or by opening the **Applications** folder and double-clicking on **Wave-Flex Integrator** (macOS). On macOS you can also use **Spotlight** by pressing `Command + Space`, typing "Wave-Flex Integrator," and pressing `Enter` to launch the app.
 
 Wave-Flex Integrator will connect to your DX Cluster and FlexRadio, enhance spots, and synchronize with Wavelog.
 
 > **Note:** After Wave-Flex Integrator has started up for the first time and the first spot has been augmented by Wavelog, you need to go into Wavelog and navigate to Account > Hardware Interfaces. Select the newly created wave-flex-integrator to become the default interface.
+
+### Security Warning on First Startup (Windows and macOS)
+
+When you launch Wave-Flex Integrator for the first time, you may encounter a security warning on both Windows and macOS. This is expected, and you can safely proceed.
+
+#### Windows: "Unknown Publisher" Warning
+On Windows, you may see a warning that the app is from an "Unknown Publisher." This occurs because the application hasn't been signed with a verified certificate yet.
+
+To continue:
+
+1. Click **More info**.
+2. Then click **Run anyway** to proceed with the installation.
+
+Rest assured, the software is safe to use. We are working towards acquiring a verified publisher certificate to avoid this warning in future releases.
+
+#### macOS: "Unidentified Developer" Warning
+On macOS, a similar warning may appear saying that the app is from an "Unidentified Developer."
+
+To run the app:
+
+1. Open **System Preferences** > **Security & Privacy** > **General**.
+2. You'll see a message saying that Wave-Flex Integrator was blocked because it's not from an identified developer. Click **Open Anyway**.
+3. Confirm your choice by clicking **Open** in the dialog that appears.
+
+This step is necessary because the app hasn't yet been signed with an Apple Developer certificate. We recommend doing this only for trusted applications like Wave-Flex Integrator.
+
+#### Build the Application from Source
+For users who prefer to build the application themselves, the full source code is available on the [GitHub repository](https://github.com/tnxqso/wave-flex-integrator). While we don't provide specific build instructions, users with the necessary experience can compile the application independently, giving them full control over the build process.
 
 ---
 
@@ -261,6 +296,10 @@ If you encounter issues, follow these steps to help diagnose and resolve them ef
 ### Check that Wavelog can be reached on the About tab
 
 On the About tab, below the title **Wavelog Station Location** you should be able to see the `Station ID`, `Station Name`, `Station Grid Square` and `Station Callsign` fetched from the configured Wavelog server's `Active Station` in `Station Setup`. If there is no information you should check that your Wavelog server is up and running and that your configuration is correct. If you change the `Active Station` in Wavelog, you will need to restart the application to fetch the new values. The values you see here will be used by the application in various places.
+
+### Ensure No Other Applications Are Creating Spots on the SmartSDR panadapter
+
+Wave-Flex Integrator actively monitors and manages all spots displayed on the SmartSDR panadapter. To avoid conflicts or duplicate entries, make sure that no other applications are generating spots simultaneously. Additionally, only one instance of Wave-Flex Integrator should be connected to your FlexRadio at any given time to ensure operation and to avoid unexpected results.
 
 ### Enable Debug Mode
 
