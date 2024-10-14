@@ -32,7 +32,14 @@ jobs:
       - name: Build the Electron app
         run: npm run build
 
-      # Step 5: Upload the build artifacts
+      # Step 5: Clean up unpacked files
+      - name: Clean up unpacked files
+        run: |
+          rm -rf dist/win-unpacked
+          rm -rf dist/mac-unpacked
+          rm -rf dist/linux-unpacked
+
+      # Step 6: Upload the build artifacts
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
         with:
