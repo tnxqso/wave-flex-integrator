@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/tnxqso/wave-flex-integrator/blob/main/README.md
+    about: Learn more about the Wave-Flex Integrator
+  - name: Contribution Guide
+    url: https://github.com/tnxqso/wave-flex-integrator/.github/CONTRIBUTING.md
+    about: Review our guidelines for contributing to the project.
+  - name: FlexRadio Website
+    url: https://www.flexradio.com/
+    about: Learn about the FlexRadio, the technology that this project integrates with.
+  - name: Wavelog Website
+    url: https://www.wavelog.org
+    about: Visit Wavelog for more information about the logging software integrated with this project.
