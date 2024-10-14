@@ -21,8 +21,6 @@ jobs:
       # Step 2: Set up Node.js environment
       - name: Set up Node.js
         uses: actions/setup-node@v3
-        with:
-          node-version: '16'  # Ensure Node.js 16 is installed
 
       # Step 3: Install npm dependencies
       - name: Install dependencies
@@ -55,11 +53,11 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v3
 
-      # Step 2: Create a GitHub release, upload the build artifacts, and generate release notes
+      # Step 2: Create GitHub release and upload the build artifacts
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: dist/**/*  # Upload all the build artifacts from dist/
-          generate_release_notes: true  # Automatically generate release notes based on commits and PRs
+          files: dist/**/*
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
