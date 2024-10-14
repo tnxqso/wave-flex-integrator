@@ -37,7 +37,7 @@ jobs:
         run: |
           npx electron-builder --${{ matrix.os == 'ubuntu-latest' && 'linux' || matrix.os == 'windows-latest' && 'win' || 'mac'}}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
       # Step 6: Upload the build artifacts
       - name: Upload build artifacts
