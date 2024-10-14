@@ -4,14 +4,14 @@ name: Build and Release Electron App
 on:
   push:
     tags:
-      - 'v*.*.*'  # This pattern matches version tags like v1.0.0, v2.3.1, etc.
+      - 'v*.*.*'
 
 jobs:
   build:
-    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
 
     steps:
       # Step 1: Check out the repository
@@ -22,24 +22,17 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'  # Ensure Node.js 20 is installed
+          node-version: '20'
 
       # Step 3: Install npm dependencies
       - name: Install dependencies
         run: npm install
 
-      # Step 4: Build the Electron app
+      # Step 4: Build the Electron app (no publish)
       - name: Build the Electron app
         run: npm run build
 
-      # Step 5: Package the Electron app using electron-builder without publishing
-      - name: Package Electron app
-        run: |
-          npx electron-builder --linux --publish never  # Ubuntu build
-          npx electron-builder --win --publish never    # Windows build
-          npx electron-builder --mac --publish never    # macOS build
-
-      # Step 6: Upload the build artifacts
+      # Step 5: Upload the build artifacts
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -78,6 +71,6 @@ jobs:
             dist/ubuntu/**/*.AppImage
             dist/windows/**/*.exe
             dist/macos/**/*.dmg
-          generate_release_notes: true  # Automatically generate release notes based on commits and PRs
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
