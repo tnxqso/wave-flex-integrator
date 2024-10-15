@@ -317,7 +317,13 @@ Run the application with debug logging:
   wave-flex-integrator -- -- --debug
   ```
 
-- **macOS**: Refer to the [Manual Installation Guide](README-MANUAL-INSTALL.md) for debug instructions.
+- **macOS**: Run from terminal with the -- -- --debug flag:
+
+
+  ```bash
+  /Applications/Wave-Flex\ Integrator.app/Contents/MacOS/wave-flex-integrator -- -- --debug
+
+  ```
 
 This creates a `debug.log` file with detailed logs.
 
