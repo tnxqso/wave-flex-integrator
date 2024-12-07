@@ -38,7 +38,7 @@ module.exports = class FlexRadioClient extends EventEmitter {
 
     this.shouldReconnect = true;
     this.isDisconnecting = false;
-    this.activeTXSlice = null;
+    this.activeTXSlices = null;
 
     this.messageParser = new FlexRadioMessageParser();
     this.wavelogClient = new WavelogClient(this.config, this.logger);
@@ -212,52 +212,53 @@ module.exports = class FlexRadioClient extends EventEmitter {
       this.logger.info(`Added new slice with label ${slice.index_letter}`);
     }
 
-    const activeTXSlice = Array.from(this.flexSlicesByID.values()).find(
-      (s) => s.tx
-    );
+    const activeTXSlices = Array.from(this.flexSlicesByID.values()).filter((s) => s.tx);
 
-    if (activeTXSlice) {
-      const xitAdjustment = activeTXSlice.xit_on ? activeTXSlice.xit_freq : 0;
-      const adjustedFrequencyHz = Math.round(
-        activeTXSlice.frequency * 1e6 + xitAdjustment
-      );
+    const updatedActiveTXSlices = activeTXSlices.map((slice) => {
+      const xitAdjustment = slice.xit_on ? slice.xit_freq : 0;
+      const adjustedFrequencyHz = Math.round(slice.frequency * 1e6 + xitAdjustment);
 
-      if (!this.activeTXSlice || this.activeTXSlice.index !== activeTXSlice.index) {
-        this.activeTXSlice = Object.assign({}, activeTXSlice);
+      const existingSlice = this.activeTXSlices?.find((activeSlice) => activeSlice.index === slice.index);
+      if (!existingSlice) {
         this.logger.info(
-          `Active TX Slice updated: Slice ${activeTXSlice.index_letter}, Frequency: ${activeTXSlice.frequency.toFixed(6)} MHz, Mode: ${activeTXSlice.mode}, XIT: ${xitAdjustment} Hz, Adjusted Frequency: ${(adjustedFrequencyHz / 1e6).toFixed(6)} MHz`
+          `New Active TX Slice: Slice ${slice.index_letter}, Frequency: ${slice.frequency.toFixed(6)} MHz, Mode: ${slice.mode}, XIT: ${xitAdjustment} Hz, Adjusted Frequency: ${(adjustedFrequencyHz / 1e6).toFixed(6)} MHz`
         );
-
-        this.sendActiveSliceToWavelog(activeTXSlice).catch((error) => {
+        this.sendActiveSliceToWavelog(slice).catch((error) => {
           this.logger.error(`Error sending active TX slice to Wavelog: ${error.message}`);
         });
-
-      } else {
-        if (
-          this.activeTXSlice.frequency !== activeTXSlice.frequency ||
-          this.activeTXSlice.mode !== activeTXSlice.mode ||
-          this.activeTXSlice.xit_on !== activeTXSlice.xit_on ||
-          this.activeTXSlice.xit_freq !== activeTXSlice.xit_freq
-        ) {
-          this.logger.info(
-            `Active TX Slice changed: Slice ${activeTXSlice.index_letter}, Frequency: ${activeTXSlice.frequency.toFixed(6)} MHz, Mode: ${activeTXSlice.mode}, XIT: ${xitAdjustment} Hz, Adjusted Frequency: ${(adjustedFrequencyHz / 1e6).toFixed(6)} MHz`
-          );
-          this.activeTXSlice.frequency = activeTXSlice.frequency;
-          this.activeTXSlice.mode = activeTXSlice.mode;
-          this.activeTXSlice.xit_on = activeTXSlice.xit_on;
-          this.activeTXSlice.xit_freq = activeTXSlice.xit_freq;
-
-          this.sendActiveSliceToWavelog(activeTXSlice).catch((error) => {
-            this.logger.error(`Error sending active TX slice to Wavelog: ${error.message}`);
-          });
-        }
+      } else if (
+        existingSlice.frequency !== slice.frequency ||
+        existingSlice.mode !== slice.mode ||
+        existingSlice.xit_on !== slice.xit_on ||
+        existingSlice.xit_freq !== slice.xit_freq
+      ) {
+        this.logger.info(
+          `Updated Active TX Slice: Slice ${slice.index_letter}, Frequency: ${slice.frequency.toFixed(6)} MHz, Mode: ${slice.mode}, XIT: ${xitAdjustment} Hz, Adjusted Frequency: ${(adjustedFrequencyHz / 1e6).toFixed(6)} MHz`
+        );
+        existingSlice.frequency = slice.frequency;
+        existingSlice.mode = slice.mode;
+        existingSlice.xit_on = slice.xit_on;
+        existingSlice.xit_freq = slice.xit_freq;
+        this.sendActiveSliceToWavelog(slice).catch((error) => {
+          this.logger.error(`Error sending active TX slice to Wavelog: ${error.message}`);
+        });
       }
-    } else {
-      if (this.activeTXSlice) {
-        this.activeTXSlice = null;
-        this.logger.info('There is no active TX slice.');
-      }
+      return Object.assign({}, slice);
+    });
+
+    // Remove any slices that are no longer active
+    if (this.activeTXSlices) {
+      const removedSlices = this.activeTXSlices.filter(
+        (activeSlice) => !activeTXSlices.some((slice) => slice.index === activeSlice.index)
+      );
+
+      removedSlices.forEach((slice) => {
+        this.logger.info(`TX Slice ${slice.index_letter} is no longer active.`);
+      });
     }
+
+    // Update the active TX slices array
+  this.activeTXSlices = updatedActiveTXSlices;
   }
 
   async sendActiveSliceToWavelog(activeTXSlice) {

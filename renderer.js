@@ -265,6 +265,11 @@ function populateForm(config) {
   if (stationLocationIdsInput) {
     stationLocationIdsInput.value = config.wavelogAPI.station_location_ids.join(', ');
   }
+  
+  const wavelogRadioNameInput = document.getElementById('wavelogRadioName');
+  if (wavelogRadioNameInput) {
+    wavelogRadioNameInput.value = config.wavelogAPI.radioName;
+  }
 
   // Populate LoTW Configuration
   const maxDaysConsideredTrueInput = document.getElementById('maxDaysConsideredTrue');
@@ -480,6 +485,7 @@ if (configForm) {
           .value.split(',')
           .map((id) => parseInt(id.trim(), 10))
           .filter((id) => !isNaN(id)),
+        radioName: document.getElementById('wavelogRadioName').value.trim(),
       },
       loTW: {
         max_days_lotw_considered_true: parseInt(

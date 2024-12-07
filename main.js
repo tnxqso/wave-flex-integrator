@@ -410,8 +410,10 @@ function isConfigValid() {
     !config.wavelogAPI ||
     !config.wavelogAPI.URL ||
     !config.wavelogAPI.apiKey ||
+    !config.wavelogAPI.radioName ||
     config.wavelogAPI.URL.trim() === '' ||
-    config.wavelogAPI.apiKey.trim() === ''
+    config.wavelogAPI.apiKey.trim() === '' ||
+    config.wavelogAPI.radioName.trim() === ''
   ) {
     return false;
   }
