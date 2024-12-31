@@ -271,6 +271,11 @@ function populateForm(config) {
     wavelogRadioNameInput.value = config.wavelogAPI.radioName;
   }
 
+  const multiFlexEnabledCheckbox = document.getElementById('multiFlexEnabled');
+  if (multiFlexEnabledCheckbox) {
+    multiFlexEnabledCheckbox.checked = config.wavelogAPI.multiFlexEnabled;
+  }  
+
   // Populate LoTW Configuration
   const maxDaysConsideredTrueInput = document.getElementById('maxDaysConsideredTrue');
   if (maxDaysConsideredTrueInput) {
@@ -486,6 +491,7 @@ if (configForm) {
           .map((id) => parseInt(id.trim(), 10))
           .filter((id) => !isNaN(id)),
         radioName: document.getElementById('wavelogRadioName').value.trim(),
+        multiFlexEnabled: document.getElementById('multiFlexEnabled').checked,
       },
       loTW: {
         max_days_lotw_considered_true: parseInt(

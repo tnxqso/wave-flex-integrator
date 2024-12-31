@@ -30,6 +30,7 @@ module.exports = class FlexRadioClient extends EventEmitter {
     this.flexSpotsByID = new Map();
     this.flexSpotsBySpotID = new Map();
     this.flexSlicesByID = new Map();
+    this.handleStationMap = new Map();
     this.isReconnecting = false;
     this.connected = false;
 
@@ -52,6 +53,7 @@ module.exports = class FlexRadioClient extends EventEmitter {
     this.messageParser.on('spotRemoved', this.handleSpotRemoved.bind(this));
     this.messageParser.on('spotStatus', this.handleSpotStatus.bind(this));
     this.messageParser.on('sliceStatus', this.handleSliceStatus.bind(this));
+    this.messageParser.on('clientStatus', this.handleClientStatus.bind(this));
     this.messageParser.on('handle', (data) => {
       this.logger.info(`Received handle: ${data.handle}`);
     });
@@ -108,10 +110,13 @@ module.exports = class FlexRadioClient extends EventEmitter {
       setTimeout(() => {
         this.queueCommand('sub slice all', (response) => {
           this.logger.debug(`Response to sub slice all: ${response}`);
-          this.queueCommand('spot clear', (response) => {
-            this.logger.debug(`Response to spot clear: ${response}`);
-            this.queueCommand('sub spot all', (response) => {
-              this.logger.debug(`Response to sub spot all: ${response}`);
+          this.queueCommand('sub client all', (response) => {
+            this.logger.debug(`Response to sub client all: ${response}`);
+            this.queueCommand('spot clear', (response) => {
+              this.logger.debug(`Response to spot clear: ${response}`);
+              this.queueCommand('sub spot all', (response) => {
+                this.logger.debug(`Response to sub spot all: ${response}`);
+              });
             });
           });
         });
@@ -205,8 +210,8 @@ module.exports = class FlexRadioClient extends EventEmitter {
       sliceAdded = true;
     }
 
-    slice.statusUpdate(statusMessage);
-
+    slice.statusUpdate(handle, statusMessage);
+    slice.updateStationName(this.handleStationMap); // Set the station name based on the handle here to ensure it is populated with the correct Station Name
     if (sliceAdded) {
       this.flexSlicesByID.set(index, slice);
       this.logger.info(`Added new slice with label ${slice.index_letter}`);
@@ -323,6 +328,38 @@ module.exports = class FlexRadioClient extends EventEmitter {
       }
       this.logger.debug(`Added new spot with ID ${index}`);
     }
+  }
+
+  /**
+   * Handles a client status update.
+   * @param {object} eventData - Data associated with the event.
+   */
+  handleClientStatus(eventData) {
+    const { handle, statusMessage } = eventData;
+    // Parse the statusMessage to extract the stationName
+    const statusParts = statusMessage.split(' ');
+    if (statusParts[0] == 'connected') {
+      let stationName = null;
+      for (const part of statusParts) {
+        if (part.startsWith('station=')) {
+          stationName = part.split('=')[1];
+          break;
+        }
+      }
+      // Store the handle and stationName in the Map
+      if (stationName) {
+        this.handleStationMap.set(handle, stationName);
+        this.logger.info(`Connected GUI client ${handle} with name ${stationName}`);
+      } else {
+        this.logger.warn(`Station name not found in statusMessage: ${statusMessage}`); 
+      }
+    } else if (statusParts[0] == 'disconnected') {  
+      // Remove the handle from the Map
+      this.logger.info(`Station ${this.handleStationMap.get(handle)} disconnected.`);
+      this.handleStationMap.delete(handle);      
+    } else {
+      this.logger.error(`Unhandled client status: ${statusMessage}`);
+    }  
   }
 
   /**

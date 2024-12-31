@@ -50,7 +50,9 @@ class WavelogClient extends EventEmitter {
 
       const payload = {
         key: this.config.wavelogAPI.apiKey,
-        radio: `${this.config.wavelogAPI.radioName} (Slice ${activeTXSlice.index + 1})`,
+        radio: this.config.wavelogAPI.multiFlexEnabled && activeTXSlice.stationName !== ''
+          ? `${this.config.wavelogAPI.radioName} (${activeTXSlice.stationName})`
+          : `${this.config.wavelogAPI.radioName}`,
         frequency: adjustedFrequencyHz,
         mode: activeTXSlice.mode,
       };

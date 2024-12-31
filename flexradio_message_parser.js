@@ -95,6 +95,9 @@ class FlexRadioMessageParser extends EventEmitter {
       case 'slice':
         this.parseSliceStatus(handle, statusContent);
         break;
+      case 'client':
+        this.parseClientStatus(handle, statusContent);
+        break;
       // Add more cases as needed for different status types
       default:
         // Emit a generic status event for unhandled types
@@ -155,6 +158,25 @@ class FlexRadioMessageParser extends EventEmitter {
       this.emit('sliceStatus', { handle, index, statusMessage });
     } else {
       this.emit('error', new Error(`parseSliceStatus: Failed to parse slice status message: ${statusContent}`));
+    }
+  }
+
+  /**
+     * Parses client status messages and emits events accordingly.
+     * @param {string} handle - The handle associated with the message.
+     * @param {string} statusContent - The content of the status message.
+     */
+  parseClientStatus(handle, statusContent) {
+    // We need to correctly extract the index and the rest of the status message
+    const match = statusContent.match(/^client\s+0x([0-9A-F]+)\s+(.*)/);
+    // group 1 - gui client handle
+    // group 2 - status message
+    if (match) {
+      const guiHandle = match[1];
+      const statusMessage = match[2];
+      this.emit('clientStatus', { handle:guiHandle, statusMessage});
+    } else {
+      this.emit('error', new Error(`parseClientStatus: Failed to parse client status message: ${statusContent}`));
     }
   }
 
