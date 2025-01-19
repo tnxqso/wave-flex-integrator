@@ -172,7 +172,7 @@ class FlexRadioMessageParser extends EventEmitter {
     // group 1 - gui client handle
     // group 2 - status message
     if (match) {
-      const guiHandle = match[1];
+      const guiHandle = match[1].replace(/^0+/, ''); // Remove leading zeros
       const statusMessage = match[2];
       this.emit('clientStatus', { handle:guiHandle, statusMessage});
     } else {
