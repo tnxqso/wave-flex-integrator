@@ -15,3 +15,4 @@ out/
 *.map
 /electron-builder.json
 /releases/
+.vscode

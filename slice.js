@@ -19,14 +19,25 @@ class Slice {
     this.index_letter = '';
     this.xit_on = false;
     this.xit_freq = 0;
+    this.handle = ''; // GUI Client Handle of the slice
+    this.stationName = ''; // Station name of the slice
     // Add other properties as needed
   }
 
+
+  /**
+   * Updates the station name of the slice based on the provided handleStationMap.
+   * @param {Map<string, string>} handleStationMap - A map of GUI Client Handles to station names.
+   */
+  updateStationName(handleStationMap) { 
+    this.stationName = handleStationMap.get(this.handle) || '';
+  }
   /**
    * Updates the slice's status based on the provided status message.
+   * @param {string} handle - The GUI Client Handle for the slice
    * @param {string} statusMessage - The status message content.
    */
-  statusUpdate(statusMessage) {
+  statusUpdate(handle, statusMessage) {
     // Split the status message into key-value pairs
     const keyValuePairs = statusMessage.match(/(?:[^\s"]+|"[^"]*")+/g);
 
@@ -40,7 +51,7 @@ class Slice {
     if (keyValuePairs[0] === 'slice') {
       startIndex = 2; // Skip 'slice' and the index
     }
-
+    this.handle = handle; 
     for (let i = startIndex; i < keyValuePairs.length; i++) {
       const pair = keyValuePairs[i];
       const equalIndex = pair.indexOf('=');

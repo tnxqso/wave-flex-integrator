@@ -96,6 +96,8 @@ const defaultConfig = {
     URL: 'https://wavelog.example.com/index.php',
     apiKey: 'YOUR-WAVELOG-API-KEY-HERE',
     station_location_ids: [], // Wavelog station location (QTH) IDs from where to search for DXCC confirmation data
+    radioName: 'wavelog-flex-integrator',
+    multiFlexEnabled: false,
   },
 
   // ==============================
