@@ -67,7 +67,11 @@
       "!**/*.log",
       "!PRIVATE_README.md"
     ],
-    "publish": null,
+    "publish": {
+      "provider": "github",
+      "owner": "tnxqso",
+      "repo": "wave-flex-integrator"
+    },
     "win": {
       "target": [
         {

@@ -1,0 +1,47 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Triggers only when pushing tags starting with v (e.g. v0.9.3)
+
+jobs:
+  build-and-release:
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+
+    permissions:
+      contents: write # Required for creating releases and uploading assets
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # LTS version recommended
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      # LINUX SPECIFIC: Install graphics libraries often needed for Electron builds on CI
+      - name: Install Linux Dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libicns-utils graphicsmagick
+
+      # BUILD & PUBLISH
+      # We use '-- --publish always' to force electron-builder to upload to GitHub
+      # regardless of the package.json settings.
+      - name: Build and Publish Electron App
+        env:
+          # This token is provided automatically by GitHub Actions
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+        run: npm run build -- --publish always
