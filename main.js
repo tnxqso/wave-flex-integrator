@@ -123,36 +123,72 @@ if (fs.existsSync(localConfigPath)) {
  * Creates the main application window.
  */
 function createWindow() {
+  // Safely retrieve window configuration
+  const appConfig = config.application || {};
+  const winConfig = appConfig.window || {};
+
+  logger.info(`Restoring window at: x=${winConfig.x}, y=${winConfig.y}, w=${winConfig.width}, h=${winConfig.height}`);
+
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
-    show: false, // Start hidden if using a splash screen
+    // Use saved values OR defaults
+    width: winConfig.width || 900,
+    height: winConfig.height || 800,
+    // Important: x and y must be integers. If undefined, Electron centers automatically.
+    x: Number.isInteger(winConfig.x) ? winConfig.x : undefined,
+    y: Number.isInteger(winConfig.y) ? winConfig.y : undefined,
+    show: false, // Do not show until splash screen is done
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
     },
-    autoHideMenuBar: true, // This hides the menu bar
+    autoHideMenuBar: true,
   });
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
-
-  // Remove the menu completely
   mainWindow.removeMenu();
 
-  mainWindow.on('closed', function () {
-    mainWindow = null;
-  });
+  // --- ROBUST WINDOW STATE SAVING ---
+  let saveTimeout;
+
+  const saveWindowState = () => {
+    if (!mainWindow) return;
+    
+    // Get current position and size
+    const bounds = mainWindow.getBounds();
+
+    // Update config object in memory
+    if (!config.application) config.application = {};
+    config.application.window = bounds;
+
+    // Save to disk (debounced - wait 1 second after last movement)
+    // This prevents writing to disk continuously while dragging the window
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(() => {
+      storage.set('config', config, (error) => {
+        if (error) {
+          logger.error(`Failed to save window state: ${error.message}`);
+        } else {
+          // logger.debug('Window state saved to disk.'); 
+        }
+      });
+    }, 1000);
+  };
+
+  // Listen for both move and resize events
+  mainWindow.on('resize', saveWindowState);
+  mainWindow.on('move', saveWindowState);
+  // ----------------------------------
 
   uiManager = new UIManager(mainWindow, logger);
 
-  // Show the main window after the splash screen
   mainWindow.once('ready-to-show', () => {
     setTimeout(() => {
       if (splashWindow) {
         splashWindow.close();
       }
       mainWindow.show();
-    }, 3500); // Adjust the delay as needed
+      // Do not call .center() here, or it will override the restored position!
+    }, 3500); 
   });
 
   // Auto-updater check for updates
@@ -333,6 +369,18 @@ app.on('ready', () => {
         wavelogClient = new WavelogClient(config, logger, mainWindow);
         dxClusterClient = new DXClusterClient(config, logger);
         augmentedSpotCache = new AugmentedSpotCache(config.augmentedSpotCache.maxSize, logger, config);
+
+        setTimeout(() => {
+          if (augmentedSpotCache) {
+             const healthStatus = augmentedSpotCache.getHealthStatus();
+             uiManager.sendCacheHealthUpdate(healthStatus);
+
+             setInterval(() => {
+               const healthStatus = augmentedSpotCache.getHealthStatus();
+               uiManager.sendCacheHealthUpdate(healthStatus);
+             }, 300000);
+          }
+        }, 5000);
 
         // Initialize WSJT-X client if enabled
         if (config.wsjt.enabled) {
@@ -605,22 +653,15 @@ function attachFlexRadioEventListeners() {
       logger.error(`FlexRadio error: ${error.message}`);
       uiManager.updateFlexRadioStatus('flexRadioError', error);
     });
+
+    flexRadioClient.on('globalProfilesList', (profiles) => {
+      if (mainWindow) {
+        mainWindow.webContents.send('flex-global-profiles', profiles);
+      }
+    });    
+
   }
 }
-
-/**
- * Fire the first cache health update after 5 seconds, then every 5 minutes thereafter.
- */
-setTimeout(() => {
-  const healthStatus = augmentedSpotCache.getHealthStatus();
-  uiManager.sendCacheHealthUpdate(healthStatus);
-
-  // Set the interval to fire every 5 minutes after the first 5-second delay
-  setInterval(() => {
-    const healthStatus = augmentedSpotCache.getHealthStatus();
-    uiManager.sendCacheHealthUpdate(healthStatus);
-  }, 300000); // 5 minutes in milliseconds
-}, 5000);
 
 /**
  * Attempts to reconnect to the DXCluster after a delay.
@@ -858,6 +899,22 @@ ipcMain.handle('get-station-details', async (event) => {
       return 'Error fetching station details. Please check the configuration.';
     }
   }
+});
+
+ipcMain.handle('fetch-global-profiles', async () => {
+  if (flexRadioClient && flexRadioClient.isConnected()) {
+    flexRadioClient.getGlobalProfiles();
+    return { success: true };
+  }
+  return { success: false, error: 'Not connected' };
+});
+
+ipcMain.handle('load-global-profile', async (event, profileName) => {
+  if (flexRadioClient && flexRadioClient.isConnected()) {
+    flexRadioClient.loadGlobalProfile(profileName);
+    return { success: true };
+  }
+  return { success: false, error: 'Not connected' };
 });
 
 // Handle uncaught exceptions

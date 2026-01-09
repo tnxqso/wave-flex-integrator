@@ -1,22 +1,37 @@
 /* styles.css */
 
-/* Optional: Add some custom styling for better visuals */
-body {
-  background-color: #f8f9fa;
+/* --- 1. Basic Page Reset --- */
+html, body {
+  height: auto;
+  min-height: 100%;
+  margin: 0;
+  /* Use Bootstrap variables for automatic Dark Mode support */
+  background-color: var(--bs-body-bg); 
+  color: var(--bs-body-color);
+  overflow-x: hidden;
 }
+
 .container-fluid {
+  display: block;
   padding-top: 20px;
+  padding-bottom: 40px;
 }
+
+/* --- 2. Typography & Components --- */
+
 h1 {
   margin-bottom: 30px;
 }
+
 .status-item {
   font-weight: bold;
+  min-width: 100px;
+  text-align: left;
 }
+
 #spotsList li {
   margin-bottom: 5px;
 }
-/* styles.css */
 
 .flag-icon {
   width: 32px;
@@ -25,18 +40,67 @@ h1 {
 }
 
 .label-text {
-  min-width: 150px; /* Adjust this value to control label width */
+  min-width: 150px;
   text-align: left;
 }
 
-.status-item {
-  min-width: 100px; /* Adjust this value to control the status message column width */
-  text-align: left;  /* Keep the status text left-aligned */
+/* Banner Image */
+.banner-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin-bottom: 15px;
+  border-radius: 4px;
 }
 
-/* Custom styles for banner image */
-.banner-image {
-  width: 100%; /* Set width to 100% of the browser window */
-  margin: 0; /* Remove any margin */
-  padding: 0; /* Remove any padding */
+/* --- 3. Global Profiles Grid Styles --- */
+
+.band-row {
+  display: flex;
+  align-items: center;
+  /* Use variable for border color */
+  border-bottom: 1px solid var(--bs-border-color); 
+  padding: 6px 0;
+  min-height: 45px;
 }
+
+.band-label {
+  flex: 0 0 60px;
+  font-weight: bold;
+  font-size: 1rem;
+  text-align: right;
+  margin-right: 20px;
+  /* Use secondary text color variable */
+  color: var(--bs-secondary-color); 
+}
+
+.profile-buttons-area {
+  flex-grow: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-btn {
+  padding: 4px 10px !important; 
+  font-size: 0.85rem !important;
+  font-weight: 600;
+  /* Use border color variable */
+  border: 1px solid var(--bs-border-color);
+  color: #fff; /* Keep text white on colored buttons */
+  box-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+  min-width: 70px;
+}
+
+.profile-btn:hover {
+  filter: brightness(110%);
+  cursor: pointer;
+  box-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Button Colors - These stay colorful in dark mode too */
+.mode-cw { background-color: #d68100 !important; color: white !important; }
+.mode-ssb { background-color: #198754 !important; color: white !important; }
+.mode-digi { background-color: #0d6efd !important; color: white !important; }
+.mode-fm { background-color: #6f42c1 !important; color: white !important; }
+.mode-default { background-color: #6c757d !important; color: white !important; }
