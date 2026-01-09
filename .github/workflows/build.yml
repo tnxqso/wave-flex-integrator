@@ -1,10 +1,15 @@
 name: Build and Release Electron App
 
-# Trigger the workflow only when a tag is pushed
 on:
+  # Trigger when a tag starting with 'v' is pushed
   push:
     tags:
-      - 'v*.*.*'
+      - 'v*'
+  # Trigger when a Release is created via GitHub UI
+  release:
+    types: [created]
+  # Allow manual trigger via "Run workflow" button
+  workflow_dispatch:
 
 jobs:
   build:
@@ -14,35 +19,29 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      # Step 1: Check out the repository
       - name: Check out repository
         uses: actions/checkout@v3
 
-      # Step 2: Set up Node.js environment
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20'
 
-      # Step 3: Install npm dependencies
       - name: Install dependencies
         run: npm install
 
-      # Step 4: Build the Electron app (no publish)
       - name: Build the Electron app
         run: npm run build
 
-      # Step 5: Remove unpacked binaries (conditional based on OS)
       - name: Remove unpacked directories (Linux & macOS)
         if: runner.os != 'Windows'
         run: rm -rf dist/*-unpacked
 
       - name: Remove unpacked directories (Windows)
         if: runner.os == 'Windows'
-        shell: pwsh  # Use PowerShell for Windows
+        shell: pwsh
         run: Remove-Item -Recurse -Force dist\win-unpacked
 
-      # Step 6: Upload the build artifacts
       - name: Upload build artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -52,9 +51,10 @@ jobs:
   release:
     runs-on: ubuntu-latest
     needs: build
+    # Only run release step if we have a tag/release, OR if manual run (optional logic)
+    if: startsWith(github.ref, 'refs/tags/')
 
     steps:
-      # Step 1: Download all build artifacts
       - name: Download Ubuntu artifact
         uses: actions/download-artifact@v3
         with:
@@ -73,7 +73,6 @@ jobs:
           name: WaveFlexIntegrator-macos-latest
           path: dist/macos
 
-      # Step 2: Create GitHub release and upload the build artifacts
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
