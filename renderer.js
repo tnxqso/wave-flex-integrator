@@ -11,6 +11,22 @@ function scrollToTop() {
 }
 
 /**
+ * Applies the selected theme to the application using Bootstrap's data-bs-theme attribute.
+ * @param {string} theme - 'light', 'dark', or 'system'
+ */
+function applyTheme(theme) {
+  if (theme === 'system') {
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.documentElement.setAttribute('data-bs-theme', 'dark');
+    } else {
+      document.documentElement.setAttribute('data-bs-theme', 'light');
+    }
+  } else {
+    document.documentElement.setAttribute('data-bs-theme', theme);
+  }
+}
+
+/**
  * Converts a flag emoji to its 2-letter uppercase country code.
  * @param {string} emoji - The flag emoji (e.g., "🇺🇸").
  * @returns {string} - The 2-letter country code (e.g., "US") or an empty string if invalid.
@@ -97,7 +113,41 @@ function populateForm(config) {
     return;
   }
 
-  // Populate Augmented Spot Cache Max Size
+  // --- Populate Application General Settings ---
+  const appConfig = config.application || {};
+  
+  // Theme
+  const theme = appConfig.theme || 'system';
+  const themeSelect = document.getElementById('appTheme');
+  if (themeSelect) {
+    themeSelect.value = theme;
+    applyTheme(theme); // Apply immediately on load
+  }
+
+  // Startup Tab
+  const startupTab = appConfig.startupTab || 'status';
+  const startupTabSelect = document.getElementById('appStartupTab');
+  if (startupTabSelect) {
+    startupTabSelect.value = startupTab;
+  }
+
+  // Apply Startup Tab Logic (Switch to the configured tab)
+  if (startupTab && startupTab !== 'status') {
+      const tabElement = document.querySelector(`#${startupTab}-tab`);
+      if (tabElement && typeof bootstrap !== 'undefined') {
+          const tabInstance = new bootstrap.Tab(tabElement);
+          tabInstance.show();
+      }
+  }
+
+  // Window Size
+  const winWidth = document.getElementById('appWindowWidth');
+  if (winWidth) winWidth.value = appConfig.window?.width || 900;
+
+  const winHeight = document.getElementById('appWindowHeight');
+  if (winHeight) winHeight.value = appConfig.window?.height || 800;
+
+  // --- Populate Augmented Spot Cache ---
   const augmentedSpotCacheMaxSizeInput = document.getElementById('augmentedSpotCacheMaxSize');
   if (augmentedSpotCacheMaxSizeInput) {
     augmentedSpotCacheMaxSizeInput.value = config.augmentedSpotCache.maxSize;
@@ -389,6 +439,15 @@ if (configForm) {
 
     // Build the new configuration object from the form values
     const newConfig = {
+      // --- Application Settings ---
+      application: {
+        theme: document.getElementById('appTheme').value,
+        startupTab: document.getElementById('appStartupTab').value,
+        window: {
+            width: parseInt(document.getElementById('appWindowWidth').value) || 900,
+            height: parseInt(document.getElementById('appWindowHeight').value) || 800
+        }
+      },
       augmentedSpotCache: {
         maxSize: parseInt(document.getElementById('augmentedSpotCacheMaxSize').value, 10),
       },
@@ -507,6 +566,9 @@ if (configForm) {
       },
     };
 
+    // Apply theme immediately so user sees the change without restart
+    applyTheme(newConfig.application.theme);
+
     // Send the updated config back to the main process
     try {
       await ipcRenderer.invoke('update-config', newConfig);
@@ -543,9 +605,17 @@ function handleStatusUpdate(status) {
   switch (status.event) {
     case 'flexRadioConnected':
       updateFlexRadioStatus('Connected');
+      isFlexRadioConnected = true;
+      // If we are currently on the Profiles tab, load data automatically now
+      const activeTab = document.querySelector('.nav-link.active');
+      if (activeTab && activeTab.id === 'profiles-tab') {
+          loadProfiles();
+      }
       break;
+
     case 'flexRadioDisconnected':
       updateFlexRadioStatus('Disconnected');
+      isFlexRadioConnected = false; // Mark as disconnected
       break;
     case 'flexRadioError':
       updateFlexRadioStatus(`Error: ${status.error}`);
@@ -835,3 +905,153 @@ ipcRenderer.on('update_available', () => {
 ipcRenderer.on('update_downloaded', () => {
   alert('Update downloaded. The application will now restart to install it.');
 });
+
+// --- Profile Handling Logic ---
+
+let isFlexRadioConnected = false;
+
+// Listen for when the Profiles tab is clicked/shown
+const profilesTabElement = document.getElementById('profiles-tab');
+if (profilesTabElement) {
+  profilesTabElement.addEventListener('shown.bs.tab', function (event) {
+    loadProfiles();
+  });
+}
+
+/**
+ * Invokes the main process to fetch profiles.
+ * Checks connection status before attempting fetch.
+ */
+function loadProfiles() {
+    const grid = document.getElementById('profilesGrid');
+    
+    // 1. If radio is not connected, show waiting message
+    if (!isFlexRadioConnected) {
+        grid.innerHTML = `
+            <div class="d-flex flex-column align-items-center mt-5 text-muted">
+                <div class="spinner-border text-secondary mb-2" role="status"></div>
+                <div>Waiting for FlexRadio connection...</div>
+            </div>`;
+        return;
+    }
+
+    // 2. Only show loading spinner if empty or showing waiting message
+    if(grid.children.length === 0 || grid.innerText.includes('Waiting')) {
+        grid.innerHTML = '<div class="d-flex justify-content-center mt-4"><div class="spinner-border text-primary" role="status"></div></div>';
+    }
+
+    // 3. Fetch data
+    ipcRenderer.invoke('fetch-global-profiles').then(result => {
+        if(!result.success) {
+            grid.innerHTML = `<div class="alert alert-danger m-3">${result.error}</div>`;
+        }
+    });
+}
+
+// Listen for profile data coming from the Main process
+ipcRenderer.on('flex-global-profiles', (event, profiles) => {
+  renderProfiles(profiles);
+});
+
+/**
+ * Renders the profile buttons grouped by band.
+ * @param {string[]} profiles - List of profile names.
+ */
+function renderProfiles(profiles) {
+  const grid = document.getElementById('profilesGrid');
+  grid.innerHTML = '';
+
+  if (!profiles || profiles.length === 0) {
+    grid.innerHTML = '<div class="alert alert-warning m-3">No profiles found.</div>';
+    return;
+  }
+
+  // Define the desired display order for bands
+  const bandOrder = ['160M', '80M', '60M', '40M', '30M', '20M', '17M', '15M', '12M', '10M', '6M'];
+  
+  // Create storage for sorted profiles
+  const sortedBands = {};
+  bandOrder.forEach(b => sortedBands[b] = []);
+  sortedBands['Other'] = []; // Catch-all for non-matching profiles
+
+  // Filter and Sort profiles into bands
+  profiles.forEach(name => {
+    if (name === 'Default') return; // Skip the default profile
+
+    const lowerName = name.toLowerCase();
+    let assigned = false;
+
+    for (const bandLabel of bandOrder) {
+      // Check if the profile name contains the band label (e.g. "160m")
+      if (lowerName.includes(bandLabel.toLowerCase())) {
+          sortedBands[bandLabel].push(name);
+          assigned = true;
+          break;
+      }
+    }
+
+    if (!assigned) sortedBands['Other'].push(name);
+  });
+
+  // Render the rows based on the band order
+  [...bandOrder, 'Other'].forEach(bandKey => {
+    const bandProfiles = sortedBands[bandKey];
+    
+    // Only render the row if there are profiles for this band
+    if (bandProfiles && bandProfiles.length > 0) {
+      bandProfiles.sort(); // Alphabetical sort within the band
+
+      // Create Row Container
+      const row = document.createElement('div');
+      row.className = 'band-row'; 
+
+      // 1. LEFT: Band Label
+      const label = document.createElement('div');
+      label.className = 'band-label';
+      label.innerText = bandKey;
+      row.appendChild(label);
+
+      // 2. RIGHT: Buttons Container
+      const btnContainer = document.createElement('div');
+      btnContainer.className = 'profile-buttons-area';
+
+      bandProfiles.forEach(pName => {
+        const btn = document.createElement('button');
+        btn.className = 'btn profile-btn';
+        
+        // Optional: Uncomment below if you want to shorten the button text 
+        // e.g., show "CW" instead of "CW - 160m"
+        // btn.innerText = pName.split('-')[0].trim(); 
+        btn.innerText = pName; 
+
+        // Apply color coding based on Mode in the name
+        const uName = pName.toUpperCase();
+        if (uName.includes('CW')) btn.classList.add('mode-cw');
+        else if (uName.includes('SSB') || uName.includes('LSB') || uName.includes('USB')) btn.classList.add('mode-ssb');
+        else if (uName.includes('DIG') || uName.includes('FT8') || uName.includes('RTTY')) btn.classList.add('mode-digi');
+        else if (uName.includes('FM')) btn.classList.add('mode-fm');
+        else btn.classList.add('mode-default');
+
+        // Click handler
+        btn.onclick = () => {
+           const originalText = btn.innerText;
+           btn.innerText = '...';
+           btn.disabled = true;
+           
+           ipcRenderer.invoke('load-global-profile', pName).then(() => {
+               // Restore button state after a short delay for visual feedback
+               setTimeout(() => {
+                   btn.innerText = originalText;
+                   btn.disabled = false;
+               }, 500);
+           });
+        };
+
+        btnContainer.appendChild(btn);
+      });
+
+      row.appendChild(btnContainer);
+      grid.appendChild(row);
+    }
+  });
+}

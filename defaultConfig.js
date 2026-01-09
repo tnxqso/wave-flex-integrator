@@ -2,6 +2,18 @@
 
 const defaultConfig = {
 
+  // ==============================
+  // Application Settings
+  // ==============================
+  application: {
+    theme: 'system',         // 'light', 'dark', 'system'
+    startupTab: 'status',    // 'status', 'config', 'profiles', 'about'
+    window: {
+      width: 900,
+      height: 800
+    }
+  },
+    
   // ===========================================================
   // The augmented Spot Cache
   // where we store data from Wavelog API for enriching spots

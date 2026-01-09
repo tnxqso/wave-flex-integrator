@@ -57,8 +57,21 @@
           aria-selected="false"
           >Configuration</a
         >
+      </li> 
+      <li class="nav-item" role="presentation">
+        <a
+          class="nav-link"
+          id="profiles-tab"
+          data-bs-toggle="tab"
+          href="#profiles"
+          role="tab"
+          aria-controls="profiles"
+          aria-selected="false"
+          >Profiles</a
+        >
       </li>
-      <!-- New About Tab -->
+         
+      <!-- About Tab -->
       <li class="nav-item" role="presentation">
         <a
           class="nav-link"
@@ -76,78 +89,78 @@
     <!-- Tab Contents -->
     <div class="tab-content" id="mainTabContent">
       
-    <!-- Status Tab -->
-    <div
-      class="tab-pane fade show active"
-      id="status"
-      role="tabpanel"
-      aria-labelledby="status-tab"
-    >
-      <!-- Status Content -->
-      <div id="statusContent" class="mt-4">
-        <!-- Connected Services Section -->
-        <h3>Connected Services</h3>
-        <div class="row">
-          <!-- Row 1, Column 1: DX Cluster -->
-          <div class="col-md-6">
-            <ul class="list-group">
-              <li class="list-group-item d-flex">
-                <span class="label-text">DX Cluster:</span>
-                <span id="dxClusterStatus" class="status-item">Disconnected</span>
-              </li>
-            </ul>
+      <!-- Status Tab -->
+      <div
+        class="tab-pane fade show active"
+        id="status"
+        role="tabpanel"
+        aria-labelledby="status-tab"
+      >
+        <!-- Status Content -->
+        <div id="statusContent" class="mt-4">
+          <!-- Connected Services Section -->
+          <h3>Connected Services</h3>
+          <div class="row">
+            <!-- Row 1, Column 1: DX Cluster -->
+            <div class="col-md-6">
+              <ul class="list-group">
+                <li class="list-group-item d-flex">
+                  <span class="label-text">DX Cluster:</span>
+                  <span id="dxClusterStatus" class="status-item">Disconnected</span>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Row 1, Column 2: Wavelog API -->
+            <div class="col-md-6">
+              <ul class="list-group">
+                <li class="list-group-item d-flex">
+                  <span class="label-text">Wavelog Profile:</span>
+                  <span id="wavelogApiStatus" class="status-item">Unknown</span>
+                </li>
+              </ul>
+            </div>
           </div>
 
-          <!-- Row 1, Column 2: Wavelog API -->
-          <div class="col-md-6">
-            <ul class="list-group">
-              <li class="list-group-item d-flex">
-                <span class="label-text">Wavelog Profile:</span>
-                <span id="wavelogApiStatus" class="status-item">Unknown</span>
-              </li>
-            </ul>
+          <div class="row mt-3">
+            <!-- Row 2, Column 1: FlexRadio -->
+            <div class="col-md-6">
+              <ul class="list-group">
+                <li class="list-group-item d-flex">
+                  <span class="label-text">FlexRadio:</span>
+                  <span id="flexRadioStatus" class="status-item">Disconnected</span>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Row 2, Column 2: WSJT-X Listener -->
+            <div class="col-md-6">
+              <ul class="list-group">
+                <li class="list-group-item d-flex">
+                  <span class="label-text">WSJT-X Listener:</span>
+                  <span id="wsjtxListenerStatus" class="status-item">Unknown</span>
+                </li>
+              </ul>
+            </div>
           </div>
+
+          <!-- Most Recent Spot Section -->
+          <h3 class="mt-4">Most Recent Spot</h3>
+          <ul id="spotsList" class="list-group">
+            <li class="list-group-item d-flex align-items-center">
+              <div>Unknown</div>
+            </li>
+          </ul>
+
+          <!-- Cache Health Section -->
+          <h3 class="mt-4">Wavelog Augmented Spot Data Cache Health</h3>
+          <ul class="list-group">
+            <li class="list-group-item">
+              <span id="cacheHealth" class="status-item">Uninitialized</span>
+            </li>
+          </ul>
         </div>
-
-        <div class="row mt-3">
-          <!-- Row 2, Column 1: FlexRadio -->
-          <div class="col-md-6">
-            <ul class="list-group">
-              <li class="list-group-item d-flex">
-                <span class="label-text">FlexRadio:</span>
-                <span id="flexRadioStatus" class="status-item">Disconnected</span>
-              </li>
-            </ul>
-          </div>
-
-          <!-- Row 2, Column 2: WSJT-X Listener -->
-          <div class="col-md-6">
-            <ul class="list-group">
-              <li class="list-group-item d-flex">
-                <span class="label-text">WSJT-X Listener:</span>
-                <span id="wsjtxListenerStatus" class="status-item">Unknown</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- Most Recent Spot Section -->
-        <h3 class="mt-4">Most Recent Spot</h3>
-        <ul id="spotsList" class="list-group">
-          <li class="list-group-item d-flex align-items-center">
-            <div>Unknown</div>
-          </li>
-        </ul>
-
-        <!-- Cache Health Section -->
-        <h3 class="mt-4">Wavelog Augmented Spot Data Cache Health</h3>
-        <ul class="list-group">
-          <li class="list-group-item">
-            <span id="cacheHealth" class="status-item">Uninitialized</span>
-          </li>
-        </ul>
       </div>
-    </div>
 
       
       <!-- Configuration Tab -->
@@ -161,7 +174,49 @@
         <div id="configContent" class="mt-4">
           <h3>Configuration</h3>
           <form id="configForm">
+
+            <!-- Application Settings -->
+            <h4 class="mt-4">Application General Settings</h4>
             
+            <div class="row">
+              <!-- Theme -->
+              <div class="col-md-6 mb-3">
+                <label for="appTheme" class="form-label">Theme</label>
+                <select class="form-select" id="appTheme">
+                  <option value="system">System Default</option>
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                </select>
+              </div>
+              
+              <!-- Startup Tab -->
+              <div class="col-md-6 mb-3">
+                <label for="appStartupTab" class="form-label">Startup Tab</label>
+                <select class="form-select" id="appStartupTab">
+                  <option value="status">Status</option>
+                  <option value="config">Configuration</option>
+                  <option value="profiles">Profiles</option>
+                  <option value="about">About</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row">
+              <!-- Window Width -->
+              <div class="col-md-6 mb-3">
+                <label for="appWindowWidth" class="form-label">Window Width (px)</label>
+                <input type="number" class="form-control" id="appWindowWidth" min="400" placeholder="e.g. 900" />
+              </div>
+              
+              <!-- Window Height -->
+              <div class="col-md-6 mb-3">
+                <label for="appWindowHeight" class="form-label">Window Height (px)</label>
+                <input type="number" class="form-control" id="appWindowHeight" min="400" placeholder="e.g. 800" />
+              </div>
+            </div>
+            
+            <hr class="my-4">
+
             <!-- Augmented Spot Cache -->
             <h4 class="mt-4">Augmented Spot Cache</h4>
             <div class="mb-3">
@@ -403,6 +458,24 @@
         </div>
       </div>
 
+      <!-- Profiles Tab -->
+      <div
+        class="tab-pane fade"
+        id="profiles"
+        role="tabpanel"
+        aria-labelledby="profiles-tab"
+      >
+        <div id="profilesContent" class="mt-3">
+          <!-- Grid Container -->
+          <div id="profilesGrid" class="container-fluid p-0">
+            <div class="text-center text-muted mt-5">
+               <div class="spinner-border text-secondary" role="status"></div>
+               <div>Waiting for data...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- About Tab -->
       <div
         class="tab-pane fade"
@@ -422,7 +495,6 @@
           </p>
           <p><strong>Author:</strong> <a target="_new" href="https://github.com/tnxqso">TNX QSO Community</a></p>
           <p><strong>License:</strong> <a target="_new" href="https://opensource.org/license/mit"> MIT License</a></p>
-          <!-- Add more placeholders as needed -->
         </div>
       </div>
 

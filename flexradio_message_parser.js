@@ -98,6 +98,9 @@ class FlexRadioMessageParser extends EventEmitter {
       case 'client':
         this.parseClientStatus(handle, statusContent);
         break;
+      case 'profile':
+        this.parseProfileStatus(handle, statusContent);
+        break;        
       // Add more cases as needed for different status types
       default:
         // Emit a generic status event for unhandled types
@@ -177,6 +180,25 @@ class FlexRadioMessageParser extends EventEmitter {
       this.emit('clientStatus', { handle:guiHandle, statusMessage});
     } else {
       this.emit('error', new Error(`parseClientStatus: Failed to parse client status message: ${statusContent}`));
+    }
+  }
+
+  /**
+   * Parses profile status messages to extract the list of global profiles.
+   * Format: profile global list=Name1^Name2^...
+   */
+  parseProfileStatus(handle, statusContent) {
+    // Check if this is the global list
+    if (statusContent.includes('global list=')) {
+        // Extract everything after "list="
+        const parts = statusContent.split('list=');
+        if (parts.length > 1) {
+            const rawList = parts[1];
+            // Split by '^' and filter out empty strings
+            const profiles = rawList.split('^').filter(name => name && name.trim().length > 0);
+            
+            this.emit('globalProfileList', profiles);
+        }
     }
   }
 

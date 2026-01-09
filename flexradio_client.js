@@ -54,6 +54,10 @@ module.exports = class FlexRadioClient extends EventEmitter {
     this.messageParser.on('spotStatus', this.handleSpotStatus.bind(this));
     this.messageParser.on('sliceStatus', this.handleSliceStatus.bind(this));
     this.messageParser.on('clientStatus', this.handleClientStatus.bind(this));
+    this.messageParser.on('globalProfileList', (profiles) => {
+        this.logger.info(`Received ${profiles.length} global profiles from radio.`);
+        this.emit('globalProfilesList', profiles);
+    });    
     this.messageParser.on('handle', (data) => {
       this.logger.info(`Received handle: ${data.handle}`);
     });
@@ -755,4 +759,34 @@ module.exports = class FlexRadioClient extends EventEmitter {
       }
     });
   }
+
+  /**
+   * Sends a request to get the list of global profiles.
+   * The actual data comes back via the 'globalProfileList' status event.
+   */
+  getGlobalProfiles() {
+    if (!this.isConnected()) return;
+
+    this.logger.info('Requesting global profile list...');
+    this.queueCommand('profile global info', (response) => {
+      // We don't need to parse 'response' here because it only contains "0" (success).
+      // The data is handled by the messageParser 'globalProfileList' event.
+      this.logger.debug(`Profile info command sent. Response: ${response}`);
+    });
+  }
+
+  /**
+   * Loads a specific global profile.
+   * @param {string} profileName 
+   */
+  loadGlobalProfile(profileName) {
+    if (!this.isConnected()) return;
+    
+    this.logger.info(`Loading Global Profile: ${profileName}`);
+    // Quotes are important if the name contains spaces
+    this.queueCommand(`profile global load "${profileName}"`, (response) => {
+      this.logger.debug(`Profile load response: ${response}`);
+    });
+  } 
+
 };
