@@ -194,18 +194,26 @@ function createWindow() {
   // Auto-updater check for updates
   autoUpdater.checkForUpdatesAndNotify();
 
+  // --- Updater Logic ---
+
+  // Auto-updater check for updates
+  autoUpdater.checkForUpdatesAndNotify();
+
   // Handle auto-update events
   autoUpdater.on('update-available', () => {
-    mainWindow.webContents.send('update_available');
+    if (mainWindow) {
+      mainWindow.webContents.send('update_available');
+    }
     logger.info('A new update is available.');
   });
 
   autoUpdater.on('update-downloaded', () => {
-    mainWindow.webContents.send('update_downloaded');
-    logger.info(
-      'Update downloaded. The application will now restart to install it.'
-    );
-    autoUpdater.quitAndInstall(); // Automatically quit and install the update
+    if (mainWindow) {
+      mainWindow.webContents.send('update_downloaded');
+    }
+    logger.info('Update downloaded. Waiting for user to restart.');
+    // REMOVED: autoUpdater.quitAndInstall(); 
+    // We now wait for the user to trigger it via IPC.
   });
 }
 
@@ -915,6 +923,14 @@ ipcMain.handle('load-global-profile', async (event, profileName) => {
     return { success: true };
   }
   return { success: false, error: 'Not connected' };
+});
+
+/**
+ * Handles IPC request to quit and install the update.
+ */
+ipcMain.handle('install-update', async () => {
+  logger.info('User requested install. Quitting and installing...');
+  autoUpdater.quitAndInstall();
 });
 
 // Handle uncaught exceptions

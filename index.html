@@ -501,10 +501,30 @@
     </div>
   </div>
 
+<!-- Update Notification Toast -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+      <div id="updateToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+          <strong class="me-auto text-primary">Update Ready</strong>
+          <small>Just now</small>
+          <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+          A new version has been downloaded and is ready to install.
+          <div class="mt-2 pt-2 border-top">
+            <button type="button" id="restartAndInstallBtn" class="btn btn-primary btn-sm">Restart & Install</button>
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="toast">Later</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div> <!-- End of container-fluid -->
+
   <!-- Include Bootstrap JS from CDNJS -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js" integrity="sha512-VK2zcvntEufaimc+efOYi622VN5ZacdnufnmX7zIhCPmjhKnOi9ZDMtg1/ug5l183f19gG1/cBstPO4D8N/Img==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  
-  <!-- Include renderer script -->
+
+    <!-- Include renderer script -->
   <script src="renderer.js"></script>
 </body>
 </html>

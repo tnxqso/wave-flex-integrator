@@ -897,13 +897,41 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// Listen for update events
+// --- Update Handling Logic ---
+
+// Listen for update available
 ipcRenderer.on('update_available', () => {
-  alert('A new update is available. It will be downloaded automatically.');
+  // Show a standard alert or a small toast just to say "Downloading..."
+  // For now, we can log it or show a non-intrusive alert.
+  console.log('Update available, downloading...');
+  // Optional: You could show a small toast here too "Downloading update..."
 });
 
+// Listen for update downloaded
 ipcRenderer.on('update_downloaded', () => {
-  alert('Update downloaded. The application will now restart to install it.');
+  const toastElement = document.getElementById('updateToast');
+  const restartBtn = document.getElementById('restartAndInstallBtn');
+
+  if (toastElement) {
+    // Initialize Bootstrap Toast
+    // We assume bootstrap is loaded via CDN in index.html
+    const toast = new bootstrap.Toast(toastElement, {
+      autohide: false // Keep it visible until user clicks
+    });
+
+    // Attach click handler to the Restart button
+    if (restartBtn) {
+      restartBtn.onclick = () => {
+        // Change text to indicate action
+        restartBtn.textContent = 'Restarting...';
+        restartBtn.disabled = true;
+        // Tell main process to install
+        ipcRenderer.invoke('install-update');
+      };
+    }
+
+    toast.show();
+  }
 });
 
 // --- Profile Handling Logic ---
