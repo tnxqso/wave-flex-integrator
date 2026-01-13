@@ -53,52 +53,80 @@ h1 {
   border-radius: 4px;
 }
 
-/* --- 3. Global Profiles Grid Styles --- */
+/* --- Global Profiles Grid Styles --- */
 
-.band-row {
+#profilesGrid {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+}
+
+.band-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px; 
+  width: 75px; 
+  flex-shrink: 0;
+}
+
+.band-header {
+  text-align: center;
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: #888;
+  margin-bottom: 5px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 5px;
+  height: 35px;
   display: flex;
   align-items: center;
-  /* Use variable for border color */
-  border-bottom: 1px solid var(--bs-border-color); 
-  padding: 6px 0;
-  min-height: 45px;
+  justify-content: center;
 }
 
-.band-label {
-  flex: 0 0 60px;
-  font-weight: bold;
-  font-size: 1rem;
-  text-align: right;
-  margin-right: 20px;
-  /* Use secondary text color variable */
-  color: var(--bs-secondary-color); 
+/* Common sizing for alignment */
+.grid-slot {
+  width: 100%;
+  height: 28px;
+  box-sizing: border-box;
 }
 
-.profile-buttons-area {
-  flex-grow: 1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
+/* Clickable Button */
 .profile-btn {
-  padding: 4px 10px !important; 
-  font-size: 0.85rem !important;
-  font-weight: 600;
-  /* Use border color variable */
-  border: 1px solid var(--bs-border-color);
-  color: #fff; /* Keep text white on colored buttons */
-  box-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-  min-width: 70px;
+  width: 100%;
+  height: 28px;
+  padding: 0 !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  font-size: 0.8rem !important;
+  font-weight: 700;
+  border: 1px solid rgba(0,0,0,0.15);
+  color: #fff;
+  box-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+  white-space: nowrap;
 }
 
 .profile-btn:hover {
   filter: brightness(110%);
   cursor: pointer;
-  box-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+  box-shadow: 2px 2px 4px rgba(0,0,0,0.2);
 }
 
-/* Button Colors - These stay colorful in dark mode too */
+/* Empty Placeholder (Invisible but takes space) */
+.empty-slot {
+  width: 100%;
+  height: 28px;
+  background: transparent;
+  border: 0;
+  pointer-events: none;
+}
+
+/* Colors */
 .mode-cw { background-color: #d68100 !important; color: white !important; }
 .mode-ssb { background-color: #198754 !important; color: white !important; }
 .mode-digi { background-color: #0d6efd !important; color: white !important; }

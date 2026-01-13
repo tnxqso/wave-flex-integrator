@@ -45,11 +45,6 @@ jobs:
         run: npm ci
 
       - name: Build (electron-builder)
-        env:
-          # Prevent electron-builder from trying to publish unexpectedly.
-          # (Your config has publish: null, but this keeps it explicit.)
-          GH_TOKEN: ""
-          GITHUB_TOKEN: ""
         run: npm run build
 
       - name: Upload build artifacts

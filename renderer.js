@@ -954,7 +954,10 @@ ipcRenderer.on('flex-global-profiles', (event, profiles) => {
 });
 
 /**
- * Renders the profile buttons grouped by band.
+ * Renders a Dynamic Grid.
+ * 1. Scans all profiles to see which Modes exist globally.
+ * 2. Creates rows ONLY for those modes.
+ * 3. Fills gaps with empty slots to maintain alignment.
  * @param {string[]} profiles - List of profile names.
  */
 function renderProfiles(profiles) {
@@ -966,92 +969,101 @@ function renderProfiles(profiles) {
     return;
   }
 
-  // Define the desired display order for bands
-  const bandOrder = ['160M', '80M', '60M', '40M', '30M', '20M', '17M', '15M', '12M', '10M', '6M'];
+  // 1. Setup Bands and Sorting
+  const displayOrder = ['6M', '10M', '12M', '15M', '17M', '20M', '30M', '40M', '60M', '80M', '160M'];
+  const searchOrder = [...displayOrder].sort((a, b) => b.length - a.length);
+
+  // 2. Define all POSSIBLE modes and their detection logic
+  const allModeDefinitions = [
+      { id: 'CW',   label: 'CW',   matcher: (n) => n.includes('CW') },
+      { id: 'DIGI', label: 'DIGU', matcher: (n) => n.includes('DIG') || n.includes('FT8') || n.includes('RTTY') || n.includes('DATA') },
+      { id: 'SSB',  label: 'SSB',  matcher: (n) => n.includes('SSB') || n.includes('LSB') || n.includes('USB') || n.includes('PH') },
+      { id: 'FM',   label: 'FM',   matcher: (n) => n.includes('FM') }
+  ];
+
+  // 3. Bucket profiles into bands AND detect active modes
+  const bandBuckets = {};
+  displayOrder.forEach(b => bandBuckets[b] = []);
   
-  // Create storage for sorted profiles
-  const sortedBands = {};
-  bandOrder.forEach(b => sortedBands[b] = []);
-  sortedBands['Other'] = []; // Catch-all for non-matching profiles
+  // Track which modes are actually used across ALL bands
+  const activeModesSet = new Set();
 
-  // Filter and Sort profiles into bands
   profiles.forEach(name => {
-    if (name === 'Default') return; // Skip the default profile
-
+    if (name === 'Default') return;
+    const upperName = name.toUpperCase();
     const lowerName = name.toLowerCase();
-    let assigned = false;
 
-    for (const bandLabel of bandOrder) {
-      // Check if the profile name contains the band label (e.g. "160m")
+    // Check which mode this profile belongs to
+    allModeDefinitions.forEach(mode => {
+        if (mode.matcher(upperName)) {
+            activeModesSet.add(mode.id);
+        }
+    });
+    
+    // Assign to band bucket
+    for (const bandLabel of searchOrder) {
       if (lowerName.includes(bandLabel.toLowerCase())) {
-          sortedBands[bandLabel].push(name);
-          assigned = true;
-          break;
+          bandBuckets[bandLabel].push(name);
+          return;
       }
     }
-
-    if (!assigned) sortedBands['Other'].push(name);
   });
 
-  // Render the rows based on the band order
-  [...bandOrder, 'Other'].forEach(bandKey => {
-    const bandProfiles = sortedBands[bandKey];
-    
-    // Only render the row if there are profiles for this band
-    if (bandProfiles && bandProfiles.length > 0) {
-      bandProfiles.sort(); // Alphabetical sort within the band
+  // 4. Filter the Mode Rows: Only keep modes that exist in at least one profile
+  const rowsToRender = allModeDefinitions.filter(mode => activeModesSet.has(mode.id));
 
-      // Create Row Container
-      const row = document.createElement('div');
-      row.className = 'band-row'; 
+  // 5. Render the Grid
+  displayOrder.forEach(bandKey => {
+    // Optional: Skip empty bands if you want to save horizontal space
+    if (bandBuckets[bandKey].length === 0) return;
 
-      // 1. LEFT: Band Label
-      const label = document.createElement('div');
-      label.className = 'band-label';
-      label.innerText = bandKey;
-      row.appendChild(label);
+    const col = document.createElement('div');
+    col.className = 'band-column';
 
-      // 2. RIGHT: Buttons Container
-      const btnContainer = document.createElement('div');
-      btnContainer.className = 'profile-buttons-area';
+    // Header
+    const header = document.createElement('div');
+    header.className = 'band-header';
+    header.innerText = bandKey;
+    col.appendChild(header);
 
-      bandProfiles.forEach(pName => {
-        const btn = document.createElement('button');
-        btn.className = 'btn profile-btn';
-        
-        // Optional: Uncomment below if you want to shorten the button text 
-        // e.g., show "CW" instead of "CW - 160m"
-        // btn.innerText = pName.split('-')[0].trim(); 
-        btn.innerText = pName; 
+    // Render Rows based on GLOBALLY active modes
+    rowsToRender.forEach(modeDef => {
+        // Does THIS band have a profile for THIS mode?
+        const matchingProfile = bandBuckets[bandKey].find(pName => modeDef.matcher(pName.toUpperCase()));
 
-        // Apply color coding based on Mode in the name
-        const uName = pName.toUpperCase();
-        if (uName.includes('CW')) btn.classList.add('mode-cw');
-        else if (uName.includes('SSB') || uName.includes('LSB') || uName.includes('USB')) btn.classList.add('mode-ssb');
-        else if (uName.includes('DIG') || uName.includes('FT8') || uName.includes('RTTY')) btn.classList.add('mode-digi');
-        else if (uName.includes('FM')) btn.classList.add('mode-fm');
-        else btn.classList.add('mode-default');
+        if (matchingProfile) {
+            // Yes -> Render Button
+            const btn = document.createElement('button');
+            btn.className = 'btn profile-btn grid-slot'; 
+            btn.innerText = modeDef.label; 
+            btn.title = matchingProfile;
 
-        // Click handler
-        btn.onclick = () => {
-           const originalText = btn.innerText;
-           btn.innerText = '...';
-           btn.disabled = true;
-           
-           ipcRenderer.invoke('load-global-profile', pName).then(() => {
-               // Restore button state after a short delay for visual feedback
-               setTimeout(() => {
-                   btn.innerText = originalText;
-                   btn.disabled = false;
-               }, 500);
-           });
-        };
+            if (modeDef.id === 'CW') btn.classList.add('mode-cw');
+            else if (modeDef.id === 'SSB') btn.classList.add('mode-ssb');
+            else if (modeDef.id === 'DIGI') btn.classList.add('mode-digi');
+            else if (modeDef.id === 'FM') btn.classList.add('mode-fm');
+            else btn.classList.add('mode-default');
 
-        btnContainer.appendChild(btn);
-      });
+            btn.onclick = () => {
+                const originalText = btn.innerText;
+                btn.innerText = '...';
+                btn.disabled = true;
+                ipcRenderer.invoke('load-global-profile', matchingProfile).then(() => {
+                    setTimeout(() => {
+                        btn.innerText = originalText;
+                        btn.disabled = false;
+                    }, 500);
+                });
+            };
+            col.appendChild(btn);
+        } else {
+            // No -> Render Empty Slot (To keep grid aligned with neighbors)
+            const placeholder = document.createElement('div');
+            placeholder.className = 'empty-slot grid-slot';
+            col.appendChild(placeholder);
+        }
+    });
 
-      row.appendChild(btnContainer);
-      grid.appendChild(row);
-    }
+    grid.appendChild(col);
   });
 }
