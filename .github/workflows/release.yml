@@ -5,7 +5,6 @@ on:
   push:
     tags:
       - "v*"
-  # Manual trigger (useful if you already pushed the tag and want to rerun without deleting it)
   workflow_dispatch:
     inputs:
       tag:
@@ -14,7 +13,7 @@ on:
         default: ""
 
 permissions:
-  contents: write # REQUIRED to create releases + upload assets with GITHUB_TOKEN
+  contents: write
 
 concurrency:
   group: release-${{ github.ref }}
@@ -47,12 +46,18 @@ jobs:
       - name: Build (electron-builder)
         run: npm run build -- --publish never
 
+      # Only upload the actual distributables + updater metadata.
+      # This avoids collisions and junk assets (e.g., unpacked dirs, helper exe files).
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dist-${{ matrix.os }}
           path: |
-            dist/**
+            dist/*.exe
+            dist/*.dmg
+            dist/*.AppImage
+            dist/*.blockmap
+            dist/latest*.yml
           if-no-files-found: error
 
   release:
@@ -63,6 +68,7 @@ jobs:
     steps:
       - name: Decide tag
         id: tag
+        shell: bash
         run: |
           if [ -n "${{ github.event.inputs.tag }}" ]; then
             echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
@@ -88,7 +94,7 @@ jobs:
             artifacts/**/*.exe
             artifacts/**/*.dmg
             artifacts/**/*.AppImage
-            artifacts/**/*.yml
             artifacts/**/*.blockmap
+            artifacts/**/latest*.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
