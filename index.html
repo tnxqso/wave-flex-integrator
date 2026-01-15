@@ -96,8 +96,18 @@
         role="tabpanel"
         aria-labelledby="status-tab"
       >
-        <!-- Status Content -->
+
+      <!-- Status Content -->
         <div id="statusContent" class="mt-4">
+
+          <!-- Quick Actions -->
+          <div class="d-flex justify-content-end mb-3">
+            <button id="openQSOAssistantBtn" class="btn btn-primary">
+              <!-- Icon placeholder if you want one, e.g. <i class="bi bi-window"></i> -->
+              Open QSO Assistant
+            </button>
+          </div>
+
           <!-- Connected Services Section -->
           <h3>Connected Services</h3>
           <div class="row">
@@ -201,6 +211,22 @@
               </div>
             </div>
 
+            <!-- Compact Mode & Auto Open -->
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="appCompactMode">
+                  <label class="form-check-label" for="appCompactMode">Compact Mode (Hide Banner)</label>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="appAutoOpenQSO">
+                  <label class="form-check-label" for="appAutoOpenQSO">Auto-open QSO Assistant on start</label>
+                </div>
+              </div>
+            </div>
+
             <div class="row">
               <!-- Window Width -->
               <div class="col-md-6 mb-3">
@@ -214,6 +240,15 @@
                 <input type="number" class="form-control" id="appWindowHeight" min="400" placeholder="e.g. 800" />
               </div>
             </div>
+
+            <!-- Rotator Control -->
+            <h4 class="mt-4">Rotator Control</h4>
+            <div class="mb-3">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="rotatorEnabled">
+                <label class="form-check-label" for="rotatorEnabled">Enable Rotator Integration</label>
+              </div>
+            </div>            
             
             <hr class="my-4">
 

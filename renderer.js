@@ -140,12 +140,32 @@ function populateForm(config) {
       }
   }
 
+  // Compact Mode
+  const compactModeCheckbox = document.getElementById('appCompactMode');
+  if (compactModeCheckbox) {
+    compactModeCheckbox.checked = appConfig.compactMode || false;
+    applyCompactMode(appConfig.compactMode); // Apply immediately on load
+  }
+
+  // Auto Open QSO Assistant
+  const autoOpenQSOCheckbox = document.getElementById('appAutoOpenQSO');
+  if (autoOpenQSOCheckbox) {
+    autoOpenQSOCheckbox.checked = appConfig.autoOpenQSO || false;
+  }
+
   // Window Size
   const winWidth = document.getElementById('appWindowWidth');
   if (winWidth) winWidth.value = appConfig.window?.width || 900;
 
   const winHeight = document.getElementById('appWindowHeight');
   if (winHeight) winHeight.value = appConfig.window?.height || 800;
+
+  // --- Populate Rotator Settings ---
+  const rotatorConfig = config.rotator || { enabled: false };
+  const rotatorEnabledCheckbox = document.getElementById('rotatorEnabled');
+  if (rotatorEnabledCheckbox) {
+    rotatorEnabledCheckbox.checked = rotatorConfig.enabled;
+  }  
 
   // --- Populate Augmented Spot Cache ---
   const augmentedSpotCacheMaxSizeInput = document.getElementById('augmentedSpotCacheMaxSize');
@@ -437,16 +457,22 @@ if (configForm) {
       }
     }
 
-    // Build the new configuration object from the form values
+  // Build the new configuration object from the form values
     const newConfig = {
       // --- Application Settings ---
       application: {
         theme: document.getElementById('appTheme').value,
         startupTab: document.getElementById('appStartupTab').value,
+        compactMode: document.getElementById('appCompactMode').checked,
+        autoOpenQSO: document.getElementById('appAutoOpenQSO').checked,
         window: {
             width: parseInt(document.getElementById('appWindowWidth').value) || 900,
             height: parseInt(document.getElementById('appWindowHeight').value) || 800
         }
+      },
+      // --- Rotator Settings ---
+      rotator: {
+        enabled: document.getElementById('rotatorEnabled').checked,
       },
       augmentedSpotCache: {
         maxSize: parseInt(document.getElementById('augmentedSpotCacheMaxSize').value, 10),
@@ -1093,5 +1119,31 @@ function renderProfiles(profiles) {
     });
 
     grid.appendChild(col);
+  });
+}
+
+/**
+ * Toggles the visibility of the banner based on compact mode setting.
+ * @param {boolean} isCompact - True to hide banner, false to show.
+ */
+function applyCompactMode(isCompact) {
+  const banner = document.querySelector('.banner-image');
+  if (banner) {
+    if (isCompact) {
+      banner.classList.add('banner-hidden');
+    } else {
+      banner.classList.remove('banner-hidden');
+    }
+  }
+}
+
+// --- QSO Assistant Logic ---
+
+const openQSOBtn = document.getElementById('openQSOAssistantBtn');
+if (openQSOBtn) {
+  openQSOBtn.addEventListener('click', () => {
+    // This IPC channel will be implemented in Step 3
+    ipcRenderer.invoke('open-qso-assistant'); 
+    console.log('Requesting to open QSO Assistant...');
   });
 }

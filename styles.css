@@ -51,6 +51,12 @@ h1 {
   display: block;
   margin-bottom: 15px;
   border-radius: 4px;
+  transition: all 0.3s ease; /* Smooth transition if we animate later */
+}
+
+/* Helper class to hide banner in Compact Mode */
+.banner-hidden {
+  display: none !important;
 }
 
 /* --- Global Profiles Grid Styles --- */
