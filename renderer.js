@@ -153,20 +153,50 @@ function populateForm(config) {
     autoOpenQSOCheckbox.checked = appConfig.autoOpenQSO || false;
   }
 
-  // Window Size
+  // Imperial Units
+  const useImperialCheckbox = document.getElementById('appUseImperial');
+  if (useImperialCheckbox) {
+    useImperialCheckbox.checked = appConfig.useImperial || false;
+  }
+
+ // Main Window Size
   const winWidth = document.getElementById('appWindowWidth');
   if (winWidth) winWidth.value = appConfig.window?.width || 900;
-
   const winHeight = document.getElementById('appWindowHeight');
   if (winHeight) winHeight.value = appConfig.window?.height || 800;
 
-  // --- Populate Rotator Settings ---
-  const rotatorConfig = config.rotator || { enabled: false };
-  const rotatorEnabledCheckbox = document.getElementById('rotatorEnabled');
-  if (rotatorEnabledCheckbox) {
-    rotatorEnabledCheckbox.checked = rotatorConfig.enabled;
-  }  
+  // QSO Assistant Size
+  const qsoConfig = appConfig.qsoWindow || {};
+  const qsoWidth = document.getElementById('qsoWindowWidth');
+  if (qsoWidth) qsoWidth.value = qsoConfig.width || 600;
+  const qsoHeight = document.getElementById('qsoWindowHeight');
+  if (qsoHeight) qsoHeight.value = qsoConfig.height || 500;
 
+  // --- Populate Rotator Settings ---
+  const rotConfig = config.rotator || { enabled: false, mqtt: {} };
+  const mqttConfig = rotConfig.mqtt || {};
+
+  const rotatorEnabledCheckbox = document.getElementById('rotatorEnabled');
+  if (rotatorEnabledCheckbox) rotatorEnabledCheckbox.checked = rotConfig.enabled;
+
+  document.getElementById('rotMqttHost').value = mqttConfig.host || '';
+  document.getElementById('rotMqttPort').value = mqttConfig.port || 1883;
+  document.getElementById('rotMqttUser').value = mqttConfig.username || '';
+  document.getElementById('rotMqttPass').value = mqttConfig.password || '';
+  document.getElementById('rotMqttTopic').value = mqttConfig.topicPrefix || '';
+
+  // --- Populate QRZ Settings ---
+  const qrzConfig = config.qrz || { enabled: false, username: '', password: '' };
+  
+  const qrzEnabledCheckbox = document.getElementById('qrzEnabled');
+  if (qrzEnabledCheckbox) qrzEnabledCheckbox.checked = qrzConfig.enabled;
+
+  const qrzUsernameInput = document.getElementById('qrzUsername');
+  if (qrzUsernameInput) qrzUsernameInput.value = qrzConfig.username;
+
+  const qrzPasswordInput = document.getElementById('qrzPassword');
+  if (qrzPasswordInput) qrzPasswordInput.value = qrzConfig.password;
+  
   // --- Populate Augmented Spot Cache ---
   const augmentedSpotCacheMaxSizeInput = document.getElementById('augmentedSpotCacheMaxSize');
   if (augmentedSpotCacheMaxSizeInput) {
@@ -465,15 +495,36 @@ if (configForm) {
         startupTab: document.getElementById('appStartupTab').value,
         compactMode: document.getElementById('appCompactMode').checked,
         autoOpenQSO: document.getElementById('appAutoOpenQSO').checked,
+        useImperial: document.getElementById('appUseImperial').checked,
         window: {
             width: parseInt(document.getElementById('appWindowWidth').value) || 900,
             height: parseInt(document.getElementById('appWindowHeight').value) || 800
+        },
+        qsoWindow: {
+            width: parseInt(document.getElementById('qsoWindowWidth').value) || 600,
+            height: parseInt(document.getElementById('qsoWindowHeight').value) || 500,
+            x: config.application?.qsoWindow?.x,
+            y: config.application?.qsoWindow?.y
         }
       },
       // --- Rotator Settings ---
       rotator: {
         enabled: document.getElementById('rotatorEnabled').checked,
+        type: 'MQTT',
+        mqtt: {
+            host: document.getElementById('rotMqttHost').value.trim(),
+            port: parseInt(document.getElementById('rotMqttPort').value) || 1883,
+            username: document.getElementById('rotMqttUser').value.trim(),
+            password: document.getElementById('rotMqttPass').value.trim(),
+            topicPrefix: document.getElementById('rotMqttTopic').value.trim().replace(/\/$/, '') // Remove trailing slash
+        }
       },
+      // --- QRZ Settings ---
+      qrz: {
+        enabled: document.getElementById('qrzEnabled').checked,
+        username: document.getElementById('qrzUsername').value.trim(),
+        password: document.getElementById('qrzPassword').value.trim()
+      },      
       augmentedSpotCache: {
         maxSize: parseInt(document.getElementById('augmentedSpotCacheMaxSize').value, 10),
       },

@@ -8,10 +8,43 @@ const defaultConfig = {
   application: {
     theme: 'system',         // 'light', 'dark', 'system'
     startupTab: 'status',    // 'status', 'config', 'profiles', 'about'
+    compactMode: false,      // Hide the top banner to save space
+    autoOpenQSO: false,      // Automatically open QSO Assistant on start
+    useImperial: false,
     window: {
       width: 900,
       height: 800
+    },
+    qsoWindow: {
+      width: 1024,
+      height: 800,
+      x: undefined,
+      y: undefined
+    }    
+  },
+
+  // ==============================
+  // Rotator Configuration
+  // ==============================
+  rotator: {
+    enabled: false,          // Master switch
+    type: 'MQTT',            // Future proofing (could be 'Rotctl' later)
+    mqtt: {
+        host: '192.168.x.x', // MQTT Server hostname or IP
+        port: 1883,
+        username: 'home',
+        password: '',
+        topicPrefix: 'YOURCALLSIGN/0/ROT' // The root of your topics
     }
+  },
+
+  // ==============================
+  // External Services (QRZ.com)
+  // ==============================
+  qrz: {
+    enabled: false,          // Enable lookup against QRZ XML API
+    username: '',            // Your QRZ.com login username
+    password: ''             // Your QRZ.com login password
   },
     
   // ===========================================================

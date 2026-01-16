@@ -211,6 +211,18 @@
               </div>
             </div>
 
+            <!-- Imperial Units (The Oddities) -->
+            <div class="mb-4">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="appUseImperial">
+                  <label class="form-check-label fw-bold" for="appUseImperial">Use Imperial Units</label>
+                </div>
+                <div class="form-text text-muted small mt-1">
+                    Activate if you live in one of the three countries on Earth that still insist on using miles, Fahrenheit and other imperial oddities. 
+                    Everyone else can safely leave this as not activated and enjoy Metric (km).
+                </div>
+            </div>
+
             <!-- Compact Mode & Auto Open -->
             <div class="row mb-3">
               <div class="col-md-6">
@@ -227,17 +239,24 @@
               </div>
             </div>
 
+            <!-- Window Sizes -->
+            <h5 class="mt-3">Window Sizes</h5>
             <div class="row">
-              <!-- Window Width -->
               <div class="col-md-6 mb-3">
-                <label for="appWindowWidth" class="form-label">Window Width (px)</label>
-                <input type="number" class="form-control" id="appWindowWidth" min="400" placeholder="e.g. 900" />
+                <label class="form-label">Main Window (Width x Height)</label>
+                <div class="input-group">
+                  <input type="number" class="form-control" id="appWindowWidth" placeholder="W">
+                  <span class="input-group-text">x</span>
+                  <input type="number" class="form-control" id="appWindowHeight" placeholder="H">
+                </div>
               </div>
-              
-              <!-- Window Height -->
               <div class="col-md-6 mb-3">
-                <label for="appWindowHeight" class="form-label">Window Height (px)</label>
-                <input type="number" class="form-control" id="appWindowHeight" min="400" placeholder="e.g. 800" />
+                <label class="form-label">QSO Assistant (Width x Height)</label>
+                <div class="input-group">
+                  <input type="number" class="form-control" id="qsoWindowWidth" placeholder="W">
+                  <span class="input-group-text">x</span>
+                  <input type="number" class="form-control" id="qsoWindowHeight" placeholder="H">
+                </div>
               </div>
             </div>
 
@@ -246,12 +265,60 @@
             <div class="mb-3">
               <div class="form-check form-switch">
                 <input class="form-check-input" type="checkbox" id="rotatorEnabled">
-                <label class="form-check-label" for="rotatorEnabled">Enable Rotator Integration</label>
+                <label class="form-check-label" for="rotatorEnabled">Enable Rotator Integration (MQTT)</label>
               </div>
-            </div>            
+            </div>
             
-            <hr class="my-4">
+            <!-- MQTT Settings -->
+            <div class="p-3 mb-3 border rounded">
+                <div class="row">
+                    <div class="col-md-8 mb-2">
+                        <label class="form-label small fw-bold">Broker Host (IP)</label>
+                        <input type="text" class="form-control form-control-sm" id="rotMqttHost" placeholder="e.g. 192.168.1.50">
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <label class="form-label small fw-bold">Port</label>
+                        <input type="number" class="form-control form-control-sm" id="rotMqttPort" value="1883">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-2">
+                        <label class="form-label small fw-bold">Username</label>
+                        <input type="text" class="form-control form-control-sm" id="rotMqttUser" placeholder="home">
+                    </div>
+                    <div class="col-md-6 mb-2">
+                        <label class="form-label small fw-bold">Password</label>
+                        <input type="password" class="form-control form-control-sm" id="rotMqttPass">
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small fw-bold">Topic Prefix</label>
+                    <input type="text" class="form-control form-control-sm" id="rotMqttTopic" placeholder="SM6KZW/0/ROT">
+                    <div class="form-text small">Do not include trailing slash. Logic appends '/set_azimuth'.</div>
+                </div>
+            </div>
 
+            <!-- QRZ.com Configuration -->
+            <h4 class="mt-4">QRZ.com Integration (XML Data)</h4>
+            <div class="mb-3">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="qrzEnabled">
+                <label class="form-check-label" for="qrzEnabled">Enable QRZ.com Lookup (Required for precise bearing)</label>
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="qrzUsername" class="form-label">Username</label>
+                <input type="text" class="form-control" id="qrzUsername" placeholder="QRZ Username">
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="qrzPassword" class="form-label">Password</label>
+                <input type="password" class="form-control" id="qrzPassword" placeholder="QRZ Password">
+              </div>
+            </div>
+            
+            <hr class="my-4">          
+            
             <!-- Augmented Spot Cache -->
             <h4 class="mt-4">Augmented Spot Cache</h4>
             <div class="mb-3">

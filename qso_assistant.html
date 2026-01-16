@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>QSO Assistant</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; img-src 'self' data: https://cdnjs.cloudflare.com https://*.qrz.com https://*.qrz.cn; frame-src 'self' https://www.openstreetmap.org;">
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/6.6.6/css/flag-icons.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  
+  <style>
+    body {
+      background-color: var(--bs-body-bg);
+      color: var(--bs-body-color);
+      overflow: hidden; 
+      padding: 8px;
+      user-select: none;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* --- UNIFIED HEADER --- */
+    #unifiedHeader {
+        display: flex;
+        align-items: center;
+        background: rgba(255,255,255,0.05); /* Subtle background */
+        padding: 4px;
+        border-radius: 4px;
+        margin-bottom: 8px;
+        height: 54px; /* Fixed height container */
+        flex-shrink: 0;
+    }
+
+    /* 1. Search Input (Fixed Width) */
+    .search-section {
+        width: 140px; /* Fixed width (~12 chars) */
+        margin-right: 10px;
+        display: flex;
+        align-items: center;
+    }
+    
+    #callsignInput {
+        font-weight: 800;
+        text-transform: uppercase;
+        font-size: 1.1rem;
+        height: 42px; /* Fill header height nicely */
+        background-color: var(--bs-body-bg);
+        color: var(--bs-body-color);
+        border: 1px solid var(--bs-border-color);
+    }
+
+    /* Wrapper for Data (Hidden by default) */
+    #headerData {
+        display: flex;
+        flex-grow: 1;
+        align-items: center;
+        overflow: hidden;
+    }
+
+    /* 2. Info Section (Flag, Name, Badges) */
+    .info-section {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        overflow: hidden;
+        line-height: 1.1;
+    }
+
+    .info-top {
+        display: flex;
+        align-items: center;
+        margin-bottom: 3px;
+    }
+
+    #dxccName {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: 700;
+        font-size: 0.95rem;
+    }
+
+    /* Badges Row */
+    .badges-inline {
+        display: flex;
+        gap: 4px;
+    }
+
+    .status-badge {
+        padding: 0 6px;
+        border-radius: 3px;
+        font-size: 0.65rem;
+        font-weight: 700;
+        background-color: var(--bs-secondary-bg);
+        color: var(--bs-secondary-color);
+        border: 1px solid var(--bs-border-color);
+        text-transform: uppercase;
+        white-space: nowrap;
+        height: 20px;
+        display: flex;
+        align-items: center;
+    }
+    
+    .status-active { background-color: #198754 !important; color: white !important; } 
+    .status-needed { background-color: #0d6efd !important; color: white !important; } 
+    .status-none   { background-color: #6c757d !important; color: white !important; opacity: 0.5; } 
+
+    /* 3. Bearing Section (Right) */
+    .bearing-section {
+        text-align: right;
+        min-width: 80px;
+        margin-left: 8px;
+        line-height: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .stat-bearing { font-size: 1.6rem; font-weight: 800; color: var(--bs-primary); }
+    .stat-dist { font-size: 0.8rem; color: var(--bs-secondary); margin-top: 2px; }
+
+    /* --- MEDIA & CONTROLS --- */
+
+    .media-container {
+      background: #000; 
+      border-radius: 4px; 
+      overflow: hidden; 
+      border: 1px solid var(--bs-border-color);
+      position: relative;
+      height: 100%;
+      display: flex; 
+      align-items: center;
+      justify-content: center;
+    }
+
+    #profileImg {
+        width: 100%;
+        height: 100%;
+        object-fit: contain !important; 
+    }
+
+    /* Control Grid */
+    #controlsRow {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr); 
+        gap: 5px;
+        margin-top: auto; 
+        width: 100%;
+        flex-shrink: 0;
+    }
+
+    .btn-action {
+      width: 100%;
+      height: 38px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+      padding: 0; 
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Unified Header -->
+  <div id="unifiedHeader">
+      
+      <!-- 1. Search (Always Visible) -->
+      <div class="search-section">
+          <input type="text" id="callsignInput" class="form-control" placeholder="CALL">
+          <button id="lookupBtn" class="d-none"></button> <!-- Hidden trigger for logic -->
+      </div>
+
+      <!-- 2. Data Wrapper (Hidden until lookup) -->
+      <div id="headerData" class="d-none">
+          
+          <!-- Info & Badges -->
+          <div class="info-section">
+              <div class="info-top">
+                  <span id="flagIcon" class="fi me-2" style="font-size: 1.4em;"></span>
+                  <div id="dxccName">---</div>
+              </div>
+              
+              <div class="badges-inline">
+                  <div id="statusDxcc" class="status-badge">DXCC</div>
+                  <div id="statusSlot" class="status-badge">SLOT</div>
+                  <div id="statusLotw" class="status-badge">LoTW</div>
+                  <div id="statusOqrs" class="status-badge">OQRS</div>
+              </div>
+          </div>
+
+          <!-- Bearing -->
+          <div class="bearing-section">
+              <div id="bearingValue" class="stat-bearing">---°</div>
+              <div id="distanceValue" class="stat-dist">--- km</div>
+          </div>
+
+      </div>
+  </div>
+
+  <!-- Media Row -->
+  <div id="mediaRow" class="row g-2 mb-2 flex-grow-1 d-none" style="min-height: 0;">
+    <div class="col-6 h-100">
+      <div class="media-container" id="profileImgContainer" title="Click to enlarge" style="cursor: pointer;">
+        <img id="profileImg" src="" alt="">
+        <div id="noImageLabel" class="position-absolute text-muted small text-center">
+          <i class="bi bi-person-x display-6"></i><br>No Image
+        </div>
+      </div>
+    </div>
+    <div class="col-6 h-100">
+      <div class="media-container" id="mapContainer" title="Click to open Google Maps" style="cursor: pointer;">
+        <iframe id="mapFrame" width="100%" height="100%" style="border:0;" loading="lazy"></iframe>
+        <div class="position-absolute top-0 start-0 w-100 h-100"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Control Buttons -->
+  <div id="controlsRow" class="d-none">
+      <button id="rotateBtn" class="btn btn-outline-danger btn-action"><i class="bi bi-compass me-1"></i> Rotor</button>
+      <button id="spotFlexBtn" class="btn btn-outline-secondary btn-action"><i class="bi bi-display me-1"></i> Spot</button>
+      <button id="spotClusterBtn" class="btn btn-outline-secondary btn-action"><i class="bi bi-globe me-1"></i> DXC</button>
+      <button id="logBtn" class="btn btn-success btn-action"><i class="bi bi-pencil-square me-1"></i> Log</button>
+  </div>
+
+  <script src="qso_assistant.js"></script>
+</body>
+</html>

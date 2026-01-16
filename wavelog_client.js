@@ -21,16 +21,23 @@ class WavelogClient extends EventEmitter {
 
   /**
    * Handles errors by logging and showing a modal error dialog attached to the main window.
+   * Updated to support suppressing the dialog.
    * @param {string} errorMessage - The error message.
    * @param {boolean} throwError - Whether to throw the error or not.
+   * @param {boolean} suppressDialog - Whether to suppress the UI dialog.
    */
-  handleError(errorMessage, throwError = true) {
+  handleError(errorMessage, throwError = true, suppressDialog = false) {
     this.logger.error(errorMessage);
-    dialog.showMessageBoxSync(this.mainWindow, {
-      type: 'error',
-      title: 'Wavelog Client Error',
-      message: errorMessage,
-    });
+    
+    // Only show dialog if not suppressed and mainWindow exists
+    if (!suppressDialog && this.mainWindow) {
+        dialog.showMessageBoxSync(this.mainWindow, {
+            type: 'error',
+            title: 'Wavelog Client Error',
+            message: errorMessage,
+        });
+    }
+    
     if (throwError) {
       throw new Error(errorMessage);
     }
@@ -377,6 +384,113 @@ class WavelogClient extends EventEmitter {
     }
 
     return parsedAdif;
+  }
+
+  // --- NEW METHODS FOR QSO ASSISTANT ---
+
+  /**
+   * Look up callsign via Wavelog Private Lookup API.
+   * @param {string} callsign - The callsign to lookup
+   * @param {string} band - The band (e.g. '20m')
+   * @param {string} mode - The mode (e.g. 'SSB')
+   */
+  async lookupCallsign(callsign, band = '20m', mode = 'SSB') {
+    try {
+      const baseURL = this.config.wavelogAPI.URL.replace(/\/$/, '');
+      const fullURL = `${baseURL}/api/private_lookup`;
+
+      const payload = {
+        key: this.config.wavelogAPI.apiKey,
+        callsign: callsign,
+        band: band, 
+        mode: mode
+      };
+
+      this.logger.debug(`Looking up callsign: ${callsign}`);
+
+      const response = await fetch(fullURL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        this.logger.warn(`Lookup failed: ${response.statusText}`);
+        return null;
+      }
+
+      const data = await response.json();
+      return data;
+
+    } catch (error) {
+      this.logger.error(`Error in lookupCallsign: ${error.message}`);
+      return null;
+    }
+  }
+/**
+   * Converts a Maidenhead Gridsquare to Latitude and Longitude.
+   * @param {string} grid - The gridsquare (e.g., "JO67LC").
+   * @returns {object|null} - { lat: number, lon: number } or null if invalid.
+   */
+  gridToLatLon(grid) {
+    if (!grid || grid.length < 4) return null;
+    
+    grid = grid.toUpperCase();
+    
+    const latChar1 = grid.charCodeAt(1) - 65;
+    const lonChar1 = grid.charCodeAt(0) - 65;
+    const latChar2 = parseInt(grid.charAt(3));
+    const lonChar2 = parseInt(grid.charAt(2));
+    
+    // Basic calculation for 4-char grid (Center of the square)
+    let lat = -90 + (latChar1 * 10) + latChar2 + 0.5;
+    let lon = -180 + (lonChar1 * 20) + (lonChar2 * 2) + 1;
+
+    // Refine if 6 chars provided
+    if (grid.length >= 6) {
+      const latChar3 = grid.charCodeAt(5) - 65;
+      const lonChar3 = grid.charCodeAt(4) - 65;
+      lat += (latChar3 / 24) - 0.5 + (1.0/48); // Adjust center
+      lon += (lonChar3 / 12) - 1 + (1.0/24);   // Adjust center
+    }
+
+    return { lat, lon };
+  }
+
+  /**
+   * Calculates bearing and distance between two points.
+   * @param {number} lat1 - Start Latitude
+   * @param {number} lon1 - Start Longitude
+   * @param {number} lat2 - End Latitude
+   * @param {number} lon2 - End Longitude
+   */
+  calculateBearingDistance(lat1, lon1, lat2, lon2) {
+    const toRad = (deg) => (deg * Math.PI) / 180;
+    const toDeg = (rad) => (rad * 180) / Math.PI;
+    const R = 6371; // Earth radius in km
+
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const rLat1 = toRad(lat1);
+    const rLat2 = toRad(lat2);
+
+    // Haversine Distance
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.sin(dLon/2) * Math.sin(dLon/2) * Math.cos(rLat1) * Math.cos(rLat2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distance = Math.round(R * c);
+
+    // Bearing
+    const y = Math.sin(dLon) * Math.cos(rLat2);
+    const x = Math.cos(rLat1) * Math.sin(rLat2) -
+              Math.sin(rLat1) * Math.cos(rLat2) * Math.cos(dLon);
+    let bearing = toDeg(Math.atan2(y, x));
+    bearing = (bearing + 360) % 360;
+
+    return { bearing: Math.round(bearing), distance: distance };
   }
 }
 
