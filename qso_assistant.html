@@ -121,6 +121,22 @@
     .stat-bearing { font-size: 1.6rem; font-weight: 800; color: var(--bs-primary); }
     .stat-dist { font-size: 0.8rem; color: var(--bs-secondary); margin-top: 2px; }
 
+    /* STATS ROW */
+    #statsRow {
+        display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--bs-secondary);
+        margin-bottom: 5px; padding: 0 4px; flex-shrink: 0;
+    }
+    .stat-box { text-align: center; }
+    .stat-val { font-weight: 700; color: var(--bs-primary); }
+    .stat-lp { color: #fd7e14; }
+
+    /* DX ANNOUNCEMENT ROW (NEW) */
+    #dxRow { display: flex; gap: 5px; margin-bottom: 5px; flex-shrink: 0; }
+    #dxComment { flex-grow: 1; font-size: 0.85rem; }
+
+    /* Split button for Rotor (NEW) */
+    .btn-split { display: flex; flex-direction: column; line-height: 0.9; font-size: 0.7rem; }    
+
     /* --- MEDIA & CONTROLS --- */
 
     .media-container {
@@ -202,6 +218,13 @@
       </div>
   </div>
 
+  <!-- EXTENDED INFO -->
+  <div id="statsRow" class="d-none">
+      <div class="stat-box">GRID: <span id="valGrid" class="stat-val">---</span></div>
+      <div class="stat-box">SP: <span id="valBear" class="stat-val">---°</span> / <span id="valDist">---</span></div>
+      <div class="stat-box">LP: <span id="valBearLP" class="stat-val stat-lp">---°</span> / <span id="valDistLP">---</span></div>
+  </div>
+
   <!-- Media Row -->
   <div id="mediaRow" class="row g-2 mb-2 flex-grow-1 d-none" style="min-height: 0;">
     <div class="col-6 h-100">
@@ -220,12 +243,21 @@
     </div>
   </div>
 
+  <!-- DX ANNOUNCEMENT -->
+  <div id="dxRow" class="d-none">
+      <input type="text" id="dxComment" class="form-control form-control-sm" placeholder="DX Comment (e.g. 5 up)">
+      <button id="btnSendDx" class="btn btn-sm btn-warning fw-bold" style="white-space:nowrap;" disabled><i class="bi bi-send"></i> Spot</button>
+      <button id="btnDxLink" class="btn btn-sm btn-outline-secondary" title="Open DXWatch"><i class="bi bi-box-arrow-up-right"></i></button>
+  </div>
+
   <!-- Control Buttons -->
   <div id="controlsRow" class="d-none">
-      <button id="rotateBtn" class="btn btn-outline-danger btn-action"><i class="bi bi-compass me-1"></i> Rotor</button>
-      <button id="spotFlexBtn" class="btn btn-outline-secondary btn-action"><i class="bi bi-display me-1"></i> Spot</button>
-      <button id="spotClusterBtn" class="btn btn-outline-secondary btn-action"><i class="bi bi-globe me-1"></i> DXC</button>
-      <button id="logBtn" class="btn btn-success btn-action"><i class="bi bi-pencil-square me-1"></i> Log</button>
+      <!-- Split Rotor Buttons -->
+      <button id="rotateBtnSP" class="btn btn-outline-danger btn-action btn-split"><span>ROTATE</span><span id="rotBearSP" style="font-size:1.1em;">---°</span></button>
+      <button id="rotateBtnLP" class="btn btn-outline-warning btn-action btn-split"><span>LONG P</span><span id="rotBearLP" style="font-size:1.1em;">---°</span></button>
+      
+      <button id="spotFlexBtn" class="btn btn-outline-secondary btn-action"><i class="bi bi-display me-1"></i> Flex Spot</button>
+      <button id="logBtn" class="btn btn-success btn-action"><i class="bi bi-pencil-square me-1"></i> Log QSO</button>
   </div>
 
   <script src="qso_assistant.js"></script>

@@ -5,15 +5,24 @@ const callInput = document.getElementById('callsignInput');
 const lookupBtn = document.getElementById('lookupBtn');
 
 // Layout Containers
-const headerData = document.getElementById('headerData'); // NYTT ID
+const headerData = document.getElementById('headerData'); 
 const mediaRow = document.getElementById('mediaRow');
 const controlsRow = document.getElementById('controlsRow');
+const statsRow = document.getElementById('statsRow');
+const dxRow = document.getElementById('dxRow');      
 
 // Data Elements
 const dxccName = document.getElementById('dxccName');
 const flagIcon = document.getElementById('flagIcon');
 const bearingValue = document.getElementById('bearingValue');
 const distanceValue = document.getElementById('distanceValue');
+
+// Stats Elements (NEW)
+const valGrid = document.getElementById('valGrid');
+const valBear = document.getElementById('valBear');
+const valDist = document.getElementById('valDist');
+const valBearLP = document.getElementById('valBearLP');
+const valDistLP = document.getElementById('valDistLP');
 
 // Badges
 const statusDxcc = document.getElementById('statusDxcc');
@@ -29,16 +38,21 @@ const profileImgContainer = document.getElementById('profileImgContainer');
 const mapContainer = document.getElementById('mapContainer');
 
 // Buttons
-const rotateBtn = document.getElementById('rotateBtn');
+const rotateSP = document.getElementById('rotateBtnSP');
+const rotateLP = document.getElementById('rotateBtnLP');
 const logBtn = document.getElementById('logBtn');
 const spotFlexBtn = document.getElementById('spotFlexBtn');
-const spotClusterBtn = document.getElementById('spotClusterBtn');
+const btnSendDx = document.getElementById('btnSendDx');
+const btnDxLink = document.getElementById('btnDxLink');
+const dxComment = document.getElementById('dxComment');
 
 let currentCallsign = '';
-let currentBearing = null;
+let currentBearingSP = null;
+let currentBearingLP = null;
 let currentImageUrl = '';
 let currentGoogleMapsLink = '';
 let appConfig = {};
+let isExternalLookup = false; // Flag to prevent recursion
 
 // --- Initialize ---
 window.onload = async () => {
@@ -47,6 +61,13 @@ window.onload = async () => {
     callInput.focus();
     resetUI(); 
 };
+
+// --- External Trigger (Flex Click) ---
+ipcRenderer.on('external-lookup', (event, callsign) => {
+    callInput.value = callsign;
+    isExternalLookup = true; // Mark source
+    performLookup();
+});
 
 // --- Event Listeners ---
 callInput.addEventListener('keypress', (e) => {
@@ -57,19 +78,47 @@ callInput.addEventListener('input', () => {
     if (currentCallsign) resetUI();
 });
 
-// Rotate
-rotateBtn.addEventListener('click', () => {
-    if (currentBearing !== null) {
-        ipcRenderer.invoke('rotate-rotor', currentBearing);
-        const originalHtml = rotateBtn.innerHTML;
-        rotateBtn.innerHTML = '<i class="bi bi-check"></i>';
-        setTimeout(() => rotateBtn.innerHTML = originalHtml, 1500);
+// Rotor Buttons
+rotateSP.addEventListener('click', () => {
+    if (currentBearingSP !== null) {
+        ipcRenderer.invoke('rotate-rotor', currentBearingSP);
+        flashButton(rotateSP);
     }
 });
+
+rotateLP.addEventListener('click', () => {
+    if (currentBearingLP !== null) {
+        ipcRenderer.invoke('rotate-rotor', currentBearingLP);
+        flashButton(rotateLP);
+    }
+});
+
+function flashButton(btn) {
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-check"></i>';
+    setTimeout(() => btn.innerHTML = originalHtml, 1000);
+}
 
 // Log
 logBtn.addEventListener('click', () => {
     if (currentCallsign) ipcRenderer.invoke('log-qso', currentCallsign);
+});
+
+// DX Spot
+btnSendDx.addEventListener('click', async () => {
+    const comment = dxComment.value;
+    // Send to main process
+    const res = await ipcRenderer.invoke('send-dx-spot', { callsign: currentCallsign, comment });
+    if(res.success) {
+        flashButton(btnSendDx);
+        dxComment.value = ''; // Clear comment
+    } else {
+        alert("Error: " + res.error);
+    }
+});
+
+btnDxLink.addEventListener('click', () => {
+    ipcRenderer.invoke('open-external-link', 'https://dxwatch.com/');
 });
 
 // Maps & Image
@@ -88,7 +137,6 @@ async function performLookup() {
     if (!rawCall) return;
 
     if (!/^(?=.*\d)[A-Z0-9/]{3,}$/.test(rawCall)) {
-        // Simple invalid indication (red border)
         callInput.classList.add('is-invalid');
         setTimeout(() => callInput.classList.remove('is-invalid'), 2000);
         return;
@@ -102,9 +150,13 @@ async function performLookup() {
         
         if (result) {
             updateUI(result);
+
+            // Auto Log Logic (Only if NOT from external click)
+            if (appConfig.application?.autoLogQso && !isExternalLookup) {
+                 ipcRenderer.invoke('log-qso', rawCall);
+            }
         } else {
-            // Not Found Indication inside input? or allow header to show error?
-            // Let's flash the input red for simplicity in compact mode
+            // Not Found logic (Optional visual feedback)
             callInput.classList.add('is-invalid');
             setTimeout(() => callInput.classList.remove('is-invalid'), 2000);
         }
@@ -114,18 +166,45 @@ async function performLookup() {
         callInput.disabled = false;
         callInput.focus();
         document.body.style.cursor = 'default';
+        isExternalLookup = false; // Reset flag
     }
 }
 
 function updateUI(data) {
     currentCallsign = data.callsign;
-    currentBearing = data.bearing; 
+    currentBearingSP = data.bearing; 
+    currentBearingLP = data.bearing_lp; // From main.js
 
     // SHOW Data Containers
     headerData.classList.remove('d-none');
-    headerData.classList.add('d-flex'); // Restore flex behavior
-    mediaRow.classList.remove('d-none');
+    statsRow.classList.remove('d-none');
+    dxRow.classList.remove('d-none');   
     controlsRow.classList.remove('d-none');
+
+    // Show Media?
+    if (appConfig.application?.showQsoMedia) {
+        mediaRow.classList.remove('d-none');
+    } else {
+        mediaRow.classList.add('d-none');
+    }
+
+    // Show Log Button?
+    if (appConfig.application?.autoLogQso) {
+        logBtn.style.display = 'none';
+    } else {
+        logBtn.style.display = 'flex';
+    }
+
+    // Enable DX Button if radio connected
+    if (data.radio_connected) {
+        btnSendDx.disabled = false;
+        dxComment.disabled = false;
+        dxComment.placeholder = "DX Comment (e.g. 5 up)";
+    } else {
+        btnSendDx.disabled = true;
+        dxComment.disabled = true;
+        dxComment.placeholder = "Radio Disconnected";
+    }
 
     // Header Info
     let displayText = data.dxcc || 'Unknown';
@@ -147,21 +226,36 @@ function updateUI(data) {
         }
     }
 
-    // Stats (Bearing/Dist)
-    bearingValue.innerText = data.bearing ? `${data.bearing}°` : '---';
-    
-    // Imperial Check
-    if (data.distance) {
-        let dist = data.distance;
-        let unit = 'km';
-        if (appConfig.application && appConfig.application.useImperial) {
-            dist = Math.round(dist * 0.621371);
-            unit = 'mi';
-        }
-        distanceValue.innerText = `${dist} ${unit}`;
-    } else {
-        distanceValue.innerText = '';
+    // Stats Logic (Imperial vs Metric)
+    let distSP = data.distance;
+    let distLP = data.distance_lp;
+    let unit = 'km';
+
+    if (appConfig.application?.useImperial) {
+        // Convert to miles if requested
+        if (distSP) distSP = Math.round(distSP * 0.621371);
+        if (distLP) distLP = Math.round(distLP * 0.621371);
+        unit = 'mi';
     }
+
+    // Header Bearing
+    bearingValue.innerText = data.bearing ? `${data.bearing}°` : '---';
+    distanceValue.innerText = distSP ? `${distSP} ${unit}` : '';
+
+    // Extended Stats Row
+    valGrid.innerText = data.gridsquare || '---';
+    
+    // Short Path Stats
+    valBear.innerText = data.bearing ? `${data.bearing}°` : '-';
+    valDist.innerText = distSP ? `${distSP} ${unit}` : '-';
+
+    // Long Path Stats
+    valBearLP.innerText = data.bearing_lp ? `${data.bearing_lp}°` : '-';
+    valDistLP.innerText = distLP ? `${distLP} ${unit}` : '-';
+
+    // Rotor Button Labels
+    document.getElementById('rotBearSP').innerText = data.bearing ? `${data.bearing}°` : '';
+    document.getElementById('rotBearLP').innerText = data.bearing_lp ? `${data.bearing_lp}°` : '';
 
     // Badges
     updateBadge(statusDxcc, data.dxcc_confirmed, "DXCC Cnf", "New DXCC");
@@ -230,18 +324,19 @@ function updateUI(data) {
 
 function resetUI() {
     currentCallsign = '';
-    currentBearing = null;
+    currentBearingSP = null;
+    currentBearingLP = null;
     currentImageUrl = '';
     
-    // Hide Data Containers
     headerData.classList.add('d-none');
-    headerData.classList.remove('d-flex');
+    statsRow.classList.add('d-none');
     mediaRow.classList.add('d-none');
+    dxRow.classList.add('d-none');
     controlsRow.classList.add('d-none');
 
-    // Reset internal values
     dxccName.innerText = '---';
     bearingValue.innerText = '---';
+    distanceValue.innerText = '';
     profileImg.src = '';
     mapFrame.src = 'about:blank';
 }

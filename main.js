@@ -686,8 +686,13 @@ function attachFlexRadioEventListeners() {
       if (mainWindow) {
         mainWindow.webContents.send('flex-global-profiles', profiles);
       }
+    });
+    flexRadioClient.on('externalSpotTriggered', (callsign) => {
+        if (qsoWindow && !qsoWindow.isDestroyed()) {
+             qsoWindow.webContents.send('external-lookup', callsign);
+             qsoWindow.show(); // Bring window to front if hidden
+        }
     });    
-
   }
 }
 
@@ -1053,8 +1058,13 @@ ipcMain.handle('lookup-callsign', async (event, callsign) => {
                   const result = wavelogClient.calculateBearingDistance(
                       myCoords.lat, myCoords.lon, dxLat, dxLon
                   );
+                  
                   finalData.bearing = result.bearing;
                   finalData.distance = result.distance;
+
+                  finalData.bearing_lp = (result.bearing + 180) % 360;
+                  finalData.distance_lp = Math.round(40075 - result.distance); // Earth circumference - SP
+                  
                   finalData.calc_precision = precision;
                   logger.info(`Calculated: ${result.bearing} deg, ${result.distance} km (${precision})`);
               }
@@ -1108,6 +1118,26 @@ ipcMain.handle('rotate-rotor', (event, bearing) => {
   } else {
       logger.warn("Rotator client not initialized or disabled.");
   }
+});
+
+ipcMain.handle('log-qso', (event, callsign) => {
+  utils.openLogQSO(callsign, config);
+});
+
+ipcMain.handle('send-dx-spot', async (event, { callsign, comment }) => {
+    if (!flexRadioClient || !flexRadioClient.isConnected()) return { success: false, error: "Radio not connected" };
+    if (!flexRadioClient.activeTXSlices || flexRadioClient.activeTXSlices.length === 0) return { success: false, error: "No Active TX Slice" };
+
+    try {
+        // Get freq in Hz, convert to kHz (e.g. 14020.5)
+        const freqHz = flexRadioClient.activeTXSlices[0].frequency * 1e6; 
+        const freqKHz = (freqHz / 1000).toFixed(1);
+
+        dxClusterClient.sendDxSpot(freqKHz, callsign, comment);
+        return { success: true };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
 });
 
 // Handle uncaught exceptions

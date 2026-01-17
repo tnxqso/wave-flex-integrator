@@ -140,11 +140,18 @@ function populateForm(config) {
       }
   }
 
+  // QSO Settings
+  const showMediaCheckbox = document.getElementById('appShowQsoMedia');
+  if (showMediaCheckbox) showMediaCheckbox.checked = appConfig.showQsoMedia || false;
+  
+  const autoLogCheckbox = document.getElementById('appAutoLogQso');
+  if (autoLogCheckbox) autoLogCheckbox.checked = appConfig.autoLogQso || false;
+    
   // Compact Mode
   const compactModeCheckbox = document.getElementById('appCompactMode');
   if (compactModeCheckbox) {
     compactModeCheckbox.checked = appConfig.compactMode || false;
-    applyCompactMode(appConfig.compactMode); // Apply immediately on load
+    applyCompactMode(appConfig.compactMode);
   }
 
   // Auto Open QSO Assistant
@@ -496,6 +503,8 @@ if (configForm) {
         compactMode: document.getElementById('appCompactMode').checked,
         autoOpenQSO: document.getElementById('appAutoOpenQSO').checked,
         useImperial: document.getElementById('appUseImperial').checked,
+        showQsoMedia: document.getElementById('appShowQsoMedia').checked,
+        autoLogQso: document.getElementById('appAutoLogQso').checked, 
         window: {
             width: parseInt(document.getElementById('appWindowWidth').value) || 900,
             height: parseInt(document.getElementById('appWindowHeight').value) || 800

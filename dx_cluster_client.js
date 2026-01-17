@@ -312,6 +312,24 @@ class DXClusterClient extends events.EventEmitter {
     }
   }
 
+  /**
+   * Sends a DX Spot announcement to the cluster.
+   * Format: DX <freq> <call> <comment>
+   * @param {string} freq - Frequency in kHz (e.g. 14020.5)
+   * @param {string} callsign - The callsign
+   * @param {string} comment - Optional comment
+   */
+  sendDxSpot(freq, callsign, comment) {
+    if (!this.client) return;
+    
+    // Ensure comment is safe
+    const safeComment = comment ? comment.replace(/[^a-zA-Z0-9 ]/g, "") : "";
+    const command = `DX ${freq} ${callsign} ${safeComment}\r\n`;
+    
+    this.logger.info(`Sending Cluster Spot: ${command.trim()}`);
+    this.client.write(command);
+  }  
+
 }
 
 module.exports = DXClusterClient;

@@ -282,12 +282,14 @@ module.exports = class FlexRadioClient extends EventEmitter {
    * Handles a spot being triggered.
    * @param {object} eventData - Data associated with the event.
    */
-  handleSpotTriggered(eventData) {
+handleSpotTriggered(eventData) {
     const { handle, index } = eventData;
     const spotData = this.flexSpotsByID.get(index);
     if (spotData) {
       this.logger.info(`Spot triggered: callsign=${spotData.callsign}, index=${index}`);
       utils.openLogQSO(spotData.callsign, this.config);
+      this.emit('externalSpotTriggered', spotData.callsign);
+      // --------------------------------------------------------
     } else {
       this.logger.warn(`No spot data found for FlexRadio Spot ID ${index}`);
     }

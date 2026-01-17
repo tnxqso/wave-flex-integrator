@@ -6,21 +6,21 @@ const defaultConfig = {
   // Application Settings
   // ==============================
   application: {
-    theme: 'system',         // 'light', 'dark', 'system'
-    startupTab: 'status',    // 'status', 'config', 'profiles', 'about'
-    compactMode: false,      // Hide the top banner to save space
-    autoOpenQSO: false,      // Automatically open QSO Assistant on start
+    theme: 'system',
+    startupTab: 'status',
+    compactMode: false,
+    autoOpenQSO: false,
     useImperial: false,
+    showQsoMedia: false,
+    autoLogQso: false,
     window: {
       width: 900,
       height: 800
     },
     qsoWindow: {
-      width: 1024,
-      height: 800,
-      x: undefined,
-      y: undefined
-    }    
+        width: 600,
+        height: 500
+    }
   },
 
   // ==============================
