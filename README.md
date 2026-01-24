@@ -228,16 +228,20 @@ Upon first startup, no services gets connected. This is normal. Configure the ap
 #### WSJT-X Configuration
 
 - **WSJT-X integration Enabled**: Toggle WSJT-X integration. If this is set to `false`, all WSJT-X functionality (including `Show QSO` and `Log QSO`) will be disabled, regardless of their individual settings.
-- **UDP Listen Port**: The port on which the application listens for ADIF broadcasts from WSJT-X (default is 2237). Ensure this matches the port configured in WSJT-X for sending ADIF messages.
-- **Show ongoing WSJT-X QSO in Wavelog live logging**: When this option and `WSJT-X integration Enabled` are both set to `true`, the details of the ongoing QSO will be displayed in Wavelog's live logging tab.
 
-  While a logging window is opened in Wavelog for the purpose of displaying information about the callsign currently being worked, you are not required to manually complete the logging process in Wavelog. 
+- **UDP Listen Port**: The UDP port on which the application listens for WSJT-X “Network Messages” (default is `2237`). Configure WSJT-X **Settings → Reporting → UDP Server** to send to the integrator host/IP and this port.
 
-  Although it is technically possible to manually log the QSO at this stage, it is not necessary, nor recommended. The actual logging will happen automatically if you have enabled the `Log WSJT-X QSO in Wavelog` option. This automatic logging is triggered when WSJT-X sends an ADIF logging message at the end of the QSO.
+- **Show ongoing WSJT-X QSO in Wavelog live logging**: When this option and `WSJT-X integration Enabled` are both set to `true`, the details of the ongoing QSO will be displayed in Wavelog's live logging tab (based on WSJT-X *Status* messages).
 
-- **Log WSJT-X QSO in Wavelog**: When both this option and ` WSJT-X integration Enabled` are set to `true`, completed QSOs from WSJT-X ADIF broadcasts will be automatically logged in Wavelog. In WSJT-X setting, general tab, the station details for `My Call` and `My Grid`must match those set in Wavelog for the Station Location marked as `Active Station`. If the `Avtive Station` is changed in Wavelog, Wave-Flex Integrator should be restarted to pick up the changes.
+  While a logging window is opened in Wavelog for the purpose of displaying information about the callsign currently being worked, you are not required to manually complete the logging process in Wavelog.
 
-> **Note:** Both **Show ongoing WSJT-X QSO in Wavelog live logging** and **Log WSJT-X QSO in Wavelog** options only take effect if WSJT-X integration (` WSJT-X integration Enabled`) is set to `true`. If WSJT-X integration is disabled, these features will not function, even if individually enabled.
+  Although it is technically possible to manually log the QSO at this stage, it is not necessary, nor recommended. The actual logging will happen automatically if you have enabled the `Log WSJT-X QSO in Wavelog` option. This automatic logging is triggered when WSJT-X sends a *Logged ADIF* message at the end of the QSO.
+
+- **Log WSJT-X QSO in Wavelog**: When both this option and `WSJT-X integration Enabled` are set to `true`, completed QSOs from WSJT-X broadcasts will be automatically logged in Wavelog (based on WSJT-X *Logged ADIF* messages). In WSJT-X settings (General tab), the station details for `My Call` and `My Grid` must match those set in Wavelog for the Station Location marked as `Active Station`. If the `Active Station` is changed in Wavelog, Wave-Flex Integrator should be restarted to pick up the changes.
+
+- **Multicast / port sharing**: Multicast reception is **not supported** in the current version, and the integrator does not currently enable UDP port sharing. If you use multicast to feed multiple programs, use a UDP relay/fan-out feature in another application, or configure WSJT-X to send a unicast copy to the integrator.
+
+> **Note:** Both **Show ongoing WSJT-X QSO in Wavelog live logging** and **Log WSJT-X QSO in Wavelog** options only take effect if WSJT-X integration (`WSJT-X integration Enabled`) is set to `true`. If WSJT-X integration is disabled, these features will not function, even if individually enabled.
 
 ---
 
