@@ -709,6 +709,71 @@ handleSpotTriggered(eventData) {
   }
 
   /**
+   * Sets the frequency and mode of the currently active Transmit Slice.
+   * @param {number} freqHz - Frequency in Hertz.
+   * @param {string} mode - Mode string (e.g., 'cw', 'ssb').
+   */
+  setSliceFrequency(freqHz, mode) {
+    if (!this.isConnected()) {
+        this.logger.warn(`Ignored QSY request to ${freqHz} Hz because FlexRadio is NOT connected.`);
+        return;
+    }
+
+    // 1. Find Active TX Slice
+    // If no active TX slice is explicitly known yet, default to Slice 0 (usually A)
+    // or the first one in the list.
+    let targetSlice = null;
+    if (this.activeTXSlices && this.activeTXSlices.length > 0) {
+        targetSlice = this.activeTXSlices[0];
+    } else if (this.flexSlicesByID.size > 0) {
+        // Fallback: grab the first available slice
+        targetSlice = this.flexSlicesByID.values().next().value;
+    }
+
+    if (!targetSlice) {
+        this.logger.error('Cannot QSY: No active slice found.');
+        return;
+    }
+
+    // 2. Format Frequency (Flex expects MHz, e.g., 14.020000)
+    const freqMHz = (freqHz / 1e6).toFixed(6);
+
+    // 3. Map Mode
+    let flexMode = null;
+    if (mode) {
+        const inputMode = mode.toUpperCase();
+        
+        // Mode mapping logic
+        if (inputMode === 'CW') flexMode = 'CW';
+        else if (inputMode === 'AM') flexMode = 'AM';
+        else if (inputMode === 'FM') flexMode = 'FM';
+        else if (inputMode === 'FT8' || inputMode === 'RTTY' || inputMode === 'DATA' || inputMode === 'DIG') flexMode = 'DIGU';
+        else if (inputMode === 'SSB') {
+            // Ham radio convention: < 10MHz = LSB, >= 10MHz = USB
+            // Exception: 60M is usually USB, but standard logic often applies LSB. 
+            // Flex usually handles 'USB'/'LSB' explicitly.
+            flexMode = (freqHz < 10000000) ? 'LSB' : 'USB';
+        } 
+        else if (inputMode === 'LSB') flexMode = 'LSB';
+        else if (inputMode === 'USB') flexMode = 'USB';
+    }
+
+    // 4. Construct Command
+    // Format: slice set <index> freq=<mhz> [mode=<mode>]
+    let command = `slice set ${targetSlice.index} freq=${freqMHz}`;
+    if (flexMode) {
+        command += ` mode=${flexMode}`;
+    }
+
+    this.logger.info(`QSY Request: Slice ${targetSlice.index_letter} -> ${freqMHz} MHz ${flexMode || '(No mode change)'}`);
+    
+    // 5. Send
+    this.queueCommand(command, (response) => {
+        this.logger.debug(`QSY Response: ${response}`);
+    });
+  }
+
+  /**
    * Gracefully disconnects from the FlexRadio server.
    * Closes the socket, cleans up resources, and prevents further reconnection attempts.
    * @returns {Promise<void>} - Resolves when the disconnection is complete.

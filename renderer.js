@@ -1,3 +1,4 @@
+// renderer.js
 'use strict';
 
 const { ipcRenderer } = require('electron');
@@ -116,6 +117,18 @@ function populateForm(config) {
   // --- Populate Application General Settings ---
   const appConfig = config.application || {};
   
+    // Populate CAT Listener Settings
+  const catConfig = config.catListener || { enabled: false, host: '127.0.0.1', port: 54321 };
+  
+  const catEnabled = document.getElementById('catListenerEnabled');
+  if(catEnabled) catEnabled.checked = catConfig.enabled;
+
+  const catHost = document.getElementById('catListenerHost');
+  if(catHost) catHost.value = catConfig.host;
+
+  const catPort = document.getElementById('catListenerPort');
+  if(catPort) catPort.value = catConfig.port;
+
   // Theme
   const theme = appConfig.theme || 'system';
   const themeSelect = document.getElementById('appTheme');
@@ -516,6 +529,11 @@ if (configForm) {
             y: config.application?.qsoWindow?.y
         }
       },
+      catListener: {
+        enabled: document.getElementById('catListenerEnabled').checked,
+        host: document.getElementById('catListenerHost').value.trim() || '127.0.0.1',
+        port: parseInt(document.getElementById('catListenerPort').value) || 54321
+      },      
       // --- Rotator Settings ---
       rotator: {
         enabled: document.getElementById('rotatorEnabled').checked,

@@ -162,6 +162,15 @@ const defaultConfig = {
     logQSO: true,
   },
 
+  // ==============================
+  // Local HTTP CAT Listener
+  // ==============================
+  catListener: {
+    enabled: true,
+    host: '127.0.0.1', // Listen on localhost by default for security
+    port: 54321,       // Default Wavelog port
+  },  
+
 };
 
 module.exports = defaultConfig;

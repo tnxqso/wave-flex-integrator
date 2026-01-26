@@ -185,6 +185,49 @@
           <h3>Configuration</h3>
           <form id="configForm">
 
+<!-- HTTP CAT Listener -->
+            <h4 class="mt-4">Wavelog "Click-to-Tune" Listener</h4>
+            
+            <div class="mb-3">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="catListenerEnabled">
+                <label class="form-check-label fw-bold" for="catListenerEnabled">Enable Local Callback Listener</label>
+              </div>
+              <div class="form-text text-muted">
+                This enables the <strong>Callback URL</strong> feature. When enabled, clicking a spot in the Wavelog Bandmap/Cluster will instantly tune your FlexRadio to that frequency.
+              </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <label for="catListenerHost" class="form-label">Listener Host (IP)</label>
+                    <input type="text" class="form-control" id="catListenerHost" placeholder="127.0.0.1">
+                    <div class="form-text">
+                        Default: <code>127.0.0.1</code> (Localhost). Keep this unless Wavelog is running on a different machine than this browser.
+                    </div>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="catListenerPort" class="form-label">Listener Port</label>
+                    <input type="number" class="form-control" id="catListenerPort" placeholder="54321">
+                    <div class="form-text">
+                        Default: <code>54321</code>.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration Hint Box -->
+            <div class="alert alert-info mt-2" role="alert">
+                <i class="bi bi-info-circle-fill me-2"></i><strong>Wavelog Configuration Steps:</strong>
+                <ol class="mb-0 ps-3 mt-1">
+                    <li>
+                        In Wavelog <em>Settings -> Hardware Interfaces</em>: Set <strong>Radio Interface</strong> to <code class="user-select-all">http://127.0.0.1:54321</code>
+                    </li>
+                    <li>
+                        <strong>IMPORTANT:</strong> In the Wavelog <strong>DX Cluster / QSO Panel</strong>, you must click the <strong>"CAT Connection"</strong> button so it turns <span class="text-success fw-bold">GREEN</span>.
+                    </li>
+                </ol>
+            </div>
+  
             <!-- Application Settings -->
             <h4 class="mt-4">Application General Settings</h4>
             

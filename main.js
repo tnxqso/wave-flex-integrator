@@ -17,6 +17,9 @@ const UIManager = require('./ui_manager');
 const mergeWith = require('lodash.mergewith');
 const QRZClient = require('./qrz_client');
 const MqttRotatorClient = require('./mqtt_client');
+const HttpCatListener = require('./http_cat_listener');
+
+let httpCatListener;
 let mqttRotatorClient;
 let qsoWindow = null; // Reference to the QSO Assistant window
 
@@ -433,6 +436,20 @@ app.on('ready', () => {
 
           // Attach flexRadioClient-specific event listeners here
           attachFlexRadioEventListeners();
+
+          // Initialize HTTP CAT Listener
+          httpCatListener = new HttpCatListener(config, logger);
+          
+          // Define what happens when a request comes in
+          httpCatListener.onQsy((freq, mode) => {
+            if (flexRadioClient) {
+                flexRadioClient.setSliceFrequency(freq, mode);
+            }
+          });
+
+          // Start the listener
+          httpCatListener.start();
+
         } else {
           logger.warn('No station callsign found; FlexRadio client will not be initialized.');
         }
@@ -766,6 +783,10 @@ async function shutdown() {
     if (wsjtClient) {
       wsjtClient.stop();
     }
+
+    if (httpCatListener) {
+        httpCatListener.stop();
+    }    
 
     if (mainWindow) {
       mainWindow.close();

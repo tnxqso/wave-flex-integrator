@@ -1,11 +1,10 @@
-
 # Wave-Flex Integrator
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node.js Version](https://img.shields.io/badge/node.js-12%2B-green.svg)](https://nodejs.org/)
 [![Beta Status](https://img.shields.io/badge/status-beta-orange.svg)](#)
 
-*A seamless bridge between your FlexRadio and Wavelog logging software, integrating DX Cluster data, WSJT-X and synchronizing frequency and mode, all without traditional CAT software.*
+*A seamless bridge between your FlexRadio and Wavelog logging software, integrating DX Cluster data, WSJT-X, QSO Assistant, and synchronizing frequency and mode, all without traditional CAT software.*
 
 ![Wave-Flex Integrator main tab](assets/wave-flex-integrator-main-tab.png)
 
@@ -30,6 +29,10 @@
 - [Auto-Updating](#auto-updating)
 - [Configuration](#configuration)
   - [Configuration Parameters](#configuration-parameters)
+- [Features in Detail](#features-in-detail)
+  - [Wavelog Click-to-Tune (CAT Listener)](#wavelog-click-to-tune-cat-listener)
+  - [QSO Assistant](#qso-assistant)
+  - [Profile Manager](#profile-manager)
 - [Usage](#usage)
   - [Security Warning on First Startup (Windows and macOS)](#security-warning-on-first-startup-windows-and-macos)
 - [How DXCC Confirmation is Determined](#how-dxcc-confirmation-is-determined)
@@ -47,7 +50,7 @@
 
 ## Introduction
 
-Wave-Flex Integrator simplifies your ham radio setup by directly connecting your **FlexRadio** to the **Wavelog** web-based logging software. It integrates DX Cluster data, enhances spot information, and synchronizes your frequency and mode, optionally integrates WSJT-X, all without the need for traditional CAT software.
+Wave-Flex Integrator simplifies your ham radio setup by directly connecting your **FlexRadio** to the **Wavelog** web-based logging software. It integrates DX Cluster data, enhances spot information, enables "Click-to-Tune" from Wavelog, and provides a powerful QSO Assistant tool, all without the need for traditional CAT software.
 
 ![SmartSDR Panadapter with Color-Coded Spots](assets/panadapter.png)
 
@@ -55,7 +58,7 @@ When a spot appears on your SmartSDR panadapter, not only does it display import
 
 ![SmartSDR Popup Info](assets/popup-info.png)
 
-Additionally, when you click on a spot, a pre-filled Wavelog logging window will automatically open in your browser, ready to log the QSO. This seamless integration allows you to focus more on operating and less on managing multiple applications.
+Additionally, the application provides a dedicated **QSO Assistant** window for quick lookups, rotor control, and media display (QRZ images/Maps).
 
 > **Note:** The TNXQSO team is not affiliated with **Wavelog** or **FlexRadio**. This project is independently developed to integrate free of charge tools for the ham radio community. We exist only here on GitHub.
 
@@ -64,6 +67,13 @@ Additionally, when you click on a spot, a pre-filled Wavelog logging window will
 ## Features
 
 - **DX Cluster Integration**: Connects to a DX Cluster to receive real-time spot data.
+- **Wavelog Click-to-Tune**: A local listener allows you to click spots in the Wavelog Bandmap to instantly tune your FlexRadio (replaces WavelogGate/FlRig).
+- **QSO Assistant**: A dedicated, compact window for:
+  - Callsign lookups (Wavelog & QRZ.com).
+  - Profile images and Grid maps.
+  - Bearing/Distance calculation (Short & Long Path).
+  - Rotator control (via MQTT).
+- **Profile Manager**: View and load your FlexRadio Global Profiles via a simple grid interface, organized by Band and Mode.
 - **Spot Augmentation**:
   - Enriches spot data using the Wavelog API.
   - Indicates whether a callsign's DXCC is needed for the band or mode.
@@ -199,6 +209,22 @@ Upon first startup, no services gets connected. This is normal. Configure the ap
 
 ### Configuration Parameters
 
+#### Application General Settings
+
+- **Theme**: Light, Dark, or System Sync.
+- **Startup Tab**: Choose which tab opens by default.
+- **QSO Assistant Settings**: 
+  - **Show Profile Image & Map**: Toggle visual media in QSO Assistant.
+  - **Auto-Log to Wavelog**: If enabled, lookups via Enter key or external triggers will automatically be logged.
+- **Rotator Control**: Enable MQTT-based rotator control (e.g., RemoteQTH Interface V).
+- **QRZ.com Integration**: Enable XML data lookup (requires QRZ subscription) to fetch names, locators, and images.
+
+#### Wavelog Click-to-Tune (Local Listener)
+
+- **Enable**: Turns on the local HTTP listener.
+- **Bind IP**: Default `127.0.0.1`.
+- **Port**: Default `54321`. This allows Wavelog to tune your radio.
+
 #### DX Cluster Settings
 
 - **Host**: The hostname or IP address of the DX Cluster server.
@@ -242,6 +268,44 @@ Upon first startup, no services gets connected. This is normal. Configure the ap
 - **Multicast / port sharing**: Multicast reception is **not supported** in the current version, and the integrator does not currently enable UDP port sharing. If you use multicast to feed multiple programs, use a UDP relay/fan-out feature in another application, or configure WSJT-X to send a unicast copy to the integrator.
 
 > **Note:** Both **Show ongoing WSJT-X QSO in Wavelog live logging** and **Log WSJT-X QSO in Wavelog** options only take effect if WSJT-X integration (`WSJT-X integration Enabled`) is set to `true`. If WSJT-X integration is disabled, these features will not function, even if individually enabled.
+
+---
+
+## Features in Detail
+
+### Wavelog Click-to-Tune (CAT Listener)
+
+This feature allows you to click spots in the Wavelog Bandmap or Cluster list to instantly tune your FlexRadio, replacing the need for external tools like WavelogGate or FlRig.
+
+1.  **Enable the Listener**: In Wave-Flex Integrator, go to **Configuration** -> **Wavelog Click-to-Tune** and check "Enable Local Callback Listener".
+2.  **Configure Wavelog Hardware**:
+    *   In Wavelog, go to **Settings** -> **Hardware Interfaces**.
+    *   Create or Edit your Radio.
+    *   Set **Radio Interface** to: `http://127.0.0.1:54321` (assuming you used the default port).
+3.  **Activate in QSO Panel (Crucial Step!)**:
+    *   Go to the **DX Cluster / QSO Panel** in Wavelog.
+    *   Locate the **"CAT Connection"** button (usually near the top left of the cluster list).
+    *   **Click it so it turns GREEN.**
+    *   *If this button is not green, Wavelog will not attempt to send tuning commands.*
+
+### QSO Assistant
+
+The **QSO Assistant** is a dedicated, compact floating window designed to sit alongside your logging workflow. It offers:
+
+- **Unified Lookup**: Type a callsign and press Enter. The assistant fetches data from both Wavelog (previous QSOs) and QRZ.com (if enabled).
+- **Stats Display**: Instantly see Name, QTH, Grid Square, and Bearings (Short Path & Long Path).
+- **Media**: Displays the operator's profile picture (from QRZ) and a dynamic map of their location.
+- **Visual Badges**: Color-coded badges indicate if you need this station for **DXCC**, **Slot** (Band/Mode), or if they use **LoTW** / **OQRS**.
+- **Rotator Control**: If enabled, click the "ROTATE" or "LONG P" buttons to automatically turn your antenna to the calculated bearing using MQTT.
+- **Flex Spot**: A dedicated button to send the looked-up callsign directly to your FlexRadio panadapter as a spot.
+
+### Profile Manager
+
+The **Profiles Tab** allows you to view and load your FlexRadio **Global Profiles** directly from the application.
+
+- **Grid Layout**: Profiles are automatically sorted into columns based on Band (160M - 6M) for easy visual navigation.
+- **Mode Detection**: The system intelligently guesses the mode (CW, SSB, DIGI, FM) based on the profile name and displays a clickable button with appropriate color coding.
+- **One-Click Load**: Clicking a button immediately commands the radio to load that profile.
 
 ---
 
@@ -296,7 +360,7 @@ The QSL methods you have defined as default will dictate how DXCC confirmations 
 ## Debugging and Troubleshooting
 
 If you encounter issues, follow these steps to help diagnose and resolve them effectively.
-``
+
 ### Check that Wavelog can be reached on the About tab
 
 On the About tab, below the title **Wavelog Station Location** you should be able to see the `Station ID`, `Station Name`, `Station Grid Square` and `Station Callsign` fetched from the configured Wavelog server's `Active Station` in `Station Setup`. If there is no information you should check that your Wavelog server is up and running and that your configuration is correct. If you change the `Active Station` in Wavelog, you will need to restart the application to fetch the new values. The values you see here will be used by the application in various places.
@@ -326,7 +390,6 @@ Run the application with debug logging:
 
   ```bash
   /Applications/Wave-Flex\ Integrator.app/Contents/MacOS/wave-flex-integrator -- -- --debug
-
   ```
 
 This creates a `debug.log` file with detailed logs.
