@@ -301,11 +301,87 @@ The **QSO Assistant** is a dedicated, compact floating window designed to sit al
 
 ### Profile Manager
 
-The **Profiles Tab** allows you to view and load your FlexRadio **Global Profiles** directly from the application.
+The **Profiles** tab lets you view and load **FlexRadio Global Profiles** directly from the application.
 
-- **Grid Layout**: Profiles are automatically sorted into columns based on Band (160M - 6M) for easy visual navigation.
-- **Mode Detection**: The system intelligently guesses the mode (CW, SSB, DIGI, FM) based on the profile name and displays a clickable button with appropriate color coding.
-- **One-Click Load**: Clicking a button immediately commands the radio to load that profile.
+This tab depends on **profile name parsing** to classify profiles into a band/mode grid. To avoid missing profiles, follow the naming rules below.
+
+---
+
+#### What this tab does
+
+- **Band grid layout:** Profiles are automatically sorted into columns by **band** (160M → 6M) for fast navigation.
+- **Mode detection:** The app **guesses the mode from the profile name** (CW/SSB/DIGI/FM) and displays a color-coded, clickable button.
+- **One-click load:** Clicking a button commands the radio to **load that Global Profile** immediately.
+
+---
+
+#### Critical requirement: profile names MUST contain BOTH band and mode
+
+The application **does not read band/mode from the profile’s internal settings**.  
+It classifies profiles using **only the profile name string**.
+
+To be shown and placed correctly, the profile name must contain:
+
+1. A supported **band token** (e.g., `20M`)
+2. A supported **mode token** (e.g., `CW`, `USB`, `FT8`, etc.)
+
+If either is missing, the profile cannot be reliably placed in the grid and may not appear.
+
+---
+
+#### Bands that are recognized
+
+The app searches for one of these exact band strings:
+
+`160M, 80M, 60M, 40M, 30M, 20M, 17M, 15M, 12M, 10M, 6M`
+
+---
+
+#### Modes that are recognized (detection rules)
+
+The app uppercases the profile name and checks for these tokens:
+
+- **CW**  
+  Matches if the name includes: `CW`
+
+- **DIGI** (displayed as **DIGU**)  
+  Matches if the name includes any of: `DIG`, `FT8`, `RTTY`, `DATA`
+
+- **SSB**  
+  Matches if the name includes any of: `SSB`, `LSB`, `USB`, `PH`
+
+- **FM**  
+  Matches if the name includes: `FM`
+
+##### Practical examples
+
+- `20M FT8` → DIGI (button labeled **DIGU**)
+- `40M USB` → SSB
+- `80M PH` → SSB
+- `15M CW` → CW
+- `10M FM` → FM
+
+---
+
+#### Recommended naming convention
+
+Use a consistent, simple format:
+
+`<BAND> <MODE> - <OPTIONAL DETAILS>`
+
+Examples that work:
+
+- `20M CW`
+- `40M LSB`
+- `15M USB`
+- `10M FT8 - Some more details`
+- `60M USB`
+
+---
+
+#### Why many operators keep Global Profiles per band and mode
+
+This is common with Flex/SmartSDR because Profiles help you return to a known-good setup instantly, and **what you want differs by band and by mode**. If you operate multiple modes across many bands, profiles reduce mistakes and speed up band/mode changes.
 
 ---
 
@@ -376,7 +452,7 @@ Run the application with debug logging:
 - **Windows**: Launch the application from the command prompt with the `-- -- --debug` flag.
 
   ```bash
-  "C:\Program Files\Wave-Flex Integrator\wave-flex-integrator.exe" -- -- --debug
+  "C:\Users\<YourUserName>\AppData\Local\Programs\wave-flex-integrator\WaveFlexIntegrator.exe" -- -- --debug
   ```
 
 - **Linux**: Run from terminal with the `-- -- --debug` flag.

@@ -4,6 +4,7 @@ const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const storage = require('electron-json-storage');
 const DXClusterClient = require('./dx_cluster_client');
 const FlexRadioClient = require('./flexradio_client');
@@ -41,10 +42,24 @@ let config = null;
 let qrzClient;
 
 const isDebug = process.argv.includes('--debug');
+
+function getDebugLogPath() {
+  const localAppData =
+    process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+
+  return path.join(localAppData, 'wave-flex-integrator', 'logs', 'debug.log');
+}
+
+const debugLogPath = getDebugLogPath();
+
 if (isDebug) {
-  console.log(
-    'Debug mode is enabled, debug messages can be found in file: debug.log'
-  );
+  // Ensure the directory exists
+  fs.mkdirSync(path.dirname(debugLogPath), { recursive: true });
+
+  console.log(`Debug mode is enabled.`);
+  console.log(`Debug log file (absolute): ${debugLogPath}`);
+  console.log(`Process CWD: ${process.cwd()}`);
+  console.log(`Executable: ${process.execPath}`);
 } else {
   console.log('Running in normal mode');
 }

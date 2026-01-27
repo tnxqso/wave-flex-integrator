@@ -1,11 +1,12 @@
 {
   "name": "wave-flex-integrator",
-  "version": "0.9.10",
+  "version": "0.9.12",
   "description": "A seamless bridge between your FlexRadio and Wavelog logging software, integrating DX Cluster data, and synchronizing frequency and mode, all without traditional CAT software.",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder"
+    "dist": "electron-builder",
+    "postinstall": "electron-builder install-app-deps"
   },
   "keywords": [
     "dxcluster",
@@ -17,7 +18,7 @@
     "integration",
     "radio-automation"
   ],
-  "author": "tnxqso tnxqso@narva2.net",
+  "author": "tnxqso <tnxqso@narva2.net>",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -42,11 +43,14 @@
   },
   "devDependencies": {
     "electron": "^32.1.2",
-    "electron-builder": "^24.13.3",
+    "electron-builder": "^26.4.0",
     "nodemon": "^3.0.1"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=16.0.0"
+  },
+  "overrides": {
+    "lodash": "^4.17.21"
   },
   "build": {
     "appId": "com.waveflex.integrator",
@@ -94,7 +98,9 @@
           ]
         }
       ],
-      "icon": "assets/icons/icon.icns"
+      "icon": "assets/icons/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
     },
     "linux": {
       "target": [
@@ -103,8 +109,21 @@
           "arch": [
             "x64"
           ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "rpm",
+          "arch": [
+            "x64"
+          ]
         }
       ],
+      "category": "Utility",
       "icon": "assets/icons/icon.png"
     }
   }

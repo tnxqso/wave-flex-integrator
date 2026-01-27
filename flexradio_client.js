@@ -715,24 +715,21 @@ handleSpotTriggered(eventData) {
    */
   setSliceFrequency(freqHz, mode) {
     if (!this.isConnected()) {
-        this.logger.warn(`Ignored QSY request to ${freqHz} Hz because FlexRadio is NOT connected.`);
-        return;
+      this.logger.warn(`Ignored QSY request to ${freqHz} Hz because FlexRadio is NOT connected.`);
+      return;
     }
 
     // 1. Find Active TX Slice
-    // If no active TX slice is explicitly known yet, default to Slice 0 (usually A)
-    // or the first one in the list.
     let targetSlice = null;
     if (this.activeTXSlices && this.activeTXSlices.length > 0) {
-        targetSlice = this.activeTXSlices[0];
+      targetSlice = this.activeTXSlices[0];
     } else if (this.flexSlicesByID.size > 0) {
-        // Fallback: grab the first available slice
-        targetSlice = this.flexSlicesByID.values().next().value;
+      targetSlice = this.flexSlicesByID.values().next().value;
     }
 
     if (!targetSlice) {
-        this.logger.error('Cannot QSY: No active slice found.');
-        return;
+      this.logger.error('Cannot QSY: No active slice found.');
+      return;
     }
 
     // 2. Format Frequency (Flex expects MHz, e.g., 14.020000)
@@ -741,36 +738,40 @@ handleSpotTriggered(eventData) {
     // 3. Map Mode
     let flexMode = null;
     if (mode) {
-        const inputMode = mode.toUpperCase();
-        
-        // Mode mapping logic
-        if (inputMode === 'CW') flexMode = 'CW';
-        else if (inputMode === 'AM') flexMode = 'AM';
-        else if (inputMode === 'FM') flexMode = 'FM';
-        else if (inputMode === 'FT8' || inputMode === 'RTTY' || inputMode === 'DATA' || inputMode === 'DIG') flexMode = 'DIGU';
-        else if (inputMode === 'SSB') {
-            // Ham radio convention: < 10MHz = LSB, >= 10MHz = USB
-            // Exception: 60M is usually USB, but standard logic often applies LSB. 
-            // Flex usually handles 'USB'/'LSB' explicitly.
-            flexMode = (freqHz < 10000000) ? 'LSB' : 'USB';
-        } 
-        else if (inputMode === 'LSB') flexMode = 'LSB';
-        else if (inputMode === 'USB') flexMode = 'USB';
+      const inputMode = mode.toUpperCase();
+
+      if (inputMode === 'CW' || inputMode === 'CWL' || inputMode === 'CWU') flexMode = inputMode;
+      else if (inputMode === 'AM') flexMode = 'AM';
+      else if (inputMode === 'FM') flexMode = 'FM';
+      else if (inputMode === 'FT8' || inputMode === 'RTTY' || inputMode === 'DATA' || inputMode === 'DIG') flexMode = 'DIGU';
+      else if (inputMode === 'DIGU' || inputMode === 'DIGL') flexMode = inputMode;
+      else if (inputMode === 'SSB') {
+        // < 10MHz = LSB, >= 10MHz = USB
+        flexMode = (freqHz < 10000000) ? 'LSB' : 'USB';
+      } else if (inputMode === 'LSB') flexMode = 'LSB';
+      else if (inputMode === 'USB') flexMode = 'USB';
     }
 
-    // 4. Construct Command
-    // Format: slice set <index> freq=<mhz> [mode=<mode>]
-    let command = `slice set ${targetSlice.index} freq=${freqMHz}`;
-    if (flexMode) {
-        command += ` mode=${flexMode}`;
-    }
+    // 4. Construct Commands (SmartSDR TCP API)
+    // Frequency changes: slice tune <slice> <MHz>
+    // Mode changes:      slice set <slice> mode=<mode>
+    const tuneCommand = `slice tune ${targetSlice.index} ${freqMHz}`;
+    const modeCommand = flexMode ? `slice set ${targetSlice.index} mode=${flexMode}` : null;
 
-    this.logger.info(`QSY Request: Slice ${targetSlice.index_letter} -> ${freqMHz} MHz ${flexMode || '(No mode change)'}`);
-    
-    // 5. Send
-    this.queueCommand(command, (response) => {
-        this.logger.debug(`QSY Response: ${response}`);
+    this.logger.info(
+      `QSY Request: Slice ${targetSlice.index_letter} -> ${freqMHz} MHz ${flexMode || '(No mode change)'}`
+    );
+
+    // 5. Send (queueCommand prefixes sequence number and serializes delivery)
+    this.queueCommand(tuneCommand, (response) => {
+      this.logger.debug(`QSY Tune Response: ${response}`);
     });
+
+    if (modeCommand) {
+      this.queueCommand(modeCommand, (response) => {
+        this.logger.debug(`QSY Mode Response: ${response}`);
+      });
+    }
   }
 
   /**
