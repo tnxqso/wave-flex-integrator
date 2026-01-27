@@ -1,6 +1,6 @@
 {
   "name": "wave-flex-integrator",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A seamless bridge between your FlexRadio and Wavelog logging software, integrating DX Cluster data, and synchronizing frequency and mode, all without traditional CAT software.",
   "main": "main.js",
   "scripts": {
@@ -56,7 +56,8 @@
     "appId": "com.waveflex.integrator",
     "productName": "WaveFlexIntegrator",
     "directories": {
-      "output": "dist"
+      "output": "dist",
+      "buildResources": "assets"
     },
     "files": [
       "*.js",
@@ -86,7 +87,8 @@
           ]
         }
       ],
-      "icon": "assets/icons/icon.ico"
+      "icon": "assets/icons/icon.ico",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "mac": {
       "target": [
@@ -100,7 +102,8 @@
       ],
       "icon": "assets/icons/icon.icns",
       "hardenedRuntime": true,
-      "gatekeeperAssess": false
+      "gatekeeperAssess": false,
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
     },
     "linux": {
       "target": [
@@ -124,7 +127,8 @@
         }
       ],
       "category": "Utility",
-      "icon": "assets/icons/icon.png"
+      "icon": "assets/icons/icon.png",
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
     }
   }
 }

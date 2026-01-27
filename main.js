@@ -1,6 +1,6 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, Notification } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
@@ -318,13 +318,16 @@ function createWindow() {
 
   uiManager = new UIManager(mainWindow, logger);
 
-  // Auto-updater check for updates
-  autoUpdater.checkForUpdatesAndNotify();
-
   // --- Updater Logic ---
 
-  // Auto-updater check for updates
+  // Check for updates immediately on startup
   autoUpdater.checkForUpdatesAndNotify();
+
+  // Poll for updates every 4 hours (4 * 60 * 60 * 1000 ms)
+  setInterval(() => {
+    logger.info('Performing periodic update check...');
+    autoUpdater.checkForUpdatesAndNotify();
+  }, 14400000);
 
   // Handle auto-update events
   autoUpdater.on('update-available', () => {
@@ -335,12 +338,26 @@ function createWindow() {
   });
 
   autoUpdater.on('update-downloaded', () => {
-    if (mainWindow) {
+    logger.info('Update downloaded. Ready to install.');
+
+    if (mainWindow && mainWindow.isVisible()) {
+      // If the window is visible, show the in-app toast notification
       mainWindow.webContents.send('update_downloaded');
+    } else {
+      // If the window is hidden (in tray), show a system notification
+      const notification = new Notification({
+        title: 'Wave-Flex Integrator Update',
+        body: 'A new version has been downloaded. Click to restart and install.',
+        icon: path.join(__dirname, 'assets/icons/icon.png')
+      });
+
+      notification.show();
+
+      // If user clicks the system notification, install immediately
+      notification.on('click', () => {
+        autoUpdater.quitAndInstall();
+      });
     }
-    logger.info('Update downloaded. Waiting for user to restart.');
-    // REMOVED: autoUpdater.quitAndInstall(); 
-    // We now wait for the user to trigger it via IPC.
   });
 }
 
