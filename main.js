@@ -321,12 +321,12 @@ function createWindow() {
   // --- Updater Logic ---
 
   // Check for updates immediately on startup
-  autoUpdater.checkForUpdatesAndNotify();
+  autoUpdater.checkForUpdates();
 
-  // Poll for updates every 4 hours (4 * 60 * 60 * 1000 ms)
+  // Poll for updates every 4 hours
   setInterval(() => {
     logger.info('Performing periodic update check...');
-    autoUpdater.checkForUpdatesAndNotify();
+    autoUpdater.checkForUpdates();
   }, 14400000);
 
   // Handle auto-update events
