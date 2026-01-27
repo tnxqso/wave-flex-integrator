@@ -13,6 +13,9 @@ const defaultConfig = {
     useImperial: false,
     showQsoMedia: false,
     autoLogQso: false,
+    startMinimized: false,
+    minimizeToTray: true,
+    startAtLogin: false,
     window: {
       width: 900,
       height: 800

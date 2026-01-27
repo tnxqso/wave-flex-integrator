@@ -182,10 +182,13 @@
       >
         <!-- Configuration Content -->
         <div id="configContent" class="mt-4">
-          <h3>Configuration</h3>
           <form id="configForm">
 
-<!-- HTTP CAT Listener -->
+            <!-- Form Action Buttons -->
+            <button type="submit" class="btn btn-primary">Save Configuration</button>
+            <button type="button" id="resetDefaults" class="btn btn-warning ms-2">Reset to Defaults</button>
+
+            <!-- HTTP CAT Listener -->
             <h4 class="mt-4">Wavelog "Click-to-Tune" Listener</h4>
             
             <div class="mb-3">
@@ -232,6 +235,29 @@
             <h4 class="mt-4">Application General Settings</h4>
             
             <div class="row">
+
+            <!-- Startup & Tray Behavior -->
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="appStartAtLogin">
+                  <label class="form-check-label" for="appStartAtLogin">Start at Login</label>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="appStartMinimized">
+                  <label class="form-check-label" for="appStartMinimized">Start Minimized</label>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="appMinimizeToTray">
+                  <label class="form-check-label" for="appMinimizeToTray">Minimize to Tray</label>
+                </div>
+              </div>
+            </div>
+
               <!-- Theme -->
               <div class="col-md-6 mb-3">
                 <label for="appTheme" class="form-label">Theme</label>

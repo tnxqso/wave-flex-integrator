@@ -115,9 +115,20 @@ function populateForm(config) {
   }
 
   // --- Populate Application General Settings ---
+  // IMPORTANT: Must be defined before using it for Tray settings
   const appConfig = config.application || {};
-  
-    // Populate CAT Listener Settings
+
+// Tray & Startup Settings
+  const startLoginCheck = document.getElementById('appStartAtLogin'); // <-- NY
+  if (startLoginCheck) startLoginCheck.checked = appConfig.startAtLogin || false;
+
+  const minTrayCheck = document.getElementById('appMinimizeToTray');
+  if (minTrayCheck) minTrayCheck.checked = appConfig.minimizeToTray || false;
+
+  const startMinCheck = document.getElementById('appStartMinimized');
+  if (startMinCheck) startMinCheck.checked = appConfig.startMinimized || false;
+
+  // Populate CAT Listener Settings
   const catConfig = config.catListener || { enabled: false, host: '127.0.0.1', port: 54321 };
   
   const catEnabled = document.getElementById('catListenerEnabled');
@@ -512,6 +523,9 @@ if (configForm) {
       // --- Application Settings ---
       application: {
         theme: document.getElementById('appTheme').value,
+        startAtLogin: document.getElementById('appStartAtLogin').checked,
+        minimizeToTray: document.getElementById('appMinimizeToTray').checked,
+        startMinimized: document.getElementById('appStartMinimized').checked,        
         startupTab: document.getElementById('appStartupTab').value,
         compactMode: document.getElementById('appCompactMode').checked,
         autoOpenQSO: document.getElementById('appAutoOpenQSO').checked,
