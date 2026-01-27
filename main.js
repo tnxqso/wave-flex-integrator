@@ -355,6 +355,7 @@ function createWindow() {
 
       // If user clicks the system notification, install immediately
       notification.on('click', () => {
+        isQuitting = true; // Bypass tray logic
         autoUpdater.quitAndInstall();
       });
     }
@@ -1129,6 +1130,7 @@ ipcMain.handle('load-global-profile', async (event, profileName) => {
  */
 ipcMain.handle('install-update', async () => {
   logger.info('User requested install. Quitting and installing...');
+  isQuitting = true; // Bypass tray logic to allow update
   autoUpdater.quitAndInstall();
 });
 
