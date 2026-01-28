@@ -681,18 +681,64 @@
       >
         <!-- About Content -->
         <div id="aboutContent" class="mt-4">
-          <h3>About Wave-Flex Integrator</h3>
-          <p><strong>Version:</strong> <span id="appVersion">1.0.4</span></p>
-          <p><strong>Wavelog Station Location:</strong><br><span id="wavelogStationLocationDetails">Not data retrieved</span></p>
-          <p><strong>Description:</strong> Wave-Flex Integrator simplifies your ham radio setup by directly connecting your **FlexRadio** to the **Wavelog** web-based logging software. It integrates DX Cluster data, enhances spot information, and synchronizes your frequency and mode, optionally integrates WSJT-X, all without the need for traditional CAT software.</p>
-          <p>
-            For support and more information, please refer to the
-            <a href="https://github.com/tnxqso/wave-flex-integrator/blob/main/README.md" target="_new">README file</a>.
-          </p>
-          <p><strong>Author:</strong> <a target="_new" href="https://github.com/tnxqso">TNX QSO Community</a></p>
-          <p><strong>License:</strong> <a target="_new" href="https://opensource.org/license/mit"> MIT License</a></p>
+          
+          <!-- Header Section -->
+          <div class="d-flex align-items-center mb-4">
+            <img src="assets/icons/icon.png" alt="Logo" style="width: 64px; height: 64px;" class="me-3">
+            <div>
+              <h2 class="mb-0">Wave-Flex Integrator</h2>
+              <p class="text-muted mb-0">Version <span id="appVersion">1.0.0</span></p>
+            </div>
+          </div>
+
+          <p><strong>Description:</strong> Wave-Flex Integrator simplifies your ham radio setup by directly connecting your **FlexRadio** to the **Wavelog** web-based logging software. It integrates DX Cluster data, enhances spot information, enables click-to-tune, and synchronizes your frequency and mode, all without the need for traditional CAT software.</p>
+
+          <hr class="my-4">
+
+          <!-- Wavelog Station Info -->
+          <h5><i class="bi bi-broadcast me-2"></i>Wavelog Station Location</h5>
+          <div class="card mb-4 bg-light-subtle">
+            <div class="card-body font-monospace small">
+              <span id="wavelogStationLocationDetails">Waiting for Wavelog connection...</span>
+            </div>
+          </div>
+
+          <!-- Community Call to Action (Soft Version) -->
+          <div class="card border-primary mb-4">
+            <div class="card-header bg-primary text-white">
+              <i class="bi bi-heart-fill me-2"></i>Help the Project
+            </div>
+            <div class="card-body">
+              <h5 class="card-title">Do you like this integration?</h5>
+              <p class="card-text">
+                Wave-Flex Integrator is a free, open-source project developed independently by the TNXQSO community.
+              </p>
+              <p class="card-text">
+                If this tool has improved your operating experience, <strong>please consider spreading the word!</strong> Mentioning Wave-Flex Integrator on the <em>FlexRadio Community Forum</em>, Twitter/X, or to your fellow ham operators helps others discover that they can run Wavelog without complex CAT bridges.
+              </p>
+              <div class="d-flex gap-2">
+                <a href="https://community.flexradio.com/" target="_new" class="btn btn-outline-primary btn-sm">
+                  <i class="bi bi-chat-quote-fill me-1"></i> FlexRadio Forum
+                </a>
+                <a href="https://github.com/tnxqso/wave-flex-integrator" target="_new" class="btn btn-dark btn-sm">
+                  <i class="bi bi-github me-1"></i> Star on GitHub
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- Credits & Links -->
+          <h5>Credits</h5>
+          <ul class="list-unstyled">
+            <li><strong>Author:</strong> <a target="_new" href="https://github.com/tnxqso">TNX QSO Community</a></li>
+            <li><strong>Support:</strong> <a href="https://github.com/tnxqso/wave-flex-integrator/blob/main/README.md" target="_new">README & Documentation</a></li>
+            <li><strong>License:</strong> <a target="_new" href="https://opensource.org/license/mit">MIT License</a></li>
+          </ul>
+          
+          <div class="text-center mt-4 text-muted small">
+            <em>Not affiliated with FlexRadio Systems or Wavelog.</em>
+          </div>
         </div>
-      </div>
 
     </div>
   </div>
