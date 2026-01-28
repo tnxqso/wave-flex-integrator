@@ -130,24 +130,22 @@ The demo provides a hands-on experience to see if Wavelog suits your needs.
 
 ### SmartSDR Versions and Compatibility
 
-Wave-Flex Integrator communicates directly with the FlexRadio hardware, making it independent of the SmartSDR version used. However, some features depend on the capabilities of your SmartSDR software:
+Wave-Flex Integrator communicates directly with the FlexRadio hardware API (TCP/IP), making it largely independent of the SmartSDR version used. However, certain interactive features depend on the capabilities of your SmartSDR client software:
 
 - **SmartSDR for Windows** (Developed by FlexRadio Systems):
-  - [Download SmartSDR for Windows](https://www.flexradio.com/ssdr/)
-  - **Click-to-Log Feature**: Fully supported. Clicking a spot opens a pre-filled Wavelog logging window.
+  - **Click-to-Log Feature**: Fully supported. Clicking a spot on the panadapter opens a pre-filled Wavelog logging window.
 
 - **SmartSDR for Mac** (Developed by Marcus & Jan Roskosch):
-  - [SmartSDR for Mac](https://roskosch.de/smartsdr-for-mac/)
-  - **Click-to-Log Feature**: **Not supported** due to software limitations. SmartSDR for Mac does not send information about clicked spots back to the FlexRadio, preventing Wave-Flex Integrator from triggering the logging action.
+  - **Click-to-Log Feature**: **Not supported**.
+  - *Reason:* The Mac client does not send a notification back to the radio API when a spot is clicked. Therefore, Wave-Flex Integrator never receives the trigger signal. Please contact the developer of SmartSDR for Mac if you wish to request this feature.
 
 - **SmartSDR for iOS** (Also by Marcus & Jan Roskosch):
-  - [SmartSDR for iOS](https://roskosch.de/smartsdr-features/)
-  - **Click-to-Log Feature**: **Not tested**, but expected to have the same limitations as the Mac version.
+  - **Click-to-Log Feature**: **Not supported** (Same limitation as the Mac version).
 
 - **FlexRadio M-Series** (Radios with integrated touchscreens):
   - **Click-to-Log Feature**: **Not tested**. Functionality may vary.
 
-> **Important Note:** While the Wave-Flex Integrator is compatible with various versions of SmartSDR, the one-click logging feature is only available when using SmartSDR for Windows and probably also when using FlexRadio M-Series touch screen instead of SmartSDR.
+> **Important Note:** While spots will *display* correctly on all platforms, the **one-click logging** feature is currently exclusive to **SmartSDR for Windows** due to API implementation differences in third-party clients.
 
 ---
 
