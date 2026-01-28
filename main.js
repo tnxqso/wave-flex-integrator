@@ -574,7 +574,33 @@ app.on('ready', () => {
           // Define what happens when a request comes in
           httpCatListener.onQsy((freq, mode) => {
             if (flexRadioClient) {
+                // 1. Send the physical command to the radio
                 flexRadioClient.setSliceFrequency(freq, mode);
+
+                // 2. BUG FIX: Optimistic Update (Solves the Race Condition)
+                // We update the internal state and push it to WaveLog immediately.
+                // We do NOT wait for the FlexRadio "sliceStatus" event, because it arrives
+                // too late (after the WaveLog window has already opened).
+                
+                if (flexRadioClient.activeTXSlices && flexRadioClient.activeTXSlices.length > 0) {
+                    const activeSlice = flexRadioClient.activeTXSlices[0];
+                    
+                    // Update the local object immediately. 
+                    // Convert Hz (from HTTP) to MHz (for internal storage/WaveLog)
+                    activeSlice.frequency = freq / 1000000.0;
+                    
+                    // Update mode if provided
+                    if (mode) {
+                        activeSlice.mode = mode.toUpperCase();
+                    }
+
+                    logger.info(`Optimistic Update: Manually pushing ${freq} Hz to WaveLog to prevent race condition.`);
+                    
+                    // Push to WaveLog immediately
+                    wavelogClient.sendActiveSliceToWavelog(activeSlice).catch((err) => {
+                        logger.error(`Error sending optimistic update: ${err.message}`);
+                    });
+                }
             }
           });
 
