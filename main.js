@@ -491,6 +491,35 @@ async function fetchStationDetails(suppressErrors = false) {
   }
 }
 
+// --- Single Instance Lock Logic ---
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  logger.info('Another instance is already running. Quitting this instance.');
+  app.quit();
+} else {
+  // We have the lock. Listen for a second instance trying to start.
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    logger.info('Second instance detected. Focusing existing window.');
+    
+    // Someone tried to run a second instance, we should focus our window.
+    if (mainWindow) {
+      // If minimized to tray, show it
+      if (!mainWindow.isVisible()) {
+          mainWindow.show();
+      }
+      // If minimized to taskbar, restore it
+      if (mainWindow.isMinimized()) {
+          mainWindow.restore();
+      }
+      mainWindow.focus();
+    } else {
+        // Edge case: If window was destroyed but app is running (e.g. macOS behavior sometimes), recreate it
+        createWindow();
+    }
+  });
+}
+
 /**
  * Initializes the application once Electron is ready.
  */
