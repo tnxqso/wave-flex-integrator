@@ -1,8 +1,9 @@
 const { ipcRenderer } = require('electron');
 
 // UI Elements
-const callInput = document.getElementById('callsignInput');
-const lookupBtn = document.getElementById('lookupBtn');
+// NOTE: Assumes HTML uses <div id="callsignDisplay"> instead of input
+const callDisplay = document.getElementById('callsignDisplay'); 
+const radioStatusFooter = document.getElementById('radioStatusFooter');
 
 // Layout Containers
 const headerData = document.getElementById('headerData'); 
@@ -17,7 +18,7 @@ const flagIcon = document.getElementById('flagIcon');
 const bearingValue = document.getElementById('bearingValue');
 const distanceValue = document.getElementById('distanceValue');
 
-// Stats Elements (NEW)
+// Stats Elements
 const valGrid = document.getElementById('valGrid');
 const valBear = document.getElementById('valBear');
 const valDist = document.getElementById('valDist');
@@ -40,9 +41,8 @@ const mapContainer = document.getElementById('mapContainer');
 // Buttons
 const rotateSP = document.getElementById('rotateBtnSP');
 const rotateLP = document.getElementById('rotateBtnLP');
-const logBtn = document.getElementById('logBtn');
 const spotFlexBtn = document.getElementById('spotFlexBtn');
-const btnSendDx = document.getElementById('btnSendDx');
+const spotDxClusterBtn = document.getElementById('spotDxClusterBtn'); 
 const btnDxLink = document.getElementById('btnDxLink');
 const dxComment = document.getElementById('dxComment');
 
@@ -52,31 +52,63 @@ let currentBearingLP = null;
 let currentImageUrl = '';
 let currentGoogleMapsLink = '';
 let appConfig = {};
-let isExternalLookup = false; // Flag to prevent recursion
 
 // --- Initialize ---
 window.onload = async () => {
     appConfig = await ipcRenderer.invoke('get-config');
     applyTheme(appConfig.application?.theme || 'system');
-    callInput.focus();
     resetUI(); 
 };
 
-// --- External Trigger (Flex Click) ---
-ipcRenderer.on('external-lookup', (event, callsign) => {
-    callInput.value = callsign;
-    isExternalLookup = true; // Mark source
-    performLookup();
+// --- 1. Wavelog Live Metadata Listener (Primary Source) ---
+ipcRenderer.on('wavelog-lookup', (event, data) => {
+    console.log("Received live metadata from Wavelog:", data);
+    
+    // Direct mapping - No new lookup needed!
+    // Wavelog has already done the heavy lifting via WebSocket.
+    const mappedData = {
+        callsign: data.callsign,
+        dxcc_id: data.dxcc_id,
+        name: data.name,
+        gridsquare: data.grid || data.gridsquare,
+        city: data.city,
+        state: data.state,
+        us_county: data.us_county, 
+        
+        // Use Wavelog's calculated bearing directly
+        bearing: data.azimuth, 
+        distance: data.distance,
+        
+        // Calculate LP locally based on Wavelog's azimuth
+        bearing_lp: (data.azimuth + 180) % 360,
+        distance_lp: Math.round(40075 - parseFloat(data.distance || 0)),
+
+        // Extended status flags
+        lotw_member: data.lotw_member === "active",
+        lotw_days: data.lotw_days,
+        eqsl_member: data.eqsl_member === "active",
+        qsl_manager: data.qsl_manager,
+        
+        // Slot logic from Wavelog
+        dxcc_confirmed_on_band_mode: data.slot_confirmed,
+        
+        // Pass radio status from backend
+        radio_connected: data.radio_connected,
+        test_mode: data.test_mode // Handle test mode if present
+    };
+
+    // Update UI immediately
+    updateUI(mappedData);
+});
+
+// --- 2. Flex Spot Click (Secondary Source) ---
+ipcRenderer.on('external-lookup', async (event, callsign) => {
+    // If we click a spot on Flex, we might not be in Wavelog yet.
+    // We perform a lookup to populate the Assistant.
+    performLookup(callsign);
 });
 
 // --- Event Listeners ---
-callInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') performLookup();
-});
-
-callInput.addEventListener('input', () => {
-    if (currentCallsign) resetUI();
-});
 
 // Rotor Buttons
 rotateSP.addEventListener('click', () => {
@@ -99,23 +131,29 @@ function flashButton(btn) {
     setTimeout(() => btn.innerHTML = originalHtml, 1000);
 }
 
-// Log
-logBtn.addEventListener('click', () => {
-    if (currentCallsign) ipcRenderer.invoke('log-qso', currentCallsign);
-});
-
-// DX Spot
-btnSendDx.addEventListener('click', async () => {
-    const comment = dxComment.value;
-    // Send to main process
-    const res = await ipcRenderer.invoke('send-dx-spot', { callsign: currentCallsign, comment });
-    if(res.success) {
-        flashButton(btnSendDx);
-        dxComment.value = ''; // Clear comment
-    } else {
-        alert("Error: " + res.error);
-    }
-});
+// DX Spot (Cluster)
+if (spotDxClusterBtn) {
+    spotDxClusterBtn.addEventListener('click', async () => {
+        const comment = dxComment.value;
+        
+        // Disable immediately to prevent double-clicks while processing
+        spotDxClusterBtn.disabled = true;
+        
+        const res = await ipcRenderer.invoke('send-dx-spot', { callsign: currentCallsign, comment });
+        
+        if(res.success) {
+            flashButton(spotDxClusterBtn);
+            dxComment.value = ''; 
+            // Keep disabled after success to prevent double spotting on same callsign.
+            // It will be re-enabled automatically when updateUI() runs for the next callsign.
+            spotDxClusterBtn.disabled = true; 
+        } else {
+            alert("Error: " + res.error);
+            // Re-enable if it failed, so the user can try again
+            spotDxClusterBtn.disabled = false; 
+        }
+    });
+}
 
 btnDxLink.addEventListener('click', () => {
     ipcRenderer.invoke('open-external-link', 'https://dxwatch.com/');
@@ -132,48 +170,46 @@ profileImgContainer.addEventListener('click', () => {
 
 // --- Logic ---
 
-async function performLookup() {
-    let rawCall = callInput.value.trim().toUpperCase();
-    if (!rawCall) return;
+/**
+ * Performs a lookup via Main Process (Wavelog API/QRZ).
+ * Only used when triggered by Flex Spot click, NOT by Wavelog Live.
+ */
+async function performLookup(callsign) {
+    if (!callsign) return;
 
-    if (!/^(?=.*\d)[A-Z0-9/]{3,}$/.test(rawCall)) {
-        callInput.classList.add('is-invalid');
-        setTimeout(() => callInput.classList.remove('is-invalid'), 2000);
-        return;
-    }
-
-    callInput.disabled = true;
+    if(callDisplay) callDisplay.innerText = callsign;
     document.body.style.cursor = 'wait';
 
     try {
-        const result = await ipcRenderer.invoke('lookup-callsign', rawCall);
+        const result = await ipcRenderer.invoke('lookup-callsign', callsign);
         
         if (result) {
             updateUI(result);
-
-            // Auto Log Logic (Only if NOT from external click)
-            if (appConfig.application?.autoLogQso && !isExternalLookup) {
-                 ipcRenderer.invoke('log-qso', rawCall);
-            }
         } else {
-            // Not Found logic (Optional visual feedback)
-            callInput.classList.add('is-invalid');
-            setTimeout(() => callInput.classList.remove('is-invalid'), 2000);
+            // Visual feedback for not found
+            if(callDisplay) {
+                callDisplay.style.color = "#dc3545"; // Red
+                setTimeout(() => callDisplay.style.color = "#0dcaf0", 2000);
+            }
         }
     } catch (err) {
         console.error(err);
     } finally {
-        callInput.disabled = false;
-        callInput.focus();
         document.body.style.cursor = 'default';
-        isExternalLookup = false; // Reset flag
     }
 }
 
 function updateUI(data) {
     currentCallsign = data.callsign;
+    
+    // Update LCD Display
+    if(callDisplay) {
+        callDisplay.innerText = currentCallsign || '---';
+        callDisplay.style.color = "#0dcaf0"; // Cyan/Blue
+    }
+    
     currentBearingSP = data.bearing; 
-    currentBearingLP = data.bearing_lp; // From main.js
+    currentBearingLP = data.bearing_lp;
 
     // SHOW Data Containers
     headerData.classList.remove('d-none');
@@ -188,33 +224,47 @@ function updateUI(data) {
         mediaRow.classList.add('d-none');
     }
 
-    // Show Log Button?
-    if (appConfig.application?.autoLogQso) {
-        logBtn.style.display = 'none';
-    } else {
-        logBtn.style.display = 'flex';
-    }
+    // Handle Radio Status & Buttons
+    // Allow spotting if radio connected OR in test mode
+    const isRadioConnected = data.radio_connected === true;
+    const isTestMode = data.test_mode === true;
+    const canSpot = isRadioConnected || isTestMode;
 
-    // Enable DX Button if radio connected
-    if (data.radio_connected) {
-        btnSendDx.disabled = false;
+    if (canSpot) {
+        if(spotDxClusterBtn) spotDxClusterBtn.disabled = false;
         dxComment.disabled = false;
         dxComment.placeholder = "DX Comment (e.g. 5 up)";
     } else {
-        btnSendDx.disabled = true;
+        if(spotDxClusterBtn) spotDxClusterBtn.disabled = true;
         dxComment.disabled = true;
         dxComment.placeholder = "Radio Disconnected";
     }
 
+    // Flex Spot Button: ONLY if real radio is connected (Test mode doesn't help here)
+    if (spotFlexBtn) {
+        spotFlexBtn.disabled = !isRadioConnected;
+    }
+
+    // Show warning footer if disconnected (and not in test mode)
+    if(radioStatusFooter) {
+        radioStatusFooter.style.display = (isRadioConnected || isTestMode) ? 'none' : 'block';
+    }
+
     // Header Info
-    let displayText = data.dxcc || 'Unknown';
+    let displayText = data.dxcc || '';
+    
+    // Construct Location String (City, State - County)
+    let locString = data.city || '';
+    if (data.state) locString += (locString ? `, ${data.state}` : data.state);
+    if (data.us_county) locString += ` - ${data.us_county}`;
+    
     if (data.name) {
         displayText += ` - ${data.name}`;
-        if (data.location) displayText += ` (${data.location})`;
+        if (locString) displayText += ` (${locString})`;
     }
-    dxccName.innerText = displayText;
+    dxccName.innerText = displayText || 'Unknown';
 
-    // Flag
+    // Flag logic 
     if (data.dxcc_flag) {
         const isoCode = getIsoCodeFromEmoji(data.dxcc_flag);
         if (isoCode) {
@@ -224,6 +274,8 @@ function updateUI(data) {
             flagIcon.className = 'fi me-2';
             flagIcon.innerText = data.dxcc_flag; 
         }
+    } else {
+        flagIcon.className = 'd-none'; 
     }
 
     // Stats Logic (Imperial vs Metric)
@@ -232,7 +284,6 @@ function updateUI(data) {
     let unit = 'km';
 
     if (appConfig.application?.useImperial) {
-        // Convert to miles if requested
         if (distSP) distSP = Math.round(distSP * 0.621371);
         if (distLP) distLP = Math.round(distLP * 0.621371);
         unit = 'mi';
@@ -245,11 +296,9 @@ function updateUI(data) {
     // Extended Stats Row
     valGrid.innerText = data.gridsquare || '---';
     
-    // Short Path Stats
     valBear.innerText = data.bearing ? `${data.bearing}°` : '-';
     valDist.innerText = distSP ? `${distSP} ${unit}` : '-';
 
-    // Long Path Stats
     valBearLP.innerText = data.bearing_lp ? `${data.bearing_lp}°` : '-';
     valDistLP.innerText = distLP ? `${distLP} ${unit}` : '-';
 
@@ -258,29 +307,45 @@ function updateUI(data) {
     document.getElementById('rotBearLP').innerText = data.bearing_lp ? `${data.bearing_lp}°` : '';
 
     // Badges
-    updateBadge(statusDxcc, data.dxcc_confirmed, "DXCC Cnf", "New DXCC");
+    updateBadge(statusDxcc, data.dxcc_confirmed, "DXCC CNF", "NEW DXCC");
     
-    if (data.radio_connected) {
+    // Slot Status (Band/Mode)
+    if (data.dxcc_confirmed_on_band_mode !== undefined) {
         statusSlot.style.display = 'flex';
-        updateBadge(statusSlot, data.dxcc_confirmed_on_band_mode, "Slot Cnf", "New Slot");
+        updateBadge(statusSlot, data.dxcc_confirmed_on_band_mode, "SLOT CNF", "NEW SLOT");
     } else {
         statusSlot.style.display = 'none';
     }
 
+    // LoTW Status with Days
     if (data.lotw_member) {
         statusLotw.className = 'status-badge status-active';
-        statusLotw.innerText = "LoTW";
+        statusLotw.style.backgroundColor = ''; 
+        
+        if (data.lotw_days !== null && data.lotw_days !== undefined) {
+            statusLotw.innerText = `LOTW (${data.lotw_days}D)`;
+            
+            // Warning color for old uploads (> 1 year)
+            if (parseInt(data.lotw_days) > 365) {
+                statusLotw.style.backgroundColor = '#d63384'; 
+                statusLotw.title = "Warning: Last upload > 1 year ago";
+            }
+        } else {
+            statusLotw.innerText = "LOTW";
+        }
     } else {
         statusLotw.className = 'status-badge status-none';
-        statusLotw.innerText = "No LoTW";
+        statusLotw.style.backgroundColor = ''; 
+        statusLotw.innerText = "NO LOTW";
     }
 
-    if (data.qsl_manager && data.qsl_manager.includes('OQRS')) {
+    // OQRS
+    if (data.qsl_manager && data.qsl_manager.toUpperCase().includes('OQRS')) {
         statusOqrs.className = 'status-badge status-active';
         statusOqrs.innerText = "OQRS";
     } else {
         statusOqrs.className = 'status-badge status-none';
-        statusOqrs.innerText = "No OQRS";
+        statusOqrs.innerText = "NO OQRS";
     }
 
     // Media
@@ -305,10 +370,6 @@ function updateUI(data) {
     } else if (data.latlng && data.latlng.length === 2) {
         mapLat = data.latlng[0];
         mapLon = data.latlng[1];
-        hasCoords = true;
-    } else if (data.dxcc_lat) {
-        mapLat = parseFloat(data.dxcc_lat);
-        mapLon = parseFloat(data.dxcc_long);
         hasCoords = true;
     }
 
@@ -339,6 +400,17 @@ function resetUI() {
     distanceValue.innerText = '';
     profileImg.src = '';
     mapFrame.src = 'about:blank';
+    
+    if(callDisplay) {
+        callDisplay.innerText = "WAITING...";
+        callDisplay.style.color = "#6c757d";
+    }
+    
+    // Disable buttons on reset
+    if(spotDxClusterBtn) spotDxClusterBtn.disabled = true;
+    if(spotFlexBtn) spotFlexBtn.disabled = true;
+    dxComment.disabled = true;
+    if(radioStatusFooter) radioStatusFooter.style.display = 'none'; 
 }
 
 function updateBadge(el, isConfirmed, textConf, textNeed) {

@@ -172,7 +172,15 @@ const defaultConfig = {
     enabled: true,
     host: '127.0.0.1', // Listen on localhost by default for security
     port: 54321,       // Default Wavelog port
-  },  
+  }, 
+
+  // ==============================
+  // Wavelog Live Metadata Listener (WebSocket)
+  // ==============================
+  wavelogLive: {
+    enabled: true,     // Master switch for metadata reception
+    port: 54322        // Standard Wavelog WebSocket port
+  }
 
 };
 

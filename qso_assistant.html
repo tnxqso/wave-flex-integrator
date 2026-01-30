@@ -185,10 +185,14 @@
   <!-- Unified Header -->
   <div id="unifiedHeader">
       
-      <!-- 1. Search (Always Visible) -->
-      <div class="search-section">
-          <input type="text" id="callsignInput" class="form-control" placeholder="CALL">
-          <button id="lookupBtn" class="d-none"></button> <!-- Hidden trigger for logic -->
+      <!-- 1. Callsign Display (LCD Style) - Width auto-adjusts now -->
+      <div class="search-section" style="flex-grow: 1; margin-right: 12px; min-width: 160px;">
+          <div id="callsignDisplay" class="d-flex align-items-center justify-content-center" 
+               style="background-color: #212529; color: #0dcaf0; font-family: 'Consolas', monospace; 
+                      font-weight: 800; font-size: 1.8rem; height: 42px; border-radius: 4px; 
+                      border: 1px solid #444; letter-spacing: 2px; overflow: hidden; white-space: nowrap; padding-left: 10px; padding-right: 10px;">
+              WAITING...
+          </div>
       </div>
 
       <!-- 2. Data Wrapper (Hidden until lookup) -->
@@ -246,18 +250,25 @@
   <!-- DX ANNOUNCEMENT -->
   <div id="dxRow" class="d-none">
       <input type="text" id="dxComment" class="form-control form-control-sm" placeholder="DX Comment (e.g. 5 up)">
-      <button id="btnSendDx" class="btn btn-sm btn-warning fw-bold" style="white-space:nowrap;" disabled><i class="bi bi-send"></i> Spot</button>
+      <button id="spotDxClusterBtn" class="btn btn-sm btn-warning fw-bold" style="white-space:nowrap;" disabled>
+          <i class="bi bi-send"></i> Send Spot
+      </button>
       <button id="btnDxLink" class="btn btn-sm btn-outline-secondary" title="Open DXWatch"><i class="bi bi-box-arrow-up-right"></i></button>
   </div>
-
+  
   <!-- Control Buttons -->
   <div id="controlsRow" class="d-none">
-      <!-- Split Rotor Buttons -->
       <button id="rotateBtnSP" class="btn btn-outline-danger btn-action btn-split"><span>ROTATE</span><span id="rotBearSP" style="font-size:1.1em;">---°</span></button>
       <button id="rotateBtnLP" class="btn btn-outline-warning btn-action btn-split"><span>LONG P</span><span id="rotBearLP" style="font-size:1.1em;">---°</span></button>
       
-      <button id="spotFlexBtn" class="btn btn-outline-secondary btn-action"><i class="bi bi-display me-1"></i> Flex Spot</button>
-      <button id="logBtn" class="btn btn-success btn-action"><i class="bi bi-pencil-square me-1"></i> Log QSO</button>
+      <button id="spotFlexBtn" class="btn btn-outline-secondary btn-action" disabled>
+          <i class="bi bi-display me-1"></i> Flex Spot
+      </button>
+  </div>
+  
+  <!-- Radio Status Footer (New) -->
+  <div id="radioStatusFooter" class="text-center mt-2 text-muted small" style="display:none;">
+      <i class="bi bi-exclamation-triangle-fill text-warning"></i> Radio Disconnected
   </div>
 
   <script src="qso_assistant.js"></script>

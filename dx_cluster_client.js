@@ -313,22 +313,39 @@ class DXClusterClient extends events.EventEmitter {
   }
 
   /**
-   * Sends a DX Spot announcement to the cluster.
-   * Format: DX <freq> <call> <comment>
-   * @param {string} freq - Frequency in kHz (e.g. 14020.5)
-   * @param {string} callsign - The callsign
-   * @param {string} comment - Optional comment
+   * Sends a DX spot to the cluster.
+   * @param {string} freq - Frequency in kHz.
+   * @param {string} callsign - DX Callsign.
+   * @param {string} comment - Comment.
    */
   sendDxSpot(freq, callsign, comment) {
-    if (!this.client) return;
+    // --- DEBUGGING CONNECTION STATE ---
+    this.logger.info(`[DEBUG] sendDxSpot called via IPC.`);
     
-    // Ensure comment is safe
-    const safeComment = comment ? comment.replace(/[^a-zA-Z0-9 ]/g, "") : "";
-    const command = `DX ${freq} ${callsign} ${safeComment}\r\n`;
-    
-    this.logger.info(`Sending Cluster Spot: ${command.trim()}`);
-    this.client.write(command);
-  }  
+    if (!this.socket) {
+        this.logger.error(`[DEBUG] this.socket is NULL or UNDEFINED.`);
+    }
+
+    if (!this.socket || this.socket.destroyed || !this.socket.writable) {
+      this.logger.warn('Cannot send spot: Client not connected/writable.');
+      return;
+    }
+
+    const command = `DX ${freq} ${callsign} ${comment || ''}`;
+    this.logger.info(`DXCluster TX Raw: "${command}"`);
+
+    try {
+        this.socket.write(command + '\r\n', (err) => {
+        if (err) {
+            this.logger.error(`Failed to write spot command: ${err.message}`);
+        } else {
+            this.logger.debug('Spot command written to socket.');
+        }
+        });
+    } catch (e) {
+        this.logger.error(`Exception during write: ${e.message}`);
+    }
+  }
 
 }
 

@@ -231,6 +231,29 @@
                 </ol>
             </div>
   
+          <!-- Wavelog Live Listener -->
+            <h4 class="mt-4">Wavelog "Live" Metadata Listener</h4>
+            <div class="mb-3">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="wavelogLiveEnabled">
+                <label class="form-check-label fw-bold" for="wavelogLiveEnabled">Enable Metadata Broadcast Listener</label>
+              </div>
+              <div class="form-text text-muted">
+                Receives Name, QTH, Bearing, and LoTW status from Wavelog as you type a callsign. 
+                This data is used to automatically populate the <strong>QSO Assistant</strong>.
+              </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="wavelogLivePort" class="form-label">WebSocket Port</label>
+                    <input type="number" class="form-control" id="wavelogLivePort" placeholder="54322">
+                    <div class="form-text">
+                        Default: <code>54322</code>.
+                    </div>
+                </div>
+            </div>
+
             <!-- Application Settings -->
             <h4 class="mt-4">Application General Settings</h4>
             

@@ -140,6 +140,15 @@ function populateForm(config) {
   const catPort = document.getElementById('catListenerPort');
   if(catPort) catPort.value = catConfig.port;
 
+  // Populate Wavelog Live Listener Settings
+  const wlLiveConfig = config.wavelogLive || { enabled: true, port: 54322 };
+  
+  const wlLiveEnabled = document.getElementById('wavelogLiveEnabled');
+  if(wlLiveEnabled) wlLiveEnabled.checked = wlLiveConfig.enabled;
+
+  const wlLivePort = document.getElementById('wavelogLivePort');
+  if(wlLivePort) wlLivePort.value = wlLiveConfig.port;
+
   // Theme
   const theme = appConfig.theme || 'system';
   const themeSelect = document.getElementById('appTheme');
@@ -547,6 +556,10 @@ if (configForm) {
         enabled: document.getElementById('catListenerEnabled').checked,
         host: document.getElementById('catListenerHost').value.trim() || '127.0.0.1',
         port: parseInt(document.getElementById('catListenerPort').value) || 54321
+      },
+      wavelogLive: {
+        enabled: document.getElementById('wavelogLiveEnabled').checked,
+        port: parseInt(document.getElementById('wavelogLivePort').value) || 54322
       },      
       // --- Rotator Settings ---
       rotator: {

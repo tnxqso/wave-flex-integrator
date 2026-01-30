@@ -19,8 +19,12 @@ const mergeWith = require('lodash.mergewith');
 const QRZClient = require('./qrz_client');
 const MqttRotatorClient = require('./mqtt_client');
 const HttpCatListener = require('./http_cat_listener');
+const WavelogWsServer = require('./wavelog_ws_server');
+
+const IS_TEST_MODE = false; // Test, when radio is not available.
 
 let httpCatListener;
+let wavelogWsServer;
 let mqttRotatorClient;
 let qsoWindow = null; // Reference to the QSO Assistant window
 
@@ -597,44 +601,45 @@ app.on('ready', () => {
           // Attach flexRadioClient-specific event listeners here
           attachFlexRadioEventListeners();
 
-          // Initialize HTTP CAT Listener
+          // Initialize HTTP CAT Listener (Click-to-Tune)
           httpCatListener = new HttpCatListener(config, logger);
-          
-          // Define what happens when a request comes in
           httpCatListener.onQsy((freq, mode) => {
             if (flexRadioClient) {
-                // 1. Send the physical command to the radio
+                // 1. Send command to radio
                 flexRadioClient.setSliceFrequency(freq, mode);
 
-                // 2. BUG FIX: Optimistic Update (Solves the Race Condition)
-                // We update the internal state and push it to WaveLog immediately.
-                // We do NOT wait for the FlexRadio "sliceStatus" event, because it arrives
-                // too late (after the WaveLog window has already opened).
-                
+                // 2. Optimistic Update: Push directly to WaveLog to prevent race condition
                 if (flexRadioClient.activeTXSlices && flexRadioClient.activeTXSlices.length > 0) {
                     const activeSlice = flexRadioClient.activeTXSlices[0];
-                    
-                    // Update the local object immediately. 
-                    // Convert Hz (from HTTP) to MHz (for internal storage/WaveLog)
                     activeSlice.frequency = freq / 1000000.0;
+                    if (mode) activeSlice.mode = mode.toUpperCase();
                     
-                    // Update mode if provided
-                    if (mode) {
-                        activeSlice.mode = mode.toUpperCase();
-                    }
-
-                    logger.info(`Optimistic Update: Manually pushing ${freq} Hz to WaveLog to prevent race condition.`);
-                    
-                    // Push to WaveLog immediately
+                    logger.info(`Optimistic Update: Manually pushing ${freq} Hz to WaveLog.`);
                     wavelogClient.sendActiveSliceToWavelog(activeSlice).catch((err) => {
                         logger.error(`Error sending optimistic update: ${err.message}`);
                     });
                 }
             }
           });
-
-          // Start the listener
           httpCatListener.start();
+
+          // Initialize Wavelog Live Metadata Listener (WebSocket)
+          wavelogWsServer = new WavelogWsServer(config, logger);
+          
+          wavelogWsServer.on('lookup', (data) => {
+            logger.info(`External lookup trigger from Wavelog: ${data.callsign}`);
+
+            // Inject Radio Status so UI knows if it should enable "Spot" buttons
+            data.radio_connected = flexRadioClient && flexRadioClient.isConnected();
+
+            data.test_mode = IS_TEST_MODE;
+
+            if (qsoWindow && !qsoWindow.isDestroyed()) {
+              qsoWindow.webContents.send('wavelog-lookup', data);
+              qsoWindow.show();
+            }
+          });
+          wavelogWsServer.start();
 
         } else {
           logger.warn('No station callsign found; FlexRadio client will not be initialized.');
@@ -973,6 +978,9 @@ async function shutdown() {
     if (httpCatListener) {
         httpCatListener.stop();
     }    
+   if (wavelogWsServer) {
+        wavelogWsServer.stop();
+    }
 
     if (mainWindow) {
       mainWindow.close();
@@ -1339,16 +1347,33 @@ ipcMain.handle('log-qso', (event, callsign) => {
 });
 
 ipcMain.handle('send-dx-spot', async (event, { callsign, comment }) => {
-    if (!flexRadioClient || !flexRadioClient.isConnected()) return { success: false, error: "Radio not connected" };
-    if (!flexRadioClient.activeTXSlices || flexRadioClient.activeTXSlices.length === 0) return { success: false, error: "No Active TX Slice" };
+    const isConnected = flexRadioClient && flexRadioClient.isConnected();
+    const hasSlice = flexRadioClient && flexRadioClient.activeTXSlices && flexRadioClient.activeTXSlices.length > 0;
+
+    if (!isConnected && !IS_TEST_MODE) {
+        return { success: false, error: "Radio not connected" };
+    }
 
     try {
-        // Get freq in Hz, convert to kHz (e.g. 14020.5)
-        const freqHz = flexRadioClient.activeTXSlices[0].frequency * 1e6; 
-        const freqKHz = (freqHz / 1000).toFixed(1);
+        let freqKHz;
 
+        if (isConnected && hasSlice) {
+            // Real radio frequency
+            const freqHz = flexRadioClient.activeTXSlices[0].frequency * 1e6; 
+            freqKHz = (freqHz / 1000).toFixed(1);
+        } else if (IS_TEST_MODE) {
+            // Fake frequency for testing
+            freqKHz = "14055.0"; // Valid 20m frequency
+            logger.info(`[TEST] Sending Spot for ${callsign} on ${freqKHz} kHz`);
+        } else {
+             return { success: false, error: "No Active TX Slice" };
+        }
+
+        // Send the spot via DX Cluster Client
+        // Note: This requires the DX Cluster to be actually connected!
         dxClusterClient.sendDxSpot(freqKHz, callsign, comment);
         return { success: true };
+
     } catch (err) {
         return { success: false, error: err.message };
     }
