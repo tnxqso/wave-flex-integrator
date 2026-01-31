@@ -41,6 +41,7 @@ module.exports = class FlexRadioClient extends EventEmitter {
     this.isDisconnecting = false;
     this.activeTXSlices = null;
     this.lastConnectionWarningTime = 0;
+    this.qsyLock = { expiration: 0, targetFreq: 0 };
 
     this.messageParser = new FlexRadioMessageParser();
     this.wavelogClient = new WavelogClient(this.config, this.logger);
@@ -217,6 +218,20 @@ module.exports = class FlexRadioClient extends EventEmitter {
 
     slice.statusUpdate(handle, statusMessage);
     slice.updateStationName(this.handleStationMap); // Set the station name based on the handle here to ensure it is populated with the correct Station Name
+
+    const radioFreqHz = Math.round(slice.frequency * 1e6);
+    const isLocked = Date.now() < this.qsyLock.expiration;
+    
+    if (isLocked) {
+        if (radioFreqHz !== this.qsyLock.targetFreq) {
+            this.logger.debug(`QSY Lock: Suppressing stale radio status (${radioFreqHz} Hz) while waiting for ${this.qsyLock.targetFreq} Hz`);
+            return; // Exit early and do not broadcast this stale update to Wavelog
+        } else {
+            this.logger.debug(`QSY Lock: Target frequency ${radioFreqHz} Hz reached. Releasing lock.`);
+            this.qsyLock.expiration = 0; // Target reached, clear lock early
+        }
+    }
+    
     if (sliceAdded) {
       this.flexSlicesByID.set(index, slice);
       this.logger.info(`Added new slice with label ${slice.index_letter}`);
@@ -740,6 +755,9 @@ handleSpotTriggered(eventData) {
       this.logger.error(`Cannot QSY: ${msg}`);
       return { success: false, error: msg };
     }
+
+    this.qsyLock.targetFreq = freqHz;
+    this.qsyLock.expiration = Date.now() + 2000;
 
     // 2. Format Frequency (Flex expects MHz, e.g., 14.020000)
     const freqMHz = (freqHz / 1e6).toFixed(6);
