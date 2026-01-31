@@ -718,11 +718,13 @@ handleSpotTriggered(eventData) {
    * Sets the frequency and mode of the currently active Transmit Slice.
    * @param {number} freqHz - Frequency in Hertz.
    * @param {string} mode - Mode string (e.g., 'cw', 'ssb').
+   * @returns {object} - { success: boolean, error: string|null }
    */
   setSliceFrequency(freqHz, mode) {
     if (!this.isConnected()) {
-      this.logger.warn(`Ignored QSY request to ${freqHz} Hz because FlexRadio is NOT connected.`);
-      return;
+      const msg = 'FlexRadio is NOT connected.';
+      this.logger.warn(`Ignored QSY request because ${msg}`);
+      return { success: false, error: msg };
     }
 
     // 1. Find Active TX Slice
@@ -734,8 +736,9 @@ handleSpotTriggered(eventData) {
     }
 
     if (!targetSlice) {
-      this.logger.error('Cannot QSY: No active slice found.');
-      return;
+      const msg = 'No active slice found. Ensure SmartSDR or Maestro is running.';
+      this.logger.error(`Cannot QSY: ${msg}`);
+      return { success: false, error: msg };
     }
 
     // 2. Format Frequency (Flex expects MHz, e.g., 14.020000)
@@ -752,15 +755,12 @@ handleSpotTriggered(eventData) {
       else if (inputMode === 'FT8' || inputMode === 'RTTY' || inputMode === 'DATA' || inputMode === 'DIG') flexMode = 'DIGU';
       else if (inputMode === 'DIGU' || inputMode === 'DIGL') flexMode = inputMode;
       else if (inputMode === 'SSB') {
-        // < 10MHz = LSB, >= 10MHz = USB
         flexMode = (freqHz < 10000000) ? 'LSB' : 'USB';
       } else if (inputMode === 'LSB') flexMode = 'LSB';
       else if (inputMode === 'USB') flexMode = 'USB';
     }
 
-    // 4. Construct Commands (SmartSDR TCP API)
-    // Frequency changes: slice tune <slice> <MHz>
-    // Mode changes:      slice set <slice> mode=<mode>
+    // 4. Construct Commands
     const tuneCommand = `slice tune ${targetSlice.index} ${freqMHz}`;
     const modeCommand = flexMode ? `slice set ${targetSlice.index} mode=${flexMode}` : null;
 
@@ -768,7 +768,7 @@ handleSpotTriggered(eventData) {
       `QSY Request: Slice ${targetSlice.index_letter} -> ${freqMHz} MHz ${flexMode || '(No mode change)'}`
     );
 
-    // 5. Send (queueCommand prefixes sequence number and serializes delivery)
+    // 5. Send commands
     this.queueCommand(tuneCommand, (response) => {
       this.logger.debug(`QSY Tune Response: ${response}`);
     });
@@ -778,6 +778,8 @@ handleSpotTriggered(eventData) {
         this.logger.debug(`QSY Mode Response: ${response}`);
       });
     }
+
+    return { success: true, error: null };
   }
 
   /**

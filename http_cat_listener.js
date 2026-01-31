@@ -107,24 +107,31 @@ class HttpCatListener {
       // 4. Log reception (Crucial: Logs even if radio is disconnected)
       this.logger.info(`CAT Listener received QSY request: ${freqHz} Hz ${mode ? '(' + mode + ')' : ''}`);
 
-      // 5. Trigger Action
       if (this.onQsyCallback) {
         try {
-            // Send 200 OK immediately to acknowledge receipt to Wavelog
-            res.writeHead(200, { 'Content-Type': 'text/plain' });
-            res.end('OK');
+            // Trigger the QSY logic and capture the result from the FlexRadio client
+            const result = this.onQsyCallback(freqHz, mode);
 
-            // Execute the tuning logic asynchronously
-            this.onQsyCallback(freqHz, mode);
+            if (result && result.success) {
+                // Success: Wavelog will show a green confirmation popup
+                res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+                res.end('OK');
+            } else {
+                // Failure (e.g. no slice): Wavelog will show a red error popup
+                const errorMsg = result ? result.error : 'Unknown error';
+                this.logger.error(`CAT Listener: Rejecting request because: ${errorMsg}`);
+                res.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8' });
+                res.end(`Error: ${errorMsg}`);
+            }
         } catch (err) {
             this.logger.error(`Error executing QSY callback: ${err.message}`);
+            res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+            res.end('Internal Server Error');
         }
       } else {
-        // Callback not defined yet (Main process not ready?)
-        res.writeHead(503, { 'Content-Type': 'text/plain' });
+        res.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8' });
         res.end('Service Not Ready');
       }
-    };
 
     try {
       if (certs && certs.key && certs.cert) {

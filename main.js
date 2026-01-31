@@ -609,11 +609,11 @@ app.on('ready', () => {
           httpCatListener = new HttpCatListener(config, logger);
           httpCatListener.onQsy((freq, mode) => {
             if (flexRadioClient) {
-                // 1. Send command to radio
-                flexRadioClient.setSliceFrequency(freq, mode);
+                // 1. Attempt to set frequency and capture return status
+                const qsyResult = flexRadioClient.setSliceFrequency(freq, mode);
 
-                // 2. Optimistic Update: Push to Wavelog immediately to prevent race conditions
-                if (flexRadioClient.activeTXSlices && flexRadioClient.activeTXSlices.length > 0) {
+                // 2. If successful, perform Optimistic Update for real-time UI response
+                if (qsyResult.success && flexRadioClient.activeTXSlices && flexRadioClient.activeTXSlices.length > 0) {
                     const activeSlice = flexRadioClient.activeTXSlices[0];
                     activeSlice.frequency = freq / 1000000.0;
                     if (mode) activeSlice.mode = mode.toUpperCase();
@@ -621,7 +621,11 @@ app.on('ready', () => {
                     logger.info(`Optimistic QSY Update: Pushing ${freq} Hz to Wavelog via WebSocket.`);
                     if (wavelogWsServer) wavelogWsServer.broadcastStatus(activeSlice);
                 }
+
+                // Return the result object back to the HTTP listener
+                return qsyResult;
             }
+            return { success: false, error: 'FlexRadio client not initialized' };
           });
           httpCatListener.start(certs);
 
