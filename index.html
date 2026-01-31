@@ -9,15 +9,18 @@
     content="
       default-src 'self'; 
       script-src 'self' https://cdnjs.cloudflare.com; 
-      style-src 'self' https://cdnjs.cloudflare.com; 
-      font-src 'self'; 
+      style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; 
+      font-src 'self' https://cdnjs.cloudflare.com; 
       img-src 'self' https://cdnjs.cloudflare.com data:;
     "
   />
   
   <!-- Include Bootstrap CSS from CDNJS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" integrity="sha512-t4GWSVZO1eC8BM339Xd7Uphw5s17a86tIZIj8qRxhnKub6WoyhnrxeCIMeAqBPgdZGlCcG2PrZjMc+Wr78+5Xg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  
+
+  <!-- Include Bootstrap Icons from CDNJS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" integrity="sha512-dPXYHHenicH9AgASjnT44v788xYV1e+I9K/zGf2yUaXlO9bT/fO+o27lKjB5q8tC1n9jC6A3C4z8+6m3K5yA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
   <!-- Include flag-icon-css from CDNJS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/6.6.6/css/flag-icons.min.css" integrity="sha512-uvXdJud8WaOlQFjlz9B15Yy2Au/bMAvz79F7Xa6OakCl2jvQPdHD0hb3dEqZRdSwG4/sknePXlE7GiarwA/9Wg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   
@@ -57,7 +60,18 @@
           aria-selected="false"
           >Configuration</a
         >
-      </li> 
+      </li>
+      <li class="nav-item" role="presentation">
+        <a
+          class="nav-link"
+          id="security-tab"
+          data-bs-toggle="tab"
+          href="#security"
+          role="tab"
+          aria-controls="security"
+          aria-selected="false"
+          >Security</a>
+      </li>      
       <li class="nav-item" role="presentation">
         <a
           class="nav-link"
@@ -231,17 +245,11 @@
                 </ol>
             </div>
   
-          <!-- Wavelog Live Listener -->
-            <h4 class="mt-4">Wavelog "Live" Metadata Listener</h4>
-            <div class="mb-3">
-              <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="wavelogLiveEnabled">
-                <label class="form-check-label fw-bold" for="wavelogLiveEnabled">Enable Metadata Broadcast Listener</label>
-              </div>
-              <div class="form-text text-muted">
-                Receives Name, QTH, Bearing, and LoTW status from Wavelog as you type a callsign. 
-                This data is used to automatically populate the <strong>QSO Assistant</strong>.
-              </div>
+          <!-- Wavelog Live Integration Settings -->
+            <h4 class="mt-4">Wavelog Live Integration</h4>
+            <div class="alert alert-secondary p-2 small">
+                <i class="bi bi-info-circle me-1"></i>
+                This service allows real-time frequency sync and provides metadata (Name, QTH, Bearing) to the <strong>QSO Assistant</strong>.
             </div>
 
             <div class="row">
@@ -249,7 +257,7 @@
                     <label for="wavelogLivePort" class="form-label">WebSocket Port</label>
                     <input type="number" class="form-control" id="wavelogLivePort" placeholder="54322">
                     <div class="form-text">
-                        Default: <code>54322</code>.
+                        Default: <code>54322</code>. Only change if this port is occupied by another app.
                     </div>
                 </div>
             </div>
@@ -674,6 +682,60 @@
             <button type="submit" class="btn btn-primary">Save Configuration</button>
             <button type="button" id="resetDefaults" class="btn btn-warning ms-2">Reset to Defaults</button>
           </form>
+        </div>
+      </div>
+
+      <!-- Security Tab -->
+      <div
+        class="tab-pane fade"
+        id="security"
+        role="tabpanel"
+        aria-labelledby="security-tab"
+      >
+        <div id="securityContent" class="mt-4">
+          <h3>Security & HTTPS Connection</h3>
+          <p>If you access Wavelog via <strong>HTTPS</strong>, your browser may block the connection to this local integrator for security reasons. Follow the steps below to establish a trusted connection.</p>
+
+          <div class="card border-primary mb-4">
+            <div class="card-header bg-primary text-white">
+              <i class="bi bi-shield-check me-2"></i>Step 1: Install Local Certificate
+            </div>
+            <div class="card-body">
+              <p>Click the button below to install the Wave-Flex security certificate into the Windows Trusted Root store. This allows Chrome and Edge to trust the connection.</p>
+              <button id="installCertBtn" class="btn btn-primary">Install Local Certificate</button>
+            </div>
+          </div>
+
+          <div class="card border-warning mb-4">
+            <div class="card-header bg-warning text-dark fw-bold">
+              <i class="bi bi-check-all me-2"></i>Step 2: Verify Connection (Required for Firefox)
+            </div>
+            <div class="card-body">
+              <p class="text-body">
+                To finalize the setup, click the buttons below to verify the connection. 
+                <strong>Firefox users MUST</strong> do this to add a security exception.
+              </p>
+              
+              <div class="d-grid gap-2 col-md-10 mx-auto">
+                <a href="https://127.0.0.1:54321" target="_new" class="btn btn-outline-info btn-sm text-start">
+                   1. Verify CAT Port 54321
+                </a>
+                <a href="https://127.0.0.1:54323" target="_new" class="btn btn-outline-info btn-sm text-start">
+                   2. Verify WSS Port 54323
+                </a>
+              </div>
+
+              <p class="mt-3 mb-0 small text-muted">
+                <strong>Chrome/Edge:</strong> If you see "Verified", you are done. <br>
+                <strong>Firefox:</strong> If you see a warning, click <strong>"Advanced..."</strong> and <strong>"Accept the Risk"</strong> until you see the "Verified" message.
+              </p>
+            </div>
+          </div>
+
+          <div class="alert alert-info">
+            <i class="bi bi-info-circle me-2"></i>
+            <strong>Note:</strong> You only need to perform these steps once. After completion, please restart your browser for the changes to take effect.
+          </div>
         </div>
       </div>
 

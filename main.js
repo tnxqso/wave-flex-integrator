@@ -20,9 +20,10 @@ const QRZClient = require('./qrz_client');
 const MqttRotatorClient = require('./mqtt_client');
 const HttpCatListener = require('./http_cat_listener');
 const WavelogWsServer = require('./wavelog_ws_server');
-
+const CertificateManager = require('./certificate_manager');
 const IS_TEST_MODE = false; // Test, when radio is not available.
 
+let certManager;
 let httpCatListener;
 let wavelogWsServer;
 let mqttRotatorClient;
@@ -549,6 +550,11 @@ app.on('ready', () => {
 
         setUtilLogger(logger);
 
+        // Initialize Certificate Manager
+        const userDataPath = app.getPath('userData');
+        certManager = new CertificateManager(userDataPath, logger);
+        const certs = certManager.getOrCreateCertificate();
+
         // Apply startup settings (Start with Windows/Mac)
         updateLoginSettings();
 
@@ -597,56 +603,78 @@ app.on('ready', () => {
         // Now that we have stationCallsign, create the flexRadioClient
         if (stationCallsign) {
           flexRadioClient = new FlexRadioClient(config, logger, stationCallsign);
-
-          // Attach flexRadioClient-specific event listeners here
           attachFlexRadioEventListeners();
 
-          // Initialize HTTP CAT Listener (Click-to-Tune)
+          // Initialize HTTP CAT Listener (Incoming QSY commands from Wavelog)
           httpCatListener = new HttpCatListener(config, logger);
           httpCatListener.onQsy((freq, mode) => {
             if (flexRadioClient) {
                 // 1. Send command to radio
                 flexRadioClient.setSliceFrequency(freq, mode);
 
-                // 2. Optimistic Update: Push directly to WaveLog to prevent race condition
+                // 2. Optimistic Update: Push to Wavelog immediately to prevent race conditions
                 if (flexRadioClient.activeTXSlices && flexRadioClient.activeTXSlices.length > 0) {
                     const activeSlice = flexRadioClient.activeTXSlices[0];
                     activeSlice.frequency = freq / 1000000.0;
                     if (mode) activeSlice.mode = mode.toUpperCase();
                     
-                    logger.info(`Optimistic Update: Manually pushing ${freq} Hz to WaveLog.`);
-                    wavelogClient.sendActiveSliceToWavelog(activeSlice).catch((err) => {
-                        logger.error(`Error sending optimistic update: ${err.message}`);
-                    });
+                    logger.info(`Optimistic QSY Update: Pushing ${freq} Hz to Wavelog via WebSocket.`);
+                    if (wavelogWsServer) wavelogWsServer.broadcastStatus(activeSlice);
                 }
             }
           });
-          httpCatListener.start();
+          httpCatListener.start(certs);
 
-          // Initialize Wavelog Live Metadata Listener (WebSocket)
+          // Initialize Wavelog WebSocket Server (Live Frequency/Metadata broadcast)
           wavelogWsServer = new WavelogWsServer(config, logger);
           
+          wavelogWsServer.on('client-connected', () => {
+              const isConnected = flexRadioClient && flexRadioClient.isConnected();
+              const hasSlice = flexRadioClient && flexRadioClient.activeTXSlices?.length > 0;
+              if (isConnected && hasSlice) {
+                  wavelogWsServer.broadcastStatus(flexRadioClient.activeTXSlices[0]);
+              } else {
+                  wavelogWsServer.broadcastStatus({
+                      radio: 'Flexradio (Radio Offline)',
+                      frequency: 14.000, 
+                      mode: 'N/A',
+                      power: 0
+                  });
+              }
+          });
+
           wavelogWsServer.on('lookup', (data) => {
             logger.info(`External lookup trigger from Wavelog: ${data.callsign}`);
-
-            // Inject Radio Status so UI knows if it should enable "Spot" buttons
             data.radio_connected = flexRadioClient && flexRadioClient.isConnected();
-
             data.test_mode = IS_TEST_MODE;
-
             if (qsoWindow && !qsoWindow.isDestroyed()) {
               qsoWindow.webContents.send('wavelog-lookup', data);
               qsoWindow.show();
             }
           });
-          wavelogWsServer.start();
+          wavelogWsServer.start(certs);
+
+          // --- CORE LOGIC: Handle Frequency Updates ---
+          flexRadioClient.on('sliceStatus', (slice) => {
+              // 1. Always broadcast via WebSocket (Zero lag)
+              if (wavelogWsServer) wavelogWsServer.broadcastStatus(slice);
+
+              // 2. Update Wavelog API (Polling) ONLY if no browser is connected via WebSocket.
+              // This prevents Wavelog from jumping back to "Polling" mode automatically.
+              const hasActiveWsClients = wavelogWsServer && wavelogWsServer.clients.size > 0;
+              if (!hasActiveWsClients) {
+                  wavelogClient.sendActiveSliceToWavelog(slice).catch((err) => {
+                      logger.error(`Error sending API update: ${err.message}`);
+                  });
+              }
+          });
 
         } else {
           logger.warn('No station callsign found; FlexRadio client will not be initialized.');
         }
 
-        main(); // Now start the main logic
-
+        main(); // Start main logic
+  
         // Schedule the WSJT status update and Wavelog status update after n seconds
         setTimeout(async () => {
           // We can not do this since the main window shows
@@ -1377,6 +1405,16 @@ ipcMain.handle('send-dx-spot', async (event, { callsign, comment }) => {
     } catch (err) {
         return { success: false, error: err.message };
     }
+});
+
+/**
+ * Handles certificate installation request from UI.
+ */
+ipcMain.handle('install-certificate', async () => {
+    if (certManager) {
+        return await certManager.installOnWindows();
+    }
+    return false;
 });
 
 // Handle uncaught exceptions

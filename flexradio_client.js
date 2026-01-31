@@ -40,6 +40,7 @@ module.exports = class FlexRadioClient extends EventEmitter {
     this.shouldReconnect = true;
     this.isDisconnecting = false;
     this.activeTXSlices = null;
+    this.lastConnectionWarningTime = 0;
 
     this.messageParser = new FlexRadioMessageParser();
     this.wavelogClient = new WavelogClient(this.config, this.logger);
@@ -485,7 +486,12 @@ handleSpotTriggered(eventData) {
    */
   sendSpot(processedSpot) {
     if (!this.connected) {
-      this.logger.warn('FlexRadio is not connected. Cannot send spot.');
+      const now = Date.now();
+      // Only log the warning if 120 seconds (120,000 ms) have passed since the last time
+      if (now - this.lastConnectionWarningTime > 120000) {
+        this.logger.warn('FlexRadio is not connected. Cannot send spot. (Warning suppressed for 120s)');
+        this.lastConnectionWarningTime = now;
+      }
       return;
     }
 

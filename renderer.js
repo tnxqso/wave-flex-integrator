@@ -140,11 +140,8 @@ function populateForm(config) {
   const catPort = document.getElementById('catListenerPort');
   if(catPort) catPort.value = catConfig.port;
 
-  // Populate Wavelog Live Listener Settings
-  const wlLiveConfig = config.wavelogLive || { enabled: true, port: 54322 };
-  
-  const wlLiveEnabled = document.getElementById('wavelogLiveEnabled');
-  if(wlLiveEnabled) wlLiveEnabled.checked = wlLiveConfig.enabled;
+// Populate Wavelog Live Listener Settings
+  const wlLiveConfig = config.wavelogLive || { port: 54322 };
 
   const wlLivePort = document.getElementById('wavelogLivePort');
   if(wlLivePort) wlLivePort.value = wlLiveConfig.port;
@@ -558,7 +555,6 @@ if (configForm) {
         port: parseInt(document.getElementById('catListenerPort').value) || 54321
       },
       wavelogLive: {
-        enabled: document.getElementById('wavelogLiveEnabled').checked,
         port: parseInt(document.getElementById('wavelogLivePort').value) || 54322
       },      
       // --- Rotator Settings ---
@@ -724,6 +720,27 @@ if (resetDefaultsButton) {
       }, 1000);
     } catch (error) {
       showAlert('Failed to reset configuration.', 'danger');
+    }
+  });
+}
+
+// --- Certificate Installation Handler ---
+const installCertBtn = document.getElementById('installCertBtn');
+if (installCertBtn) {
+  installCertBtn.addEventListener('click', async () => {
+    installCertBtn.disabled = true;
+    installCertBtn.innerText = "Installing...";
+    
+    // Invoke the main process to run the certutil command
+    const success = await ipcRenderer.invoke('install-certificate');
+    
+    if (success) {
+      showAlert("Certificate installation triggered. Please approve the Windows prompt and RESTART your browser.", "success");
+      installCertBtn.innerText = "Certificate Installed";
+    } else {
+      showAlert("Failed to trigger installation or cancelled.", "danger");
+      installCertBtn.disabled = false;
+      installCertBtn.innerText = "Install Local Certificate";
     }
   });
 }

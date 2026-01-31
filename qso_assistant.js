@@ -92,9 +92,9 @@ ipcRenderer.on('wavelog-lookup', (event, data) => {
         // Slot logic from Wavelog
         dxcc_confirmed_on_band_mode: data.slot_confirmed,
         
-        // Pass radio status from backend
+        // Pass radio and test status from backend
         radio_connected: data.radio_connected,
-        test_mode: data.test_mode // Handle test mode if present
+        test_mode: data.test_mode
     };
 
     // Update UI immediately
@@ -103,8 +103,7 @@ ipcRenderer.on('wavelog-lookup', (event, data) => {
 
 // --- 2. Flex Spot Click (Secondary Source) ---
 ipcRenderer.on('external-lookup', async (event, callsign) => {
-    // If we click a spot on Flex, we might not be in Wavelog yet.
-    // We perform a lookup to populate the Assistant.
+    // If we click a spot on Flex, we perform a lookup to populate the Assistant
     performLookup(callsign);
 });
 
@@ -144,7 +143,7 @@ if (spotDxClusterBtn) {
         if(res.success) {
             flashButton(spotDxClusterBtn);
             dxComment.value = ''; 
-            // Keep disabled after success to prevent double spotting on same callsign.
+            // Keep disabled to prevent double spotting on same callsign.
             // It will be re-enabled automatically when updateUI() runs for the next callsign.
             spotDxClusterBtn.disabled = true; 
         } else {
@@ -172,7 +171,7 @@ profileImgContainer.addEventListener('click', () => {
 
 /**
  * Performs a lookup via Main Process (Wavelog API/QRZ).
- * Only used when triggered by Flex Spot click, NOT by Wavelog Live.
+ * Only used when triggered by Flex Spot click.
  */
 async function performLookup(callsign) {
     if (!callsign) return;
@@ -184,6 +183,8 @@ async function performLookup(callsign) {
         const result = await ipcRenderer.invoke('lookup-callsign', callsign);
         
         if (result) {
+            // Ensure result includes connection status for manual lookups
+            result.radio_connected = await ipcRenderer.invoke('get-radio-status');
             updateUI(result);
         } else {
             // Visual feedback for not found
@@ -233,19 +234,19 @@ function updateUI(data) {
     if (canSpot) {
         if(spotDxClusterBtn) spotDxClusterBtn.disabled = false;
         dxComment.disabled = false;
-        dxComment.placeholder = "DX Comment (e.g. 5 up)";
+        dxComment.setAttribute("placeholder", "DX Comment (e.g. 5 up)");
     } else {
         if(spotDxClusterBtn) spotDxClusterBtn.disabled = true;
         dxComment.disabled = true;
-        dxComment.placeholder = "Radio Disconnected";
+        dxComment.setAttribute("placeholder", "Radio Disconnected");
     }
 
-    // Flex Spot Button: ONLY if real radio is connected (Test mode doesn't help here)
+    // Flex Spot Button: ONLY if real radio is connected
     if (spotFlexBtn) {
         spotFlexBtn.disabled = !isRadioConnected;
     }
 
-    // Show warning footer if disconnected (and not in test mode)
+    // Show warning footer if disconnected (and NOT in test mode)
     if(radioStatusFooter) {
         radioStatusFooter.style.display = (isRadioConnected || isTestMode) ? 'none' : 'block';
     }
@@ -406,7 +407,6 @@ function resetUI() {
         callDisplay.style.color = "#6c757d";
     }
     
-    // Disable buttons on reset
     if(spotDxClusterBtn) spotDxClusterBtn.disabled = true;
     if(spotFlexBtn) spotFlexBtn.disabled = true;
     dxComment.disabled = true;

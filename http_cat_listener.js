@@ -2,7 +2,12 @@
 'use strict';
 
 const http = require('http');
+const httpolyglot = require('httpolyglot');
 
+/**
+ * Listener for incoming QSY (Tuning) commands from Wavelog.
+ * Uses httpolyglot to support both HTTP and HTTPS on port 54321.
+ */
 class HttpCatListener {
   /**
    * Creates an instance of HttpCatListener.
@@ -25,9 +30,10 @@ class HttpCatListener {
   }
 
   /**
-   * Starts the HTTP Server.
+   * Starts the Server.
+   * @param {object} certs - Optional { key, cert } from CertificateManager
    */
-  start() {
+  start(certs = null) {
     // Safety check: ensure config exists
     if (!this.config.catListener || !this.config.catListener.enabled) {
       this.logger.info('HTTP CAT Listener is disabled in config.');
@@ -36,7 +42,8 @@ class HttpCatListener {
 
     const { host, port } = this.config.catListener;
 
-    this.server = http.createServer((req, res) => {
+    // Define the request handler to avoid duplication
+    const requestHandler = (req, res) => {
       // 1. Handle CORS (Cross-Origin Resource Sharing)
       // Required because Wavelog running in the browser needs permission to talk to localhost
       res.setHeader('Access-Control-Allow-Origin', '*');
@@ -62,9 +69,18 @@ class HttpCatListener {
       // Split by '/' and remove empty strings
       const urlParts = req.url.split('/').filter(p => p.length > 0);
 
-      if (urlParts.length < 1) {
-        res.writeHead(400, { 'Content-Type': 'text/plain' });
-        res.end('Bad Request: Missing frequency');
+      if (urlParts.length === 0 || urlParts[0] === 'verify') {
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(`
+          <html>
+            <body style="font-family: sans-serif; text-align: center; padding-top: 50px; background-color: #121212; color: #fff;">
+              <h1 style="color: #198754;">✓ Connection Verified</h1>
+              <p style="font-size: 1.2rem;">Wave-Flex Integrator is successfully communicating with your browser.</p>
+              <p style="color: #aaa;">You can now close this tab and return to Wave-Flex Integrator.</p>
+              <div style="margin-top: 30px; font-size: 0.8rem; color: #555;">Port: ${port} | SSL: ${certs ? 'Enabled' : 'Disabled'}</div>
+            </body>
+          </html>
+        `);
         return;
       }
 
@@ -108,20 +124,33 @@ class HttpCatListener {
         res.writeHead(503, { 'Content-Type': 'text/plain' });
         res.end('Service Not Ready');
       }
-    });
-
-    this.server.on('error', (err) => {
-        if (err.code === 'EADDRINUSE') {
-            this.logger.error(`HTTP CAT Listener Error: Port ${port} is already in use.`);
-        } else {
-            this.logger.error(`HTTP CAT Listener Error: ${err.message}`);
-        }
-    });
+    };
 
     try {
-        this.server.listen(port, host, () => {
-            this.logger.info(`HTTP CAT Listener running at http://${host}:${port}/`);
-        });
+      if (certs && certs.key && certs.cert) {
+        // Create a dual-mode server that detects if the incoming request is HTTP or HTTPS
+        this.server = httpolyglot.createServer({
+          key: certs.key,
+          cert: certs.cert
+        }, requestHandler);
+        this.logger.info('Dual-mode HTTP/HTTPS CAT Listener initialized with SSL support.');
+      } else {
+        // Fallback to standard HTTP server
+        this.server = http.createServer(requestHandler);
+      }
+
+      this.server.on('error', (err) => {
+          if (err.code === 'EADDRINUSE') {
+              this.logger.error(`HTTP CAT Listener Error: Port ${port} is already in use.`);
+          } else {
+              this.logger.error(`HTTP CAT Listener Error: ${err.message}`);
+          }
+      });
+
+      this.server.listen(port, host, () => {
+        const protocol = certs ? 'http/https' : 'http';
+        this.logger.info(`CAT Listener running at ${protocol}://${host}:${port}/`);
+      });
     } catch (e) {
         this.logger.error(`Failed to start HTTP CAT Listener: ${e.message}`);
     }
