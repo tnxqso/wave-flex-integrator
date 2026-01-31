@@ -81,7 +81,7 @@ logger = winston.createLogger({
     ...(isDebug
       ? [
           new winston.transports.File({
-            filename: 'debug.log',
+            filename: debugLogPath,
             level: 'debug',
             options: { flags: 'w' }, // This ensures the file is overwritten on each start
           }),
