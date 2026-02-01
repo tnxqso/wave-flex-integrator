@@ -22,6 +22,8 @@ const HttpCatListener = require('./http_cat_listener');
 const WavelogWsServer = require('./wavelog_ws_server');
 const CertificateManager = require('./certificate_manager');
 const IS_TEST_MODE = false; // Test, when radio is not available.
+let lastApiUpdate = 0;
+let lastRadioState = { frequency: 0, mode: '' };
 
 let certManager;
 let httpCatListener;
@@ -661,19 +663,34 @@ app.on('ready', () => {
           wavelogWsServer.start(certs);
 
           // --- CORE LOGIC: Handle Frequency Updates ---
-          flexRadioClient.on('sliceStatus', (slice) => {
-              // 1. Always broadcast via WebSocket (Zero lag)
-              if (wavelogWsServer) wavelogWsServer.broadcastStatus(slice);
+          if (flexRadioClient) {
+              flexRadioClient.on('sliceStatus', (slice) => {
+                  // 1. Always broadcast via WebSocket (Zero lag)
+                  if (wavelogWsServer) {
+                      wavelogWsServer.broadcastStatus(slice);
+                  }
 
-              // 2. Update Wavelog API (Polling) ONLY if no browser is connected via WebSocket.
-              // This prevents Wavelog from jumping back to "Polling" mode automatically.
-              const hasActiveWsClients = wavelogWsServer && wavelogWsServer.clients.size > 0;
-              if (!hasActiveWsClients) {
-                  wavelogClient.sendActiveSliceToWavelog(slice).catch((err) => {
-                      logger.error(`Error sending API update: ${err.message}`);
-                  });
-              }
-          });
+                  // 2. Update Wavelog API (Like WaveLogGate)
+                  // Logic: Update only if Frequency/Mode changed OR if 30 minutes passed.
+                  const now = Date.now();
+                  const timeElapsed = now - lastApiUpdate;
+                  const isChanged = (slice.frequency !== lastRadioState.frequency) || (slice.mode !== lastRadioState.mode);
+                  
+                  // 30 minutes = 1800000 ms
+                  if (isChanged || timeElapsed > 1800000) {
+                      wavelogClient.sendActiveSliceToWavelog(slice).then(() => {
+                          lastApiUpdate = now;
+                          lastRadioState = { 
+                              frequency: slice.frequency, 
+                              mode: slice.mode 
+                          };
+                          // logger.debug('API update sent to Wavelog (Change detected or Keep-alive)');
+                      }).catch((err) => {
+                          logger.error(`Error sending API update: ${err.message}`);
+                      });
+                  }
+              });
+          }
 
         } else {
           logger.warn('No station callsign found; FlexRadio client will not be initialized.');
