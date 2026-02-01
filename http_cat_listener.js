@@ -45,37 +45,31 @@ class HttpCatListener {
     // Define the request handler to avoid duplication
     const requestHandler = (req, res) => {
       // 1. Handle CORS (Cross-Origin Resource Sharing)
-      // Required because Wavelog running in the browser needs permission to talk to localhost
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-      // Cache the pre-flight response for 24 hours (consistent with WaveLogGate)
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+      
+      // Cache the pre-flight response for 24 hours
       res.setHeader('Access-Control-Max-Age', '86400');
 
-      // This header is required by modern Chrome/Edge to allow "Private Network Access"
-      // when Wavelog is running on a different local device (like a Pi)
+      // Private Network Access fix
       res.setHeader('Access-Control-Allow-Private-Network', 'true');
 
-      // Handle Pre-flight requests
       if (req.method === 'OPTIONS') {
         res.writeHead(204);
         res.end();
         return;
       }
 
-      // Ignore favicon requests to keep logs clean
       if (req.url === '/favicon.ico') {
         res.writeHead(204);
         res.end();
         return;
       }
 
-      // 2. Parse URL: Expected format /<freq_hz>/<mode>
-      // Example: /14020000/cw
-      // Split by '/' and remove empty strings
       const urlParts = req.url.split('/').filter(p => p.length > 0);
 
+      // Friendly Connection Verification Page
       if (urlParts.length === 0 || urlParts[0] === 'verify') {
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
         res.end(`
@@ -139,6 +133,7 @@ class HttpCatListener {
         res.writeHead(503, { 'Content-Type': 'text/plain; charset=utf-8' });
         res.end('Service Not Ready');
       }
+    };
 
     try {
       if (certs && certs.key && certs.cert) {
