@@ -170,7 +170,7 @@ const defaultConfig = {
   // ==============================
   catListener: {
     enabled: true,
-    host: '127.0.0.1', // Listen on localhost by default for security
+    host: '0.0.0.0',
     port: 54321,       // Default Wavelog port
   }, 
 

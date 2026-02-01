@@ -47,8 +47,15 @@ class HttpCatListener {
       // 1. Handle CORS (Cross-Origin Resource Sharing)
       // Required because Wavelog running in the browser needs permission to talk to localhost
       res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+      // Cache the pre-flight response for 24 hours (consistent with WaveLogGate)
+      res.setHeader('Access-Control-Max-Age', '86400');
+
+      // This header is required by modern Chrome/Edge to allow "Private Network Access"
+      // when Wavelog is running on a different local device (like a Pi)
+      res.setHeader('Access-Control-Allow-Private-Network', 'true');
 
       // Handle Pre-flight requests
       if (req.method === 'OPTIONS') {
