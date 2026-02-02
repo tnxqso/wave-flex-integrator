@@ -248,9 +248,6 @@ module.exports = class FlexRadioClient extends EventEmitter {
         this.logger.info(
           `New Active TX Slice: Slice ${slice.index_letter}, Frequency: ${slice.frequency.toFixed(6)} MHz, Mode: ${slice.mode}, XIT: ${xitAdjustment} Hz, Adjusted Frequency: ${(adjustedFrequencyHz / 1e6).toFixed(6)} MHz`
         );
-        this.sendActiveSliceToWavelog(slice).catch((error) => {
-          this.logger.error(`Error sending active TX slice to Wavelog: ${error.message}`);
-        });
       } else if (
         existingSlice.frequency !== slice.frequency ||
         existingSlice.mode !== slice.mode ||
@@ -264,9 +261,6 @@ module.exports = class FlexRadioClient extends EventEmitter {
         existingSlice.mode = slice.mode;
         existingSlice.xit_on = slice.xit_on;
         existingSlice.xit_freq = slice.xit_freq;
-        this.sendActiveSliceToWavelog(slice).catch((error) => {
-          this.logger.error(`Error sending active TX slice to Wavelog: ${error.message}`);
-        });
       }
       return Object.assign({}, slice);
     });
@@ -284,6 +278,10 @@ module.exports = class FlexRadioClient extends EventEmitter {
 
     // Update the active TX slices array
   this.activeTXSlices = updatedActiveTXSlices;
+  
+  // Forward the event so that main.js can intercept it
+  this.emit('sliceStatus', slice);
+
   }
 
   async sendActiveSliceToWavelog(activeTXSlice) {

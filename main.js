@@ -665,12 +665,13 @@ app.on('ready', () => {
           // --- CORE LOGIC: Handle Frequency Updates ---
           if (flexRadioClient) {
               flexRadioClient.on('sliceStatus', (slice) => {
-                  // 1. Always broadcast via WebSocket (Zero lag)
+                  
+                  // 1. WebSocket Broadcast (Immediate GUI Update)
                   if (wavelogWsServer) {
                       wavelogWsServer.broadcastStatus(slice);
                   }
 
-                  // 2. Update Wavelog API (Like WaveLogGate)
+                  // 2. Update Wavelog API (Throttled)
                   // Logic: Update only if Frequency/Mode changed OR if 30 minutes passed.
                   const now = Date.now();
                   const timeElapsed = now - lastApiUpdate;
@@ -684,7 +685,6 @@ app.on('ready', () => {
                               frequency: slice.frequency, 
                               mode: slice.mode 
                           };
-                          // logger.debug('API update sent to Wavelog (Change detected or Keep-alive)');
                       }).catch((err) => {
                           logger.error(`Error sending API update: ${err.message}`);
                       });

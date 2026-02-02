@@ -1,4 +1,3 @@
-// wavelog_ws_server.js
 'use strict';
 
 const { WebSocketServer } = require('ws');
@@ -117,12 +116,23 @@ class WavelogWsServer extends EventEmitter {
   broadcastStatus(radioData) {
     if (this.clients.size === 0) return;
 
+    // Get the name carefully
+    let configuredRadioName = 'wave-flex-integrator'; // Default
+    
+    if (this.config.wavelogAPI && this.config.wavelogAPI.radioName) {
+        configuredRadioName = this.config.wavelogAPI.radioName;
+    } 
+  
+    // Ensure safe default for frequency
+    const freqHz = radioData.frequency ? Math.round(radioData.frequency * 1000000) : 0;
+    
+    // Construct the message expected by Wavelog
     const message = JSON.stringify({
       type: 'radio_status',
-      radio: radioData.radio || 'Wave-Flex Integrator',
-      frequency: Math.round(radioData.frequency * 1000000), // Convert MHz to Hz
+      radio: configuredRadioName, 
+      frequency: freqHz,          // Wavelog expects Hz (integer)
       mode: radioData.mode || 'N/A',
-      power: radioData.power || 0,
+      power: radioData.power || null, 
       timestamp: Date.now()
     });
 
