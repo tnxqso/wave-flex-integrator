@@ -785,7 +785,10 @@ if (installCertBtn) {
 function handleStatusUpdate(status) {
   switch (status.event) {
     case 'flexRadioConnected':
-      updateFlexRadioStatus('Connected');
+      // Display Host IP if available, otherwise fallback to "Connected"
+      const flexMsg = status.host ? status.host : 'Connected';
+      updateFlexRadioStatus(flexMsg);
+      
       isFlexRadioConnected = true;
       // If we are currently on the Profiles tab, load data automatically now
       const activeTab = document.querySelector('.nav-link.active');
@@ -865,12 +868,22 @@ ipcRenderer.on('status-update', (event, status) => {
 
 /**
  * Updates FlexRadio connection status in the "Connected Services" tab.
- * @param {string} message - The status message.
+ * @param {string} message - The status message (or IP address).
  */
 function updateFlexRadioStatus(message) {
   const flexStatus = document.getElementById('flexRadioStatus');
   if (flexStatus) {
-    setStatusElement(flexStatus, message);
+    flexStatus.textContent = message;
+    
+    // Reset classes and force Green color (text-success) for active connections
+    flexStatus.classList.remove('text-danger', 'text-warning');
+    flexStatus.classList.add('text-success');
+    
+    // If it's an error message (starts with Error or Disconnected), revert to red
+    if (message.startsWith('Error') || message === 'Disconnected') {
+        flexStatus.classList.remove('text-success');
+        flexStatus.classList.add('text-danger');
+    }
   }
 }
 

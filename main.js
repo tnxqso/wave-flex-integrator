@@ -810,7 +810,7 @@ function attachEventListeners() {
         server: currentServer
     });
   });
-  
+
   dxClusterClient.on('spot', async function processSpot(spot) {
     try {
       logger.debug('Raw Spot Data:', spot);
@@ -941,7 +941,11 @@ function attachFlexRadioEventListeners() {
   if (flexRadioClient) {
     flexRadioClient.on('connected', () => {
       logger.info('Connected to FlexRadio server');
-      uiManager.updateFlexRadioStatus('flexRadioConnected');
+      // Send connection status AND the host IP to the UI
+      uiManager.sendStatusUpdate({ 
+          event: 'flexRadioConnected', 
+          host: config.flexRadio.host 
+      });
     });
   
     flexRadioClient.on('disconnected', () => {
