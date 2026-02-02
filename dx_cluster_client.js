@@ -10,11 +10,6 @@ const sleep = util.promisify(setTimeout);
  * handling login, parsing incoming data, and emitting events for spots and messages.
  */
 class DXClusterClient extends events.EventEmitter {
-  /**
-   * Constructs a new DXClusterClient instance.
-   * @param {object} config - The configuration object.
-   * @param {object} logger - The logger instance.
-   */
   constructor(config = {}, logger) {
     super();
 
@@ -28,31 +23,38 @@ class DXClusterClient extends events.EventEmitter {
       awaiting_login: false,
       logged_in: false,
     };
-    this.buffer = ''; // Buffer to accumulate data
+    this.buffer = ''; 
     this.regex = {
       deline: /^(DX de) +([A-Z0-9/\\\-#]{3,}):? *(\d*\.\d{1,3}) *([A-Z0-9/\\\-#]{3,}) +(.*\S)? +(\d{4})Z *(\w{2}\d{2})?/g,
     };
-    this.ct = config.dxCluster.ct || '\n';
+    
+    this.ct = '\r\n'; 
     this.dxId = config.dxCluster.dxId || 'DX de';
 
-    // Login-related properties
     this.loginPrompt = config.dxCluster.loginPrompt || 'login:';
     this.loginSuccessMessages = config.dxCluster.loginSuccessMessages || ['Welcome', 'de '];
-    this.loginTimeout = config.dxCluster.loginTimeout || 10000; // Default 10s timeout for login
+    this.loginTimeout = config.dxCluster.loginTimeout || 10000;
 
-    // Connection options
-    this.host = config.dxCluster.host || '127.0.0.1';
-    this.port = config.dxCluster.port || 23;
+    // Server Configs
+    this.primaryHost = config.dxCluster.host || '127.0.0.1';
+    this.primaryPort = config.dxCluster.port || 23;
+    this.backupHost = config.dxCluster.backupHost || null;
+    this.backupPort = config.dxCluster.backupPort || null;
+
+    // State Tracking
+    this.currentHost = this.primaryHost;
+    this.currentPort = this.primaryPort;
+    this.usingBackup = false;
 
     this.loginTimer = null;
-    this.shouldReconnect = true; // Control reconnection attempts
+    this.shouldReconnect = true; 
     this.isReconnecting = false;
-    this.reconnectDelay = config.dxCluster.reconnect.maxDelay || 5000; // Default 5 seconds
+    this.reconnectDelay = config.dxCluster.reconnect.maxDelay || 5000;
+    this.commandsSent = false;
   }
 
   /**
    * Connects to the DXCluster server.
-   * @returns {Promise<void>}
    */
   connect() {
     if (!this.call) {
@@ -60,73 +62,82 @@ class DXClusterClient extends events.EventEmitter {
     }
 
     if (this.status.connected || this.isReconnecting) {
-      this.logger.warn('A connection or reconnection attempt is already in progress.');
+      this.logger.warn('A DX Cluster connection or reconnection attempt is already in progress.');
       return Promise.resolve();
     }
 
+    // Note: We do NOT use removeAllListeners('loggedin') here anymore to avoid breaking the UI.
+    this.removeAllListeners('logintimeout');
+
     return new Promise((resolve, reject) => {
-      this.socket = net.createConnection({ host: this.host, port: this.port }, () => {
-        this.status.connected = this.status.awaiting_login = true;
-        this.logger.info(`Connected to DXCluster at ${this.host}:${this.port}`);
+      // Determine which server label to use for logging
+      const serverType = this.usingBackup ? 'BACKUP' : 'PRIMARY';
+      const serverInfo = `${this.currentHost}:${this.currentPort}`;
+      
+      // Define listeners as named functions so we can remove them specifically on failure
+      const onLoggedIn = () => {
+        this._stopLoginTimer();
+        this.logger.info(`Login successful on ${serverType} DX Cluster server [${serverInfo}]`);
+        this.commandsSent = false; 
+        
+        // Clean up the timeout listener
+        this.removeListener('logintimeout', onLoginTimeout);
+        resolve(); 
+      };
+
+      const onLoginTimeout = (err) => {
+        this.logger.error(`Login timeout on ${serverType} DX Cluster server [${serverInfo}].`);
+        this.destroy(); 
+        
+        // IMPORTANT: Clean up the success listener so it doesn't fire later for the wrong server
+        this.removeListener('loggedin', onLoggedIn);
+        reject(err);
+      };
+
+      // Attach specific listeners for this connection attempt
+      this.once('loggedin', onLoggedIn);
+      this.once('logintimeout', onLoginTimeout);
+
+      this.socket = net.createConnection({ host: this.currentHost, port: this.currentPort }, () => {
+        this.status.connected = true;
+        this.status.awaiting_login = true;
+        this.logger.info(`Connected to ${serverType} DX Cluster server at ${serverInfo}`);
         this._startLoginTimer();
       });
 
-      // Handle socket data
       this.socket.on('data', (data) => {
         try {
           this._handleData(data);
         } catch (error) {
-          this.logger.error(`Error handling data: ${error.message}`);
+          this.logger.error(`Error handling DX Cluster data from ${serverType}: ${error.message}`);
         }
       });
 
-      // Handle socket closure
       this.socket.on('close', () => {
-        this._handleSocketClose();
-        this.scheduleReconnect();
+        // If socket closes before login, ensure we clean up the pending listeners
+        this.removeListener('loggedin', onLoggedIn);
+        this.removeListener('logintimeout', onLoginTimeout);
+
+        this._handleSocketClose(serverType);
+        if (this.shouldReconnect) {
+            this.handleFailoverOrReconnect();
+        }
       });
 
-      // Handle socket errors
       this.socket.on('error', (err) => {
-        this.logger.error(`Socket error: ${err.message}`);
+        this.logger.error(`DX Cluster socket error on ${serverType} (${serverInfo}): ${err.message}`);
         this._handleSocketError(err);
-        this.scheduleReconnect();
-      });
-
-      // Handle successful login
-      this.once('loggedin', () => {
-        this._stopLoginTimer();
-        this.logger.info('Login successful.');
-        resolve(); // Resolve the promise
-      });
-
-      // Handle login timeout
-      this.once('logintimeout', (err) => {
-        this.logger.error('Login timeout.');
-        this.close();
-        reject(err);
-      });
-
-      // Handle unexpected errors
-      this.on('error', (err) => {
-        this.logger.error(`Unexpected error: ${err.message}`);
-        reject(err);
       });
     });
   }
 
-  /**
-   * Starts the login timer to prevent hanging on login.
-   */
   _startLoginTimer() {
+    this._stopLoginTimer(); 
     this.loginTimer = setTimeout(() => {
       this.emit('logintimeout', new Error('Login timeout'));
     }, this.loginTimeout);
   }
 
-  /**
-   * Stops the login timer.
-   */
   _stopLoginTimer() {
     if (this.loginTimer) {
       clearTimeout(this.loginTimer);
@@ -134,18 +145,14 @@ class DXClusterClient extends events.EventEmitter {
     }
   }
 
-  /**
-   * Handles incoming data from the socket.
-   * @param {Buffer|string} data - The incoming data.
-   */
   _handleData(data) {
     this.buffer += data.toString('utf8');
 
     if (this.status.awaiting_login && this.buffer.includes(this.loginPrompt)) {
-      this.logger.info('Login prompt detected. Sending callsign.');
+      this.logger.info('DX Cluster login prompt detected. Sending callsign.');
       this.write(this.call);
       this.status.awaiting_login = false;
-      this.buffer = ''; // Clear buffer after sending callsign
+      this.buffer = ''; 
     }
 
     if (
@@ -154,72 +161,59 @@ class DXClusterClient extends events.EventEmitter {
     ) {
       this.status.logged_in = true;
       this.emit('loggedin');
-      this.buffer = ''; // Clear buffer after login
+      this.buffer = ''; 
     } else if (this.status.logged_in) {
       this._parseBuffer();
     }
   }
 
-  /**
-   * Handles socket closure.
-   */
-  _handleSocketClose() {
-    this.logger.info('Connection to DXCluster closed.');
-    this.status.connected = this.status.awaiting_login = this.status.logged_in = false;
+  _handleSocketClose(serverType = 'Unknown') {
+    this.logger.info(`Connection to ${serverType} DX Cluster server closed.`);
+    this.status.connected = false;
+    this.status.awaiting_login = false;
+    this.status.logged_in = false;
+    this._stopLoginTimer();
     this.emit('close');
   }
 
-  /**
-   * Handles socket errors.
-   * @param {Error} err - The error object.
-   */
   _handleSocketError(err) {
     this._stopLoginTimer();
-    this.logger.error(`Socket error: ${err.message}`);
   }
 
-  /**
-   * Writes data to the socket.
-   * @param {string} data - The data to write.
-   */
   write(data) {
-    if (this.socket && this.status.connected) {
-      return this.socket.write(data + this.ct);
+    if (this.socket && !this.socket.destroyed && this.socket.writable) {
+      this.socket.write(data + this.ct);
     } else {
-      this.logger.warn('Cannot write to socket; not connected.');
+      this.logger.warn('Cannot write to DX Cluster socket; not connected.');
     }
   }
 
-  /**
-   * Closes the socket connection gracefully.
-   */
   close() {
     this.shouldReconnect = false;
-    this.status.connected = this.status.awaiting_login = this.status.logged_in = false;
     if (this.socket) {
       this.socket.end();
-      this.emit('closed');
     }
+    this._resetState();
   }
 
-  /**
-   * Destroys the socket connection.
-   */
   destroy() {
-    this.shouldReconnect = false;
-    this.status.connected = this.status.awaiting_login = this.status.logged_in = false;
+    this.shouldReconnect = true; 
     if (this.socket) {
       this.socket.destroy();
-      this.emit('destroyed');
     }
+    this._resetState();
   }
 
-  /**
-   * Parses the buffer to extract lines and processes them.
-   */
+  _resetState() {
+      this.status.connected = false;
+      this.status.awaiting_login = false;
+      this.status.logged_in = false;
+      this._stopLoginTimer();
+  }
+
   _parseBuffer() {
     const lines = this.buffer.split('\n');
-    this.buffer = ''; // Clear buffer after parsing
+    this.buffer = lines.pop(); 
 
     lines.forEach((line) => {
       line = line.trim();
@@ -229,14 +223,10 @@ class DXClusterClient extends events.EventEmitter {
     });
   }
 
-  /**
-   * Parses a DX string and emits a 'spot' event.
-   * @param {string} dxString - The DX string to parse.
-   */
   _parseDX(dxString) {
     if (dxString.startsWith(this.dxId)) {
       const match = this.regex.deline.exec(dxString);
-      this.regex.deline.lastIndex = 0; // Reset regex lastIndex
+      this.regex.deline.lastIndex = 0; 
 
       if (match) {
         const dxSpot = {
@@ -247,41 +237,54 @@ class DXClusterClient extends events.EventEmitter {
           timestamp: new Date(),
         };
         this.emit('spot', dxSpot);
-      } else {
-        this.emit('parseerror', dxString);
-        this.logger.warn(`Failed to parse DX spot: ${dxString}`);
       }
     } else {
       this.emit('message', dxString);
-      this.logger.debug(`Received message: ${dxString}`);
     }
   }
 
   /**
-   * Schedules a reconnection attempt after a delay.
+   * Smart logic to handle failover or standard reconnect.
    */
-  scheduleReconnect() {
-    if (!this.shouldReconnect) {
-      this.logger.info('Reconnection not scheduled due to manual disconnect.');
-      return;
-    }
+  handleFailoverOrReconnect() {
+      // If we are currently on Primary, and we have a Backup configured...
+      if (!this.usingBackup && this.backupHost && this.backupPort) {
+          this.logger.warn(`Primary DX Cluster connection (${this.primaryHost}) failed. Switching to BACKUP DX Cluster server...`);
+          this.usingBackup = true;
+          this.currentHost = this.backupHost;
+          this.currentPort = this.backupPort;
+          
+          setTimeout(() => {
+              this.connect().catch(err => this.logger.error(`Backup DX Cluster connection failed: ${err.message}`));
+          }, 1000);
+          
+      } else {
+          if (this.usingBackup) {
+              this.logger.warn('Backup DX Cluster connection failed. Reverting to PRIMARY DX Cluster server for next attempt.');
+          }
+          
+          this.usingBackup = false;
+          this.currentHost = this.primaryHost;
+          this.currentPort = this.primaryPort;
+          
+          this.scheduleReconnect();
+      }
+  }
 
-    if (this.isReconnecting) {
-      this.logger.warn('Reconnection attempt already in progress.');
-      return;
-    }
+  scheduleReconnect() {
+    if (!this.shouldReconnect) return;
+    if (this.isReconnecting) return;
 
     this.isReconnecting = true;
-    this.logger.info(
-      `Retrying connection to DXCluster in ${this.reconnectDelay / 1000} seconds...`
-    );
+    this.logger.info(`Retrying connection to PRIMARY DX Cluster server (${this.primaryHost}) in ${this.reconnectDelay / 1000} seconds...`);
+    
     setTimeout(() => {
+      this.isReconnecting = false;
       if (!this.status.connected && this.shouldReconnect) {
         this.connect().catch((err) => {
-          this.logger.error(`Reconnection attempt failed: ${err.message}`);
+          this.logger.error(`DX Cluster reconnection attempt failed: ${err.message}`);
         });
       }
-      this.isReconnecting = false;
     }, this.reconnectDelay);
   }
 
@@ -291,62 +294,35 @@ class DXClusterClient extends events.EventEmitter {
 
     const commands = this.config.dxCluster.commandsAfterLogin;
     if (!commands || commands.length === 0) {
-      this.logger.info('No commands to send after login.');
       return;
     }
 
     for (const command of commands) {
       try {
-        this.logger.info(`Sending command: ${command}`);
-        this.write(`${command}\n`);
-        await new Promise((resolve) => {
-          this.once('message', (data) => {
-            this.logger.info(`Received response: ${data.trim()}`);
-            resolve();
-          });
-        });
-        await sleep(500);
+        this.logger.info(`Sending DX Cluster command: ${command}`);
+        this.write(command);
+        await sleep(500); 
       } catch (err) {
-        this.logger.error(`Error sending command "${command}": ${err.message}`);
+        this.logger.error(`Error sending DX Cluster command "${command}": ${err.message}`);
       }
     }
   }
 
-  /**
-   * Sends a DX spot to the cluster.
-   * @param {string} freq - Frequency in kHz.
-   * @param {string} callsign - DX Callsign.
-   * @param {string} comment - Comment.
-   */
   sendDxSpot(freq, callsign, comment) {
-    // --- DEBUGGING CONNECTION STATE ---
-    this.logger.info(`[DEBUG] sendDxSpot called via IPC.`);
-    
-    if (!this.socket) {
-        this.logger.error(`[DEBUG] this.socket is NULL or UNDEFINED.`);
-    }
-
     if (!this.socket || this.socket.destroyed || !this.socket.writable) {
-      this.logger.warn('Cannot send spot: Client not connected/writable.');
+      this.logger.warn('Cannot send DX spot: DX Cluster client not connected.');
       return;
     }
 
     const command = `DX ${freq} ${callsign} ${comment || ''}`;
-    this.logger.info(`DXCluster TX Raw: "${command}"`);
+    this.logger.info(`Sending DX Spot: "${command}"`);
 
     try {
-        this.socket.write(command + '\r\n', (err) => {
-        if (err) {
-            this.logger.error(`Failed to write spot command: ${err.message}`);
-        } else {
-            this.logger.debug('Spot command written to socket.');
-        }
-        });
+        this.socket.write(command + '\r\n');
     } catch (e) {
-        this.logger.error(`Exception during write: ${e.message}`);
+        this.logger.error(`Exception during write to DX Cluster: ${e.message}`);
     }
   }
-
 }
 
 module.exports = DXClusterClient;

@@ -272,6 +272,16 @@ function populateForm(config) {
     dxClusterPortInput.value = config.dxCluster.port;
   }
 
+const dxClusterBackupHostInput = document.getElementById('dxClusterBackupHost');
+  if (dxClusterBackupHostInput) {
+    dxClusterBackupHostInput.value = config.dxCluster.backupHost || '';
+  }
+
+  const dxClusterBackupPortInput = document.getElementById('dxClusterBackupPort');
+  if (dxClusterBackupPortInput) {
+    dxClusterBackupPortInput.value = config.dxCluster.backupPort || '';
+  }
+
   const dxClusterCallsignInput = document.getElementById('dxClusterCallsign');
   if (dxClusterCallsignInput) {
     dxClusterCallsignInput.value = config.dxCluster.callsign;
@@ -601,6 +611,9 @@ if (configForm) {
       dxCluster: {
         host: document.getElementById('dxClusterHost').value.trim(),
         port: parseInt(document.getElementById('dxClusterPort').value, 10),
+        backupHost: document.getElementById('dxClusterBackupHost').value.trim(),
+        backupPort: document.getElementById('dxClusterBackupPort').value ? parseInt(document.getElementById('dxClusterBackupPort').value, 10) : null,
+
         callsign: document.getElementById('dxClusterCallsign').value.trim(),
         loginPrompt: document.getElementById('dxClusterLoginPrompt').value.trim(),
         commandsAfterLogin: document
@@ -788,8 +801,13 @@ function handleStatusUpdate(status) {
     case 'flexRadioError':
       updateFlexRadioStatus(`Error: ${status.error}`);
       break;
-    case 'dxClusterConnected':
-      updateDXClusterStatus('Connected');
+case 'dxClusterConnected':
+      // Just show the hostname to save space. It implies "Connected".
+      if (status.server) {
+          updateDXClusterStatus(status.server);
+      } else {
+          updateDXClusterStatus('Connected');
+      }
       break;
     case 'dxClusterDisconnected':
       updateDXClusterStatus('Disconnected');
@@ -858,12 +876,23 @@ function updateFlexRadioStatus(message) {
 
 /**
  * Updates DXCluster connection status in the "Connected Services" tab.
- * @param {string} message - The status message.
+ * @param {string} message - The status message (or hostname).
  */
 function updateDXClusterStatus(message) {
   const dxStatus = document.getElementById('dxClusterStatus');
   if (dxStatus) {
-    setStatusElement(dxStatus, message);
+    dxStatus.textContent = message;
+    
+    // Reset colors
+    dxStatus.classList.remove('text-danger', 'text-warning', 'text-success');
+
+    // Determine color based on content
+    if (message === 'Disconnected' || message.startsWith('Error')) {
+        dxStatus.classList.add('text-danger'); // Red
+    } else {
+        // Assume it is a hostname (Connected state)
+        dxStatus.classList.add('text-success'); // Green
+    }
   }
 }
 

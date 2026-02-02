@@ -780,19 +780,15 @@ let activeQSO = false;
 function attachEventListeners() {
   dxClusterClient.on('close', () => {
     uiManager.updateDXClusterStatus('dxClusterDisconnected');
-    reconnectToDXCluster();
   });
 
   dxClusterClient.on('timeout', () => {
     uiManager.updateDXClusterStatus('dxClusterDisconnected');
-    reconnectToDXCluster();
   });
 
   dxClusterClient.on('error', (err) => {
     uiManager.updateDXClusterStatus('dxClusterError', err);
-    reconnectToDXCluster();
   });
-
 
   dxClusterClient.on('loggedin', async () => {
     logger.info('Logged in to DXCluster');
@@ -803,11 +799,18 @@ function attachEventListeners() {
       logger.error(`Error sending commands after login: ${err.message}`);
     }
 
-    setTimeout(() => {
-      uiManager.updateDXClusterStatus('dxClusterConnected');
-    }, 2000);
+    // Determine connection type for UI
+    const isBackup = dxClusterClient.usingBackup;
+    const currentServer = dxClusterClient.currentHost;
+    
+    // Send detailed status to UI
+    uiManager.sendStatusUpdate({
+        event: 'dxClusterConnected',
+        isBackup: isBackup,
+        server: currentServer
+    });
   });
-
+  
   dxClusterClient.on('spot', async function processSpot(spot) {
     try {
       logger.debug('Raw Spot Data:', spot);
@@ -963,26 +966,6 @@ function attachFlexRadioEventListeners() {
         }
     });    
   }
-}
-
-/**
- * Attempts to reconnect to the DXCluster after a delay.
- */
-function reconnectToDXCluster() {
-  logger.info('Attempting to reconnect to DXCluster...');
-  logConnectionState('attempting', dxClusterClient.config.dxCluster);
-
-  dxClusterClient
-    .connect()
-    .then(() => {
-      logger.info('Successfully connected to DXCluster.');
-      logConnectionState('connected', dxClusterClient.config.dxCluster);
-    })
-    .catch((err) => {
-      logger.error('Failed to connect to DXCluster.');
-      logConnectionState('failed', dxClusterClient.config.dxCluster, err);
-      setTimeout(reconnectToDXCluster, 5000);
-    });
 }
 
 /**

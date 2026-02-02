@@ -514,17 +514,30 @@
                     <div class="card h-100">
                         <div class="card-header py-1">DX Cluster</div>
                         <div class="card-body">
+                            <!-- Primary & Backup Server Inputs -->
                             <div class="row g-2 mb-2">
                                 <div class="col-8">
-                                    <label class="form-label small">Host</label>
+                                    <label class="form-label small fw-bold">Primary Host</label>
                                     <input type="text" class="form-control form-control-sm" id="dxClusterHost">
                                 </div>
                                 <div class="col-4">
-                                    <label class="form-label small">Port</label>
+                                    <label class="form-label small fw-bold">Port</label>
                                     <input type="number" class="form-control form-control-sm" id="dxClusterPort">
                                 </div>
                             </div>
-                            <div class="mb-2">
+
+                            <div class="row g-2 mb-2">
+                                <div class="col-8">
+                                    <label class="form-label small text-muted">Backup Host (Optional)</label>
+                                    <input type="text" class="form-control form-control-sm" id="dxClusterBackupHost" placeholder="e.g. dxc.w3lpl.net">
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small text-muted">Port</label>
+                                    <input type="number" class="form-control form-control-sm" id="dxClusterBackupPort" placeholder="7373">
+                                </div>
+                            </div>
+
+                            <div class="mb-2 border-top pt-2">
                                 <label class="form-label small">Callsign</label>
                                 <input type="text" class="form-control form-control-sm" id="dxClusterCallsign">
                             </div>
@@ -532,7 +545,7 @@
                                 <label class="form-label small">Commands (comma separated)</label>
                                 <textarea class="form-control form-control-sm" id="dxClusterCommandsAfterLogin" rows="2"></textarea>
                             </div>
-                            <!-- Hidden technical fields for reconnect -->
+                            <!-- Hidden technical fields -->
                             <input type="hidden" id="dxClusterLoginPrompt">
                             <input type="hidden" id="dxClusterReconnectInitialDelay">
                             <input type="hidden" id="dxClusterReconnectMaxDelay">
