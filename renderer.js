@@ -1209,16 +1209,12 @@ ipcRenderer.on('flex-global-profiles', (event, profiles) => {
  * 1. Scans all profiles to see which Modes exist globally.
  * 2. Creates rows ONLY for those modes.
  * 3. Fills gaps with empty slots to maintain alignment.
+ * 4. Displays help text if no matching profiles are found.
  * @param {string[]} profiles - List of profile names.
  */
 function renderProfiles(profiles) {
   const grid = document.getElementById('profilesGrid');
   grid.innerHTML = '';
-
-  if (!profiles || profiles.length === 0) {
-    grid.innerHTML = '<div class="alert alert-warning m-3">No profiles found.</div>';
-    return;
-  }
 
   // 1. Setup Bands and Sorting
   const displayOrder = ['6M', '10M', '12M', '15M', '17M', '20M', '30M', '40M', '60M', '80M', '160M'];
@@ -1239,31 +1235,92 @@ function renderProfiles(profiles) {
   // Track which modes are actually used across ALL bands
   const activeModesSet = new Set();
 
-  profiles.forEach(name => {
-    if (name === 'Default') return;
-    const upperName = name.toUpperCase();
-    const lowerName = name.toLowerCase();
+  if (profiles && profiles.length > 0) {
+      profiles.forEach(name => {
+        if (name === 'Default') return;
+        const upperName = name.toUpperCase();
+        const lowerName = name.toLowerCase();
 
-    // Check which mode this profile belongs to
-    allModeDefinitions.forEach(mode => {
-        if (mode.matcher(upperName)) {
-            activeModesSet.add(mode.id);
+        // Check which mode this profile belongs to
+        allModeDefinitions.forEach(mode => {
+            if (mode.matcher(upperName)) {
+                activeModesSet.add(mode.id);
+            }
+        });
+        
+        // Assign to band bucket
+        for (const bandLabel of searchOrder) {
+          if (lowerName.includes(bandLabel.toLowerCase())) {
+              bandBuckets[bandLabel].push(name);
+              return;
+          }
         }
-    });
-    
-    // Assign to band bucket
-    for (const bandLabel of searchOrder) {
-      if (lowerName.includes(bandLabel.toLowerCase())) {
-          bandBuckets[bandLabel].push(name);
-          return;
-      }
-    }
-  });
+      });
+  }
 
-  // 4. Filter the Mode Rows: Only keep modes that exist in at least one profile
+  // 4. Check if we found anything meaningful to display
+  if (activeModesSet.size === 0) {
+      // Render Help / Empty State
+      grid.innerHTML = `
+        <div class="d-flex justify-content-center mt-5">
+            <div class="card bg-light-subtle border-secondary" style="max-width: 700px;">
+                <div class="card-body">
+                    <h5 class="card-title text-primary mb-3">
+                        <i class="bi bi-info-circle-fill me-2"></i>Profile Manager
+                    </h5>
+                    <p class="card-text">
+                        The Profiles tab automatically organizes your FlexRadio Global Profiles into a grid. 
+                        However, <strong>no compatible profiles were found</strong>.
+                    </p>
+                    <div class="alert alert-secondary mt-3">
+                        <h6><i class="bi bi-exclamation-triangle me-2"></i>Naming Requirement</h6>
+                        <p class="mb-0 small">
+                            To appear here, profile names MUST contain <strong>BOTH</strong> a Band and a Mode.
+                        </p>
+                    </div>
+                    <div class="row small text-muted mb-3">
+                        <div class="col-md-6">
+                            <strong>Recognized Bands:</strong><br>
+                            160M, 80M ... 10M, 6M
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Recognized Modes:</strong><br>
+                            CW, SSB (LSB/USB/PH), DIGI (FT8/RTTY), FM
+                        </div>
+                    </div>
+                    <p class="small fw-bold">Examples that work:</p>
+                    <ul class="small text-muted">
+                        <li>"20M CW"</li>
+                        <li>"40M LSB - Contest"</li>
+                        <li>"10M FT8"</li>
+                    </ul>
+                    <div class="text-center mt-4">
+                        <!-- Added ID profilesHelpLink to attach listener manually -->
+                        <a id="profilesHelpLink" href="https://github.com/tnxqso/wave-flex-integrator?tab=readme-ov-file#profile-manager" 
+                           class="btn btn-outline-primary btn-sm">
+                           <i class="bi bi-book me-1"></i> Read Full Documentation
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+      `;
+
+      // Manually attach listener to open in external browser, as this HTML is dynamic
+      const helpLink = document.getElementById('profilesHelpLink');
+      if (helpLink) {
+          helpLink.addEventListener('click', (e) => {
+              e.preventDefault();
+              shell.openExternal(e.currentTarget.href);
+          });
+      }
+      return;
+  }
+
+  // 5. Filter the Mode Rows: Only keep modes that exist in at least one profile
   const rowsToRender = allModeDefinitions.filter(mode => activeModesSet.has(mode.id));
 
-  // 5. Render the Grid
+  // 6. Render the Grid
   displayOrder.forEach(bandKey => {
     // Optional: Skip empty bands if you want to save horizontal space
     if (bandBuckets[bandKey].length === 0) return;
