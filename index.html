@@ -27,6 +27,25 @@
   <!-- Link to External Custom CSS -->
   <link rel="stylesheet" href="styles.css" />
   
+  <style>
+    /* Custom style for section headers in config */
+    .config-section-header {
+      border-bottom: 2px solid var(--bs-border-color);
+      padding-bottom: 0.5rem;
+      margin-top: 2rem;
+      margin-bottom: 1.5rem;
+      color: var(--bs-primary);
+      font-weight: 600;
+    }
+    .config-section-header:first-of-type {
+      margin-top: 0;
+    }
+    .status-badge-container {
+      display: flex;
+      align-items: center;
+      margin-right: 15px;
+    }
+  </style>
 </head>
 <body>
   <div class="container-fluid">
@@ -61,17 +80,7 @@
           >Configuration</a
         >
       </li>
-      <li class="nav-item" role="presentation">
-        <a
-          class="nav-link"
-          id="security-tab"
-          data-bs-toggle="tab"
-          href="#security"
-          role="tab"
-          aria-controls="security"
-          aria-selected="false"
-          >Security</a>
-      </li>      
+      <!-- Security Tab removed and merged into Configuration -->
       <li class="nav-item" role="presentation">
         <a
           class="nav-link"
@@ -114,8 +123,16 @@
       <!-- Status Content -->
         <div id="statusContent" class="mt-4">
 
-          <!-- Quick Actions -->
-          <div class="d-flex justify-content-end mb-3">
+          <!-- Quick Actions & Status Indicator -->
+          <div class="d-flex justify-content-end mb-3 align-items-center">
+            
+            <!-- Connection Mode Indicator -->
+            <div class="status-badge-container">
+               <span id="connectionModeBadge" class="badge rounded-pill text-bg-secondary p-2">
+                 <i class="bi bi-dash-circle-fill me-1"></i> Offline
+               </span>
+            </div>
+
             <button id="openQSOAssistantBtn" class="btn btn-primary">
               <!-- Icon placeholder if you want one, e.g. <i class="bi bi-window"></i> -->
               Open QSO Assistant
@@ -198,166 +215,103 @@
         <div id="configContent" class="mt-4">
           <form id="configForm">
 
-            <!-- Form Action Buttons -->
-            <button type="submit" class="btn btn-primary">Save Configuration</button>
-            <button type="button" id="resetDefaults" class="btn btn-warning ms-2">Reset to Defaults</button>
-
-            <!-- HTTP CAT Listener -->
-            <h4 class="mt-4">Wavelog "Click-to-Tune" Listener</h4>
-            
-            <div class="mb-3">
-              <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="catListenerEnabled">
-                <label class="form-check-label fw-bold" for="catListenerEnabled">Enable Local Callback Listener</label>
-              </div>
-              <div class="form-text text-muted">
-                This enables the <strong>Callback URL</strong> feature. When enabled, clicking a spot in the Wavelog Bandmap/Cluster will instantly tune your FlexRadio to that frequency.
-              </div>
+            <!-- Form Action Buttons (Top) -->
+            <div class="d-flex justify-content-end mb-3 sticky-top bg-body pt-2 pb-2 border-bottom">
+                <button type="submit" class="btn btn-primary me-2"><i class="bi bi-save me-1"></i> Save Configuration</button>
+                <button type="button" id="resetDefaults" class="btn btn-warning"><i class="bi bi-arrow-counterclockwise me-1"></i> Reset to Defaults</button>
             </div>
 
-              <div class="row">
-                <div class="col-md-8 mb-3">
-                    <label for="catListenerHost" class="form-label">Listener Host (IP)</label>
-                    <input type="text" class="form-control" id="catListenerHost" placeholder="0.0.0.0">
-                    <div class="form-text">
-                        Recommended: <code>0.0.0.0</code> (Listen on all interfaces). Use this if your Wavelog is running on a different device (like a Raspberry Pi or whatever).
-                    </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <label for="catListenerPort" class="form-label">Listener Port</label>
-                    <input type="number" class="form-control" id="catListenerPort" placeholder="54321">
-                    <div class="form-text">
-                        Default: <code>54321</code>.
-                    </div>
-                </div>
-            </div>
-
-            <!-- Configuration Hint Box -->
-            <div class="alert alert-info mt-2" role="alert">
-                <i class="bi bi-info-circle-fill me-2"></i><strong>Wavelog Configuration Steps:</strong>
-                <ol class="mb-0 ps-3 mt-1">
-                    <li>
-                        In Wavelog <em>Settings -> Hardware Interfaces</em>: Set <strong>Radio Interface</strong> to <code class="user-select-all">http://127.0.0.1:54321</code>
-                    </li>
-                    <li>
-                        <strong>IMPORTANT:</strong> In the Wavelog <strong>DX Cluster / QSO Panel</strong>, you must click the <strong>"CAT Connection"</strong> button so it turns <span class="text-success fw-bold">GREEN</span>.
-                    </li>
-                </ol>
-            </div>
-  
-          <!-- Wavelog Live Integration Settings -->
-            <h4 class="mt-4">Wavelog Live Integration</h4>
-            <div class="alert alert-secondary p-2 small">
-                <i class="bi bi-info-circle me-1"></i>
-                This service allows real-time frequency sync and provides metadata (Name, QTH, Bearing) to the <strong>QSO Assistant</strong>.
-            </div>
-
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label for="wavelogLivePort" class="form-label">WebSocket Port</label>
-                    <input type="number" class="form-control" id="wavelogLivePort" placeholder="54322">
-                    <div class="form-text">
-                        Default: <code>54322</code>. Only change if this port is occupied by another app.
-                    </div>
-                </div>
-            </div>
-
-            <!-- Application Settings -->
-            <h4 class="mt-4">Application General Settings</h4>
+            <!-- SECTION 1: General Application Settings -->
+            <h5 class="config-section-header"><i class="bi bi-gear-fill me-2"></i>General Application Settings</h5>
             
             <div class="row">
+                <!-- Startup & Tray Behavior -->
+                <div class="col-md-12 mb-3">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="appStartAtLogin">
+                            <label class="form-check-label" for="appStartAtLogin">Start at Login</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="appStartMinimized">
+                            <label class="form-check-label" for="appStartMinimized">Start Minimized</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="appMinimizeToTray">
+                            <label class="form-check-label" for="appMinimizeToTray">Minimize to Tray</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-            <!-- Startup & Tray Behavior -->
+                <!-- Theme & Tab -->
+                <div class="col-md-6 mb-3">
+                    <label for="appTheme" class="form-label">Theme</label>
+                    <select class="form-select" id="appTheme">
+                        <option value="system">System Default</option>
+                        <option value="light">Light</option>
+                        <option value="dark">Dark</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="appStartupTab" class="form-label">Startup Tab</label>
+                    <select class="form-select" id="appStartupTab">
+                        <option value="status">Status</option>
+                        <option value="config">Configuration</option>
+                        <option value="profiles">Profiles</option>
+                        <option value="about">About</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- QSO Assistant & Units -->
             <div class="row mb-3">
-              <div class="col-md-4">
-                <div class="form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="appStartAtLogin">
-                  <label class="form-check-label" for="appStartAtLogin">Start at Login</label>
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header">QSO Assistant Settings</div>
+                        <div class="card-body">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="appAutoOpenQSO">
+                                <label class="form-check-label" for="appAutoOpenQSO">Auto-open on start</label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="appShowQsoMedia">
+                                <label class="form-check-label" for="appShowQsoMedia">Show Profile Image & Map</label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="appAutoLogQso">
+                                <label class="form-check-label" for="appAutoLogQso">Auto-Log to Wavelog on Enter</label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-              </div>
-              <div class="col-md-4">
-                <div class="form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="appStartMinimized">
-                  <label class="form-check-label" for="appStartMinimized">Start Minimized</label>
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header">Display & Units</div>
+                        <div class="card-body">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="appCompactMode">
+                                <label class="form-check-label" for="appCompactMode">Compact Mode (Hide Banner)</label>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="appUseImperial">
+                                <label class="form-check-label fw-bold" for="appUseImperial">Use Imperial Units</label>
+                            </div>
+                            <div class="form-text text-muted small mt-1">
+                                Activate for Miles/Fahrenheit. Default is Metric (km).
+                            </div>
+                        </div>
+                    </div>
                 </div>
-              </div>
-              <div class="col-md-4">
-                <div class="form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="appMinimizeToTray">
-                  <label class="form-check-label" for="appMinimizeToTray">Minimize to Tray</label>
-                </div>
-              </div>
-            </div>
-
-              <!-- Theme -->
-              <div class="col-md-6 mb-3">
-                <label for="appTheme" class="form-label">Theme</label>
-                <select class="form-select" id="appTheme">
-                  <option value="system">System Default</option>
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                </select>
-              </div>
-              
-              <!-- Startup Tab -->
-              <div class="col-md-6 mb-3">
-                <label for="appStartupTab" class="form-label">Startup Tab</label>
-                <select class="form-select" id="appStartupTab">
-                  <option value="status">Status</option>
-                  <option value="config">Configuration</option>
-                  <option value="profiles">Profiles</option>
-                  <option value="about">About</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Imperial Units (The Oddities) -->
-            <div class="mb-4">
-                <div class="form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="appUseImperial">
-                  <label class="form-check-label fw-bold" for="appUseImperial">Use Imperial Units</label>
-                </div>
-                <div class="form-text text-muted small mt-1">
-                    Activate if you live in one of the three countries on Earth that still insist on using miles, Fahrenheit and other imperial oddities. 
-                    Everyone else can safely leave this as not activated and enjoy Metric (km).
-                </div>
-            </div>
-
-            <!-- QSO Assistant Settings -->
-            <h5 class="mt-4">QSO Assistant Settings</h5>
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <div class="form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="appShowQsoMedia">
-                  <label class="form-check-label" for="appShowQsoMedia">Show Profile Image & Map</label>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="appAutoLogQso">
-                  <label class="form-check-label" for="appAutoLogQso">Auto-Log to Wavelog on Enter</label>
-                </div>
-              </div>
-            </div>
-
-            <!-- Compact Mode & Auto Open -->
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <div class="form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="appCompactMode">
-                  <label class="form-check-label" for="appCompactMode">Compact Mode (Hide Banner)</label>
-                </div>
-              </div>
-              <div class="col-md-6">
-                <div class="form-check form-switch">
-                  <input class="form-check-input" type="checkbox" id="appAutoOpenQSO">
-                  <label class="form-check-label" for="appAutoOpenQSO">Auto-open QSO Assistant on start</label>
-                </div>
-              </div>
             </div>
 
             <!-- Window Sizes -->
-            <h5 class="mt-3">Window Sizes</h5>
             <div class="row">
               <div class="col-md-6 mb-3">
                 <label class="form-label">Main Window (Width x Height)</label>
@@ -377,367 +331,417 @@
               </div>
             </div>
 
-            <!-- Rotator Control -->
-            <h4 class="mt-4">Rotator Control</h4>
+            <!-- SECTION 2: Wavelog Connectivity & Security -->
+            <h5 class="config-section-header mt-5"><i class="bi bi-globe me-2"></i>Wavelog Connectivity & Security</h5>
 
-            <div class="mb-3 text-muted small">
-                Designed for <strong>RemoteQTH.com Simple Rotator Interface V</strong> via MQTT.
-                <a href="https://remoteqth.com/" target="_new" class="text-decoration-none ms-1">
-                    <i class="bi bi-box-arrow-up-right"></i> Visit Manufacturer
-                </a>
+            <!-- API Configuration -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="wavelogApiUrl" class="form-label">Wavelog Base URL</label>
+                    <input type="url" class="form-control" id="wavelogApiUrl" required placeholder="https://wavelog.example.com/index.php" />
+                    <div class="form-text small">Include <code>/index.php</code> unless you have modified .htaccess</div>
+                </div>
+                <div class="col-md-6">
+                    <label for="wavelogApiKey" class="form-label">API Key</label>
+                    <input type="text" class="form-control" id="wavelogApiKey" required placeholder="Your API Key" />
+                </div>
             </div>
             
-            <div class="mb-3">
-              <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="rotatorEnabled">
-                <label class="form-check-label" for="rotatorEnabled">Enable Rotator Integration (MQTT)</label>
-              </div>
-            </div>
-            
-            <!-- MQTT Settings -->
-            <div class="p-3 mb-3 border rounded">
-                <div class="row">
-                    <div class="col-md-8 mb-2">
-                        <label class="form-label small fw-bold">Broker Host (IP)</label>
-                        <input type="text" class="form-control form-control-sm" id="rotMqttHost" placeholder="e.g. 192.168.1.50">
-                    </div>
-                    <div class="col-md-4 mb-2">
-                        <label class="form-label small fw-bold">Port</label>
-                        <input type="number" class="form-control form-control-sm" id="rotMqttPort" value="1883">
-                    </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="stationLocationIds" class="form-label">Station Location IDs (comma separated)</label>
+                    <input type="text" class="form-control" id="stationLocationIds" placeholder="e.g., 1,3" />
                 </div>
-                <div class="row">
-                    <div class="col-md-6 mb-2">
-                        <label class="form-label small fw-bold">Username</label>
-                        <input type="text" class="form-control form-control-sm" id="rotMqttUser" placeholder="home">
+                <div class="col-md-6">
+                    <label for="wavelogRadioName" class="form-label">Radio name in Wavelog</label>
+                    <input type="text" class="form-control" id="wavelogRadioName" placeholder="wave-flex-integrator" />
+                    <div class="form-check mt-1">
+                        <input class="form-check-input" type="checkbox" id="multiFlexEnabled" name="multiFlexEnabled">
+                        <label class="form-check-label small" for="multiFlexEnabled">Enable MultiFlex Support</label>
                     </div>
-                    <div class="col-md-6 mb-2">
-                        <label class="form-label small fw-bold">Password</label>
-                        <input type="password" class="form-control form-control-sm" id="rotMqttPass">
-                    </div>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label small fw-bold">Topic Prefix</label>
-                    <input type="text" class="form-control form-control-sm" id="rotMqttTopic" placeholder="SM6KZW/0/ROT">
-                    <div class="form-text small">Do not include trailing slash. Logic appends '/set_azimuth'.</div>
                 </div>
             </div>
 
-            <!-- QRZ.com Configuration -->
-            <h4 class="mt-4">QRZ.com Integration (XML Data)</h4>
-            <div class="mb-3">
-              <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" id="qrzEnabled">
-                <label class="form-check-label" for="qrzEnabled">Enable QRZ.com Lookup (Required for precise bearing)</label>
-              </div>
+            <!-- Local Listener Settings (CAT & Live) -->
+            <div class="card bg-light-subtle mb-3">
+                <div class="card-body">
+                    <h6 class="card-title"><i class="bi bi-router me-2"></i>Local Listeners (Live & CAT)</h6>
+                    
+                    <div class="row">
+                        <div class="col-md-6 border-end">
+                            <!-- CAT Listener -->
+                            <strong>CAT "Click-to-Tune" Listener</strong>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="catListenerEnabled">
+                                <label class="form-check-label" for="catListenerEnabled">Enable Callback URL Listener</label>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-8">
+                                    <label class="form-label small">Host (IP)</label>
+                                    <input type="text" class="form-control form-control-sm" id="catListenerHost" placeholder="0.0.0.0">
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small">Port</label>
+                                    <input type="number" class="form-control form-control-sm" id="catListenerPort" placeholder="54321">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <!-- Live Listener -->
+                            <strong>Live Integration (WebSocket)</strong>
+                            <div class="mt-2">
+                                <label class="form-label small">WebSocket Port</label>
+                                <input type="number" class="form-control form-control-sm" id="wavelogLivePort" placeholder="54322">
+                                <div class="form-text small">Default: <code>54322</code></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info mt-3 mb-0 py-2 small" role="alert">
+                        <i class="bi bi-info-circle-fill me-1"></i>
+                        In Wavelog Hardware Interfaces, set Radio Interface to <code class="user-select-all">http://127.0.0.1:54321</code> and enable the <strong>"CAT Connection"</strong> button (Green).
+                    </div>
+                </div>
             </div>
+
+            <!-- HTTPS Security Section -->
+              <div class="card border-warning mb-3">
+                <div class="card-header bg-warning text-dark fw-bold">
+                    <i class="bi bi-shield-lock-fill me-2"></i>HTTPS & Security Setup
+                </div>
+                <div class="card-body">
+                    <p class="small mb-3">
+                        Required if your Wavelog uses <strong>HTTPS</strong>. Without this, the browser will block the connection.
+                    </p>
+
+                    <!-- Step 1 -->
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div>
+                            <h6 class="mb-0 fw-bold">Step 1: Install Certificate</h6>
+                            <small class="text-muted">Adds Wave-Flex to Windows Trusted Root.</small>
+                        </div>
+                        <!-- Changed to btn-primary (Blue) for visibility in Dark Mode -->
+                        <button type="button" id="installCertBtn" class="btn btn-primary btn-sm">
+                            <i class="bi bi-windows me-1"></i> Install Local Certificate
+                        </button>
+                    </div>
+
+                    <hr class="text-secondary my-2">
+
+                    <!-- Step 2 -->
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="mb-0 fw-bold">Step 2: Verify Connection</h6>
+                            <small class="text-muted"><strong>Firefox users:</strong> Click buttons & accept risk.</small>
+                        </div>
+                        <!-- Changed to btn-primary (Blue) for visibility -->
+                        <div class="d-flex gap-2">
+                            <a href="https://127.0.0.1:54321" target="_new" class="btn btn-primary btn-sm">
+                               Verify CAT (54321)
+                            </a>
+                            <a href="https://127.0.0.1:54323" target="_new" class="btn btn-primary btn-sm">
+                               Verify WSS (54323)
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-secondary d-flex align-items-center p-2 mt-3 mb-0 small" role="alert">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        <div>Restart your browser after installing the certificate.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 3: Radio & Hardware -->
+            <h5 class="config-section-header mt-5"><i class="bi bi-boombox me-2"></i>Radio & Hardware</h5>
+
+            <!-- FlexRadio -->
+            <div class="row mb-3">
+                <div class="col-md-12">
+                    <h6>FlexRadio Connection</h6>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Enabled</label>
+                    <select class="form-select" id="flexRadioEnabled" name="flexRadioEnabled">
+                        <option value="true">True</option>
+                        <option value="false">False</option>
+                    </select>
+                </div>
+                <div class="col-md-5">
+                    <label class="form-label">Host IP</label>
+                    <input type="text" class="form-control" id="flexRadioHost" placeholder="192.168.1.100" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Port</label>
+                    <input type="number" class="form-control" id="flexRadioPort" placeholder="4992" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Timeout (ms)</label>
+                    <input type="number" class="form-control" id="flexRadioCommandTimeout" placeholder="5000" />
+                </div>
+            </div>
+
+            <!-- Rotator -->
+            <div class="card mb-3">
+                <div class="card-body pt-2 pb-2">
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" id="rotatorEnabled">
+                        <label class="form-check-label fw-bold" for="rotatorEnabled">Enable Rotator Integration (MQTT)</label>
+                    </div>
+                    
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <input type="text" class="form-control form-control-sm" id="rotMqttHost" placeholder="MQTT Host (IP)">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" class="form-control form-control-sm" id="rotMqttPort" value="1883" placeholder="Port">
+                        </div>
+                        <div class="col-md-4">
+                            <input type="text" class="form-control form-control-sm" id="rotMqttTopic" placeholder="Topic Prefix (e.g. SM6KZW/0/ROT)">
+                        </div>
+                        <div class="col-md-6">
+                            <input type="text" class="form-control form-control-sm" id="rotMqttUser" placeholder="Username">
+                        </div>
+                        <div class="col-md-6">
+                            <input type="password" class="form-control form-control-sm" id="rotMqttPass" placeholder="Password">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 4: External Services -->
+            <h5 class="config-section-header mt-5"><i class="bi bi-cloud-network me-2"></i>External Services</h5>
+
             <div class="row">
-              <div class="col-md-6 mb-3">
-                <label for="qrzUsername" class="form-label">Username</label>
-                <input type="text" class="form-control" id="qrzUsername" placeholder="QRZ Username">
-              </div>
-              <div class="col-md-6 mb-3">
-                <label for="qrzPassword" class="form-label">Password</label>
-                <input type="password" class="form-control" id="qrzPassword" placeholder="QRZ Password">
-              </div>
+                <!-- DX Cluster -->
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100">
+                        <div class="card-header py-1">DX Cluster</div>
+                        <div class="card-body">
+                            <div class="row g-2 mb-2">
+                                <div class="col-8">
+                                    <label class="form-label small">Host</label>
+                                    <input type="text" class="form-control form-control-sm" id="dxClusterHost">
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small">Port</label>
+                                    <input type="number" class="form-control form-control-sm" id="dxClusterPort">
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label small">Callsign</label>
+                                <input type="text" class="form-control form-control-sm" id="dxClusterCallsign">
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label small">Commands (comma separated)</label>
+                                <textarea class="form-control form-control-sm" id="dxClusterCommandsAfterLogin" rows="2"></textarea>
+                            </div>
+                            <!-- Hidden technical fields for reconnect -->
+                            <input type="hidden" id="dxClusterLoginPrompt">
+                            <input type="hidden" id="dxClusterReconnectInitialDelay">
+                            <input type="hidden" id="dxClusterReconnectMaxDelay">
+                            <input type="hidden" id="dxClusterReconnectBackoffFactor">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Others (WSJT, QRZ, LoTW) -->
+                <div class="col-md-6 mb-3">
+                    <!-- WSJT-X -->
+                    <div class="card mb-2">
+                        <div class="card-header py-1">WSJT-X</div>
+                        <div class="card-body py-2">
+                            <div class="row align-items-center">
+                                <div class="col-4">
+                                    <select class="form-select form-select-sm" id="wsjtEnabled">
+                                        <option value="true">Enabled</option>
+                                        <option value="false">Disabled</option>
+                                    </select>
+                                </div>
+                                <div class="col-4">
+                                    <input type="number" class="form-control form-control-sm" id="wsjtPort" placeholder="2237">
+                                </div>
+                            </div>
+                            <div class="d-flex gap-3 mt-2">
+                                <select class="form-select form-select-sm" id="wsjtShowQSO">
+                                    <option value="true">Show QSO</option>
+                                    <option value="false">Hide QSO</option>
+                                </select>
+                                <select class="form-select form-select-sm" id="wsjtLogQSO">
+                                    <option value="true">Log QSO</option>
+                                    <option value="false">Don't Log</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- QRZ & LoTW -->
+                    <div class="card">
+                        <div class="card-header py-1">QRZ & LoTW</div>
+                        <div class="card-body py-2">
+                            <div class="form-check form-switch mb-1">
+                                <input class="form-check-input" type="checkbox" id="qrzEnabled">
+                                <label class="form-check-label small" for="qrzEnabled">Enable QRZ Lookup</label>
+                            </div>
+                            <div class="row g-1 mb-2">
+                                <div class="col-6">
+                                    <input type="text" class="form-control form-control-sm" id="qrzUsername" placeholder="QRZ User">
+                                </div>
+                                <div class="col-6">
+                                    <input type="password" class="form-control form-control-sm" id="qrzPassword" placeholder="QRZ Pass">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="form-label small mb-0">LoTW Max Days</label>
+                                <input type="number" class="form-control form-control-sm" id="maxDaysConsideredTrue" placeholder="200">
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             
-            <hr class="my-4">          
+            <!-- SECTION 5: Spot Management & Visuals -->
+            <h5 class="config-section-header mt-5"><i class="bi bi-palette me-2"></i>Spot Management & Visuals</h5>
             
-            <!-- Augmented Spot Cache -->
-            <h4 class="mt-4">Augmented Spot Cache</h4>
-            <div class="mb-3">
-              <label for="augmentedSpotCacheMaxSize" class="form-label">Max Cache Size</label>
-              <input type="number" class="form-control" id="augmentedSpotCacheMaxSize" min="1" required placeholder="Enter maximum cache size e.g. 500" />
-            </div>
-  
-            <!-- DX Cluster Configuration -->
-            <h4 class="mt-4">DX Cluster Configuration</h4>
-            <div class="mb-3">
-              <label for="dxClusterHost" class="form-label">Host</label>
-              <input type="text" class="form-control" id="dxClusterHost" required placeholder="e.g., dxc.mx0nca.uk" />
-            </div>
-            <div class="mb-3">
-              <label for="dxClusterPort" class="form-label">Port</label>
-              <input type="number" class="form-control" id="dxClusterPort" min="1" required placeholder="e.g., 7373" />
-            </div>
-            <div class="mb-3">
-              <label for="dxClusterCallsign" class="form-label">Callsign</label>
-              <input type="text" class="form-control" id="dxClusterCallsign" required placeholder="Your Callsign" />
-            </div>
-            <div class="mb-3">
-              <label for="dxClusterLoginPrompt" class="form-label">Login Prompt (usually login:)</label>
-              <input type="text" class="form-control" id="dxClusterLoginPrompt" placeholder="e.g., login:" />
-            </div>
-            <div class="mb-3">
-              <label for="dxClusterCommandsAfterLogin" class="form-label">Commands After Login (comma separated)</label>
-              <textarea class="form-control" id="dxClusterCommandsAfterLogin" rows="3" placeholder="SET/NAME YOURNAME, SET/QTH YOURCITY"></textarea>
-            </div>
-            <h5 class="mt-3">DX Cluster Reconnect Settings</h5>
-            <div class="mb-3">
-              <label for="dxClusterReconnectInitialDelay" class="form-label">Initial Delay (ms)</label>
-              <input type="number" class="form-control" id="dxClusterReconnectInitialDelay" min="0" required placeholder="e.g., 1000" />
-            </div>
-            <div class="mb-3">
-              <label for="dxClusterReconnectMaxDelay" class="form-label">Max Delay (ms)</label>
-              <input type="number" class="form-control" id="dxClusterReconnectMaxDelay" min="0" required placeholder="e.g., 30000" />
-            </div>
-            <div class="mb-3">
-              <label for="dxClusterReconnectBackoffFactor" class="form-label">Backoff Factor</label>
-              <input type="number" step="0.1" class="form-control" id="dxClusterReconnectBackoffFactor" min="0" required placeholder="e.g., 2.0" />
-            </div>
-  
-            <!-- FlexRadio Configuration -->
-            <h4 class="mt-4">FlexRadio Configuration</h4>
-            <div class="mb-3">
-              <label for="flexRadioEnabled" class="form-label">Enabled</label>
-              <select class="form-select" id="flexRadioEnabled" name="flexRadioEnabled" required>
-                <option value="true">True</option>
-                <option value="false">False</option>
-              </select>
-            </div>
-            <div class="mb-3">
-              <label for="flexRadioHost" class="form-label">Host</label>
-              <input type="text" class="form-control" id="flexRadioHost" placeholder="e.g., 192.168.1.100" />
-            </div>
-            <div class="mb-3">
-              <label for="flexRadioPort" class="form-label">Port</label>
-              <input type="number" class="form-control" id="flexRadioPort" min="1" placeholder="e.g., 4992" />
-            </div>
-            <div class="mb-3">
-              <label for="flexRadioCommandTimeout" class="form-label">Command Timeout (ms)</label>
-              <input type="number" class="form-control" id="flexRadioCommandTimeout" min="0" placeholder="e.g., 5000" />
-            </div>
-  
-            <!-- Spot Management -->
-            <h5 class="mt-4">Spot Management</h5>
-            <div class="mb-3">
-              <label for="spotManagementLifetimeSeconds" class="form-label">Lifetime Seconds</label>
-              <input type="number" class="form-control" id="spotManagementLifetimeSeconds" min="1" required placeholder="e.g., 3600" />
-            </div>
-            <div class="mb-3">
-              <label for="spotManagementCleanupIntervalSeconds" class="form-label">Cleanup Interval Seconds</label>
-              <input type="number" class="form-control" id="spotManagementCleanupIntervalSeconds" min="1" required placeholder="e.g., 600" />
-            </div>
-  
-            <!-- Spot Management Colors -->
-            <h6 class="mt-4">Spot Management Colors</h6>
-          
-            <div>Select the colors for the spots using the color pickers below.</div>
-            <div>&nbsp;</div>
-            <!-- Default Colors -->
-            <div class="mb-3">
-              <label for="colorDefaultTextColor" class="form-label">Default Text Color</label>
-              <input type="color" class="form-control form-control-color" id="colorDefaultTextColor" />
-            </div>
-            <div class="mb-3">
-              <label for="colorDefaultBackgroundColor" class="form-label">Default Background Color</label>
-              <input type="color" class="form-control form-control-color" id="colorDefaultBackgroundColor" />
-            </div>
-            <!-- My Callsign Colors -->
-            <div class="mb-3">
-              <label for="colorMyCallsignTextColor" class="form-label">My Callsign Text Color</label>
-              <input type="color" class="form-control form-control-color" id="colorMyCallsignTextColor" />
-            </div>
-            <div class="mb-3">
-              <label for="colorMyCallsignBackgroundColor" class="form-label">My Callsign Background Color</label>
-              <input type="color" class="form-control form-control-color" id="colorMyCallsignBackgroundColor" />
-            </div>
-            <!-- DXCC Needed Colors -->
-            <div class="mb-3">
-              <label for="colorDxccNeededTextColor" class="form-label">DXCC Needed Text Color</label>
-              <input type="color" class="form-control form-control-color" id="colorDxccNeededTextColor" />
-            </div>
-            <div class="mb-3">
-              <label for="colorDxccNeededBackgroundColor" class="form-label">DXCC Needed Background Color</label>
-              <input type="color" class="form-control form-control-color" id="colorDxccNeededBackgroundColor" />
-            </div>
-            <!-- DXCC Needed Band Colors -->
-            <div class="mb-3">
-              <label for="colorDxccNeededBandTextColor" class="form-label">DXCC Needed Band Text Color</label>
-              <input type="color" class="form-control form-control-color" id="colorDxccNeededBandTextColor" />
-            </div>
-            <div class="mb-3">
-              <label for="colorDxccNeededBandBackgroundColor" class="form-label">DXCC Needed Band Background Color</label>
-              <input type="color" class="form-control form-control-color" id="colorDxccNeededBandBackgroundColor" />
-            </div>
-            <!-- DXCC Needed Band Mode Colors -->
-            <div class="mb-3">
-              <label for="colorDxccNeededBandModeTextColor" class="form-label">DXCC Needed Band Mode Text Color</label>
-              <input type="color" class="form-control form-control-color" id="colorDxccNeededBandModeTextColor" />
-            </div>
-            <div class="mb-3">
-              <label for="colorDxccNeededBandModeBackgroundColor" class="form-label">DXCC Needed Band Mode Background Color</label>
-              <input type="color" class="form-control form-control-color" id="colorDxccNeededBandModeBackgroundColor" />
-            </div>
-            <!-- Call Confirmed Opacity Sliders -->
-            <div class="mb-3">
-              <label for="callConfirmedOpacity" class="form-label">Call Confirmed Opacity (%)</label>
-              <div class="d-flex align-items-center">
-                <input type="range" class="form-range me-3" id="callConfirmedOpacity" min="0" max="100" step="1" />
-                <span id="callConfirmedOpacityValue">40%</span>
-              </div>
-            </div>
-            <div class="mb-3">
-              <label for="callConfirmedBandOpacity" class="form-label">Call Confirmed on Actual Band Opacity (%)</label>
-              <div class="d-flex align-items-center">
-                <input type="range" class="form-range me-3" id="callConfirmedBandOpacity" min="0" max="100" step="1" />
-                <span id="callConfirmedBandOpacityValue">40%</span>
-              </div>
-            </div>
-            <div class="mb-3">
-              <label for="callConfirmedBandModeOpacity" class="form-label">Call Confirmed on Actual Band and Mode Opacity (%)</label>
-              <div class="d-flex align-items-center">
-                <input type="range" class="form-range me-3" id="callConfirmedBandModeOpacity" min="0" max="100" step="1" />
-                <span id="callConfirmedBandModeOpacityValue">40%</span>
-              </div>
-            </div>
-            <!-- Worked Before Opacity Sliders -->
-            <div class="mb-3">
-              <label for="callWorkedOpacity" class="form-label">Worked Before Opacity (%)</label>
-              <div class="d-flex align-items-center">
-                <input type="range" class="form-range me-3" id="callWorkedOpacity" min="0" max="100" step="1" />
-                <span id="callWorkedOpacityValue">40%</span>
-              </div>
-            </div>
-            <div class="mb-3">
-              <label for="callWorkedBandOpacity" class="form-label">Worked Before on Actual Band Opacity (%)</label>
-              <div class="d-flex align-items-center">
-                <input type="range" class="form-range me-3" id="callWorkedBandOpacity" min="0" max="100" step="1" />
-                <span id="callWorkedBandOpacityValue">40%</span>
-              </div>
-            </div>
-            <div class="mb-3">
-              <label for="callWorkedBandModeOpacity" class="form-label">Worked Before on Actual Band and Mode Opacity (%)</label>
-              <div class="d-flex align-items-center">
-                <input type="range" class="form-range me-3" id="callWorkedBandModeOpacity" min="0" max="100" step="1" />
-                <span id="callWorkedBandModeOpacityValue">40%</span>
-              </div>
-            </div>
-            <!-- Not LoTW Text Color -->
-            <div class="mb-3">
-              <label for="colorNotLotwTextColor" class="form-label">Not LoTW Text Color</label>
-              <input type="color" class="form-control form-control-color" id="colorNotLotwTextColor" />
-            </div>
-  
-            <!-- Wavelog API Configuration -->
-            <h4 class="mt-4">Wavelog API Configuration</h4>
-            <div class="mb-3">
-              <label for="wavelogApiUrl" class="form-label">BASE URL (Keep the /index.php at the end unless you have <a target="_new" href="https://github.com/wavelog/Wavelog/wiki/Wavelog.php-Configuration-File">modified Wavelogs .htaccess</a>)</label>
-              <input type="url" class="form-control" id="wavelogApiUrl" required placeholder="https://wavelog.example.com/index.php" />
-            </div>
-            <div class="mb-3">
-              <label for="wavelogApiKey" class="form-label">API Key</label>
-              <input type="text" class="form-control" id="wavelogApiKey" required placeholder="Your API Key" />
-            </div>
-            <div class="mb-3">
-              <label for="stationLocationIds" class="form-label">Station Location IDs (comma separated)</label>
-              <input type="text" class="form-control" id="stationLocationIds" placeholder="e.g., 1,3" />
-            </div>
-            <div class="mb-3">
-              <label for="wavelogRadioName" class="form-label">Radio name in Wavelog</label>
-              <input type="text" class="form-control" id="wavelogRadioName" placeholder="wave-flex-integrator" />
-
-              <!-- Checkbox for enabling multiflex support -->
-              <label for="multiFlexEnabled">Enable MultiFlex Support:</label>
-              <input type="checkbox" id="multiFlexEnabled" name="multiFlexEnabled">
-            </div>
-  
-            <!-- LoTW Configuration -->
-            <h4 class="mt-4">Logbook of The World (LoTW)</h4>
-            <div class="mb-3">
-              <label for="maxDaysConsideredTrue" class="form-label">Max Days for LoTW Consideration</label>
-              <input type="number" class="form-control" id="maxDaysConsideredTrue" min="1" required placeholder="e.g., 200" />
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label class="form-label">Cache Size</label>
+                    <input type="number" class="form-control" id="augmentedSpotCacheMaxSize" placeholder="500" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Lifetime (sec)</label>
+                    <input type="number" class="form-control" id="spotManagementLifetimeSeconds" placeholder="3600" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Cleanup (sec)</label>
+                    <input type="number" class="form-control" id="spotManagementCleanupIntervalSeconds" placeholder="600" />
+                </div>
             </div>
 
-            <!-- WSJT-X Configuration -->
-            <h4 class="mt-4">WSJT-X Configuration</h4>
-            <div class="mb-3">
-              <label for="wsjtEnabled" class="form-label">WSJT-X Integration Enabled</label>
-              <select class="form-select" id="wsjtEnabled" name="wsjtEnabled" required>
-                <option value="true">True</option>
-                <option value="false">False</option>
-              </select>
-            </div>
-            <div class="mb-3">
-              <label for="wsjtPort" class="form-label">UDP Listen Port</label>
-              <input type="number" class="form-control" id="wsjtPort" min="1" required placeholder="e.g., 2237" />
-            </div>
-            <div class="mb-3">
-              <label for="wsjtShowQSO" class="form-label">Show ongoing WSJT-X QSO in Wavelog live logging</label>
-              <select class="form-select" id="wsjtShowQSO" name="wsjtShowQSO" required>
-                <option value="true">True</option>
-                <option value="false">False</option>
-              </select>
-            </div>
-            <div class="mb-3">
-              <label for="wsjtLogQSO" class="form-label">Log WSJT-X QSO in Wavelog</label>
-              <select class="form-select" id="wsjtLogQSO" name="wsjtLogQSO" required>
-                <option value="true">True</option>
-                <option value="false">False</option>
-              </select>
+            <!-- Collapsible Color Settings -->
+            <div class="accordion" id="accordionColors">
+              <div class="accordion-item">
+                <h2 class="accordion-header">
+                  <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseColors" aria-expanded="false">
+                    Configure Spot Colors & Opacity
+                  </button>
+                </h2>
+                <div id="collapseColors" class="accordion-collapse collapse" data-bs-parent="#accordionColors">
+                  <div class="accordion-body">
+                    
+                    <div class="row">
+                        <!-- Default -->
+                        <div class="col-md-4 mb-3">
+                            <label class="small fw-bold">Default</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">Text</span>
+                                <input type="color" class="form-control form-control-color" id="colorDefaultTextColor" />
+                                <span class="input-group-text">Bg</span>
+                                <input type="color" class="form-control form-control-color" id="colorDefaultBackgroundColor" />
+                            </div>
+                        </div>
+                        <!-- My Callsign -->
+                        <div class="col-md-4 mb-3">
+                            <label class="small fw-bold">My Callsign</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">Text</span>
+                                <input type="color" class="form-control form-control-color" id="colorMyCallsignTextColor" />
+                                <span class="input-group-text">Bg</span>
+                                <input type="color" class="form-control form-control-color" id="colorMyCallsignBackgroundColor" />
+                            </div>
+                        </div>
+                        <!-- Not LoTW -->
+                        <div class="col-md-4 mb-3">
+                            <label class="small fw-bold">Not LoTW</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">Text</span>
+                                <input type="color" class="form-control form-control-color" id="colorNotLotwTextColor" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6 class="mt-2 border-bottom pb-1 mb-2">DXCC Needed</h6>
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <label class="small">Global</label>
+                            <div class="input-group input-group-sm">
+                                <input type="color" class="form-control form-control-color" id="colorDxccNeededTextColor" />
+                                <input type="color" class="form-control form-control-color" id="colorDxccNeededBackgroundColor" />
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="small">Band</label>
+                            <div class="input-group input-group-sm">
+                                <input type="color" class="form-control form-control-color" id="colorDxccNeededBandTextColor" />
+                                <input type="color" class="form-control form-control-color" id="colorDxccNeededBandBackgroundColor" />
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label class="small">Band & Mode</label>
+                            <div class="input-group input-group-sm">
+                                <input type="color" class="form-control form-control-color" id="colorDxccNeededBandModeTextColor" />
+                                <input type="color" class="form-control form-control-color" id="colorDxccNeededBandModeBackgroundColor" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6 class="mt-2 border-bottom pb-1 mb-2">Opacity Settings</h6>
+                    <div class="row">
+                        <!-- Confirmed -->
+                        <div class="col-md-6">
+                            <strong class="small d-block mb-2">Call Confirmed</strong>
+                            <label class="small">Global</label>
+                            <div class="d-flex align-items-center mb-1">
+                                <input type="range" class="form-range me-2" id="callConfirmedOpacity" min="0" max="100" />
+                                <span id="callConfirmedOpacityValue" class="small">40%</span>
+                            </div>
+                            <label class="small">Band</label>
+                            <div class="d-flex align-items-center mb-1">
+                                <input type="range" class="form-range me-2" id="callConfirmedBandOpacity" min="0" max="100" />
+                                <span id="callConfirmedBandOpacityValue" class="small">40%</span>
+                            </div>
+                            <label class="small">Band & Mode</label>
+                            <div class="d-flex align-items-center">
+                                <input type="range" class="form-range me-2" id="callConfirmedBandModeOpacity" min="0" max="100" />
+                                <span id="callConfirmedBandModeOpacityValue" class="small">40%</span>
+                            </div>
+                        </div>
+                        <!-- Worked -->
+                        <div class="col-md-6">
+                            <strong class="small d-block mb-2">Worked Before</strong>
+                            <label class="small">Global</label>
+                            <div class="d-flex align-items-center mb-1">
+                                <input type="range" class="form-range me-2" id="callWorkedOpacity" min="0" max="100" />
+                                <span id="callWorkedOpacityValue" class="small">40%</span>
+                            </div>
+                            <label class="small">Band</label>
+                            <div class="d-flex align-items-center mb-1">
+                                <input type="range" class="form-range me-2" id="callWorkedBandOpacity" min="0" max="100" />
+                                <span id="callWorkedBandOpacityValue" class="small">40%</span>
+                            </div>
+                            <label class="small">Band & Mode</label>
+                            <div class="d-flex align-items-center">
+                                <input type="range" class="form-range me-2" id="callWorkedBandModeOpacity" min="0" max="100" />
+                                <span id="callWorkedBandModeOpacityValue" class="small">40%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                  </div>
+                </div>
+              </div>
             </div>
   
-            <!-- Form Action Buttons -->
-            <button type="submit" class="btn btn-primary">Save Configuration</button>
-            <button type="button" id="resetDefaults" class="btn btn-warning ms-2">Reset to Defaults</button>
+            <!-- Form Action Buttons (Bottom) -->
+            <div class="mt-4 mb-2">
+                <button type="submit" class="btn btn-primary">Save Configuration</button>
+            </div>
           </form>
         </div>
       </div>
 
-      <!-- Security Tab -->
-      <div
-        class="tab-pane fade"
-        id="security"
-        role="tabpanel"
-        aria-labelledby="security-tab"
-      >
-        <div id="securityContent" class="mt-4">
-          <h3>Security & HTTPS Connection</h3>
-          <p>If you access Wavelog via <strong>HTTPS</strong>, your browser may block the connection to this local integrator for security reasons. Follow the steps below to establish a trusted connection.</p>
-
-          <div class="card border-primary mb-4">
-            <div class="card-header bg-primary text-white">
-              <i class="bi bi-shield-check me-2"></i>Step 1: Install Local Certificate
-            </div>
-            <div class="card-body">
-              <p>Click the button below to install the Wave-Flex security certificate into the Windows Trusted Root store. This allows Chrome and Edge to trust the connection.</p>
-              <button id="installCertBtn" class="btn btn-primary">Install Local Certificate</button>
-            </div>
-          </div>
-
-          <div class="card border-warning mb-4">
-            <div class="card-header bg-warning text-dark fw-bold">
-              <i class="bi bi-check-all me-2"></i>Step 2: Verify Connection (Required for Firefox)
-            </div>
-            <div class="card-body">
-              <p class="text-body">
-                To finalize the setup, click the buttons below to verify the connection. 
-                <strong>Firefox users MUST</strong> do this to add a security exception.
-              </p>
-              
-              <div class="d-grid gap-2 col-md-10 mx-auto">
-                <a href="https://127.0.0.1:54321" target="_new" class="btn btn-outline-info btn-sm text-start">
-                   1. Verify CAT Port 54321
-                </a>
-                <a href="https://127.0.0.1:54323" target="_new" class="btn btn-outline-info btn-sm text-start">
-                   2. Verify WSS Port 54323
-                </a>
-              </div>
-
-              <p class="mt-3 mb-0 small text-muted">
-                <strong>Chrome/Edge:</strong> If you see "Verified", you are done. <br>
-                <strong>Firefox:</strong> If you see a warning, click <strong>"Advanced..."</strong> and <strong>"Accept the Risk"</strong> until you see the "Verified" message.
-              </p>
-            </div>
-          </div>
-
-          <div class="alert alert-info">
-            <i class="bi bi-info-circle me-2"></i>
-            <strong>Note:</strong> You only need to perform these steps once. After completion, please restart your browser for the changes to take effect.
-          </div>
-        </div>
-      </div>
+      <!-- Security Tab (Content Moved to Configuration, but keeping ID if needed for logic, though empty now) -->
+      <!-- We removed the tab link, so this pane is effectively unreachable, which is what we want. -->
 
       <!-- Profiles Tab -->
       <div
@@ -746,6 +750,7 @@
         role="tabpanel"
         aria-labelledby="profiles-tab"
       >
+      <!-- ... (Profile content unchanged) ... -->
         <div id="profilesContent" class="mt-3">
           <!-- Grid Container -->
           <div id="profilesGrid" class="container-fluid p-0">
@@ -764,7 +769,7 @@
         role="tabpanel"
         aria-labelledby="about-tab"
       >
-        <!-- About Content -->
+        <!-- About Content (Unchanged) -->
         <div id="aboutContent" class="mt-4">
           
           <!-- Header Section -->

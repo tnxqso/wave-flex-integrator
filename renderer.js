@@ -3,6 +3,7 @@
 
 const { ipcRenderer } = require('electron');
 const { shell } = require('electron');
+let isWavelogLive = false;
 
 /**
  * Scrolls the window to the top of the page.
@@ -23,7 +24,7 @@ function applyTheme(theme) {
       document.documentElement.setAttribute('data-bs-theme', 'light');
     }
   } else {
-    document.documentElement.setAttribute('data-bs-theme', theme);
+    document.documentElement.setAttribute('data-bs-theme', 'theme');
   }
 }
 
@@ -86,7 +87,7 @@ function setStatusElement(element, message) {
   if (message === 'Connected' || message === 'Healthy' || message === 'Responsive' || message === 'Enabled') {
     element.textContent = message;
     element.classList.add('text-success'); // Green
-  } else if (message === 'Disconnected' || message === 'Unhealthy' || message === 'Inresponsive') {
+  } else if (message === 'Disconnected' || message === 'Unhealthy' || message === 'Inresponsive' || message === 'Unresponsive') {
     element.textContent = message;
     element.classList.add('text-danger'); // Red
   } else if (message === 'Disabled' || message === 'Unitialized') {
@@ -102,6 +103,29 @@ function setStatusElement(element, message) {
     // Default styling for other messages
     element.textContent = message;
   }
+}
+
+/**
+ * Updates the Connection Mode Badge (Live/Polling/Offline).
+ * @param {string} status - 'live', 'polling', or 'offline'.
+ */
+function updateConnectionBadge(status) {
+    const badge = document.getElementById('connectionModeBadge');
+    if (!badge) return;
+
+    // Reset Classes
+    badge.className = 'badge rounded-pill p-2';
+    
+    if (status === 'live') {
+        badge.classList.add('text-bg-success');
+        badge.innerHTML = '<i class="bi bi-lightning-charge-fill me-1"></i> Live (WS)';
+    } else if (status === 'polling') {
+        badge.classList.add('text-bg-warning');
+        badge.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Polling';
+    } else {
+        badge.classList.add('text-bg-secondary'); // Gray for offline
+        badge.innerHTML = '<i class="bi bi-dash-circle-fill me-1"></i> Offline';
+    }
 }
 
 /**
@@ -779,9 +803,13 @@ function handleStatusUpdate(status) {
       break;
     case 'WavelogResponsive':
       updateWavelogStatus(status.message);
+      if (!isWavelogLive) {
+          updateConnectionBadge('polling'); 
+      }
       break;
     case 'WavelogUnresponsive':
       updateWavelogStatus('Unresponsive');
+      updateConnectionBadge('offline');
       break;
     case 'WSJTEnabled':
       updateWSJTStatus('Enabled');
@@ -800,6 +828,15 @@ function handleStatusUpdate(status) {
       break;
     case 'configUpdated':
       showAlert(status.message, 'info');
+      break;
+    case 'connectionMode':
+      // Update state and badge
+      if (status.mode === 'live') {
+          isWavelogLive = true;
+      } else if (status.mode === 'polling' || status.mode === 'offline') {
+          isWavelogLive = false;
+      }
+      updateConnectionBadge(status.mode); 
       break;
     default:
       // Unknown event; no action required

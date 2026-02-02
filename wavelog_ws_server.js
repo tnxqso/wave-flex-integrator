@@ -95,6 +95,10 @@ class WavelogWsServer extends EventEmitter {
       ws.on('close', () => {
         this.clients.delete(ws);
         this.logger.info(`Wavelog client disconnected from ${label}.`);
+        
+        if (this.clients.size === 0) {
+            this.emit('all-clients-disconnected');
+        }
       });
 
       ws.on('error', (err) => {

@@ -639,17 +639,27 @@ app.on('ready', () => {
           wavelogWsServer.on('client-connected', () => {
               const isConnected = flexRadioClient && flexRadioClient.isConnected();
               const hasSlice = flexRadioClient && flexRadioClient.activeTXSlices?.length > 0;
+              
               if (isConnected && hasSlice) {
                   wavelogWsServer.broadcastStatus(flexRadioClient.activeTXSlices[0]);
               } else {
                   wavelogWsServer.broadcastStatus({
-                      radio: 'Flexradio (Radio Offline)',
+                      radio: config.wavelogAPI?.radioName || 'wave-flex-integrator',
                       frequency: 14.000, 
                       mode: 'N/A',
                       power: 0
                   });
               }
+
+              uiManager.sendStatusUpdate({ event: 'connectionMode', mode: 'live' });
           });
+
+          // Listener for when Wavelog closes the connection (e.g. switch to None/Polling)
+          wavelogWsServer.on('all-clients-disconnected', () => {
+              logger.info('All Wavelog clients disconnected. Reverting UI to Polling mode.');
+              uiManager.sendStatusUpdate({ event: 'connectionMode', mode: 'polling' });
+          });          
+
 
           wavelogWsServer.on('lookup', (data) => {
             logger.info(`External lookup trigger from Wavelog: ${data.callsign}`);
