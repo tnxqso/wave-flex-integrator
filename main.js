@@ -681,20 +681,25 @@ app.on('ready', () => {
                       wavelogWsServer.broadcastStatus(slice);
                   }
 
-                  // 2. Update Wavelog API (Throttled)
-                  // Logic: Update only if Frequency/Mode changed OR if 30 minutes passed.
+                  // 2. Update Wavelog API (Heartbeat / Keep-alive)
                   const now = Date.now();
                   const timeElapsed = now - lastApiUpdate;
                   const isChanged = (slice.frequency !== lastRadioState.frequency) || (slice.mode !== lastRadioState.mode);
                   
-                  // 30 minutes = 1800000 ms
-                  if (isChanged || timeElapsed > 1800000) {
+                  // Send update if changed OR if 20 minutes (1200000ms) have passed
+                  if (isChanged || timeElapsed > 1200000) {
                       wavelogClient.sendActiveSliceToWavelog(slice).then(() => {
                           lastApiUpdate = now;
                           lastRadioState = { 
                               frequency: slice.frequency, 
                               mode: slice.mode 
                           };
+                          
+                          if (isChanged) {
+                              logger.info(`[API-SIDE] Sent active slice to Wavelog API: ${slice.frequency} Hz`);
+                          } else {
+                              logger.info(`[API-SIDE] Sent Heartbeat (Keep-alive) to Wavelog API`);
+                          }
                       }).catch((err) => {
                           logger.error(`Error sending API update: ${err.message}`);
                       });
