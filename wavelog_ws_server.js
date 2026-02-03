@@ -80,6 +80,7 @@ class WavelogWsServer extends EventEmitter {
       this.emit('client-connected');
 
       ws.on('message', (data) => {
+        this.logger.info(`WS INCOMING RAW: ${data.toString()}`);
         try {
           const message = JSON.parse(data);
           // Handle metadata broadcast from our Wavelog PR

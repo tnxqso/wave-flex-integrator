@@ -729,6 +729,7 @@ handleSpotTriggered(eventData) {
 
   /**
    * Sets the frequency and mode of the currently active Transmit Slice.
+   * Checks current state to avoid sending redundant commands.
    * @param {number} freqHz - Frequency in Hertz.
    * @param {string} mode - Mode string (e.g., 'cw', 'ssb').
    * @returns {object} - { success: boolean, error: string|null }
@@ -754,50 +755,72 @@ handleSpotTriggered(eventData) {
       return { success: false, error: msg };
     }
 
-    this.qsyLock.targetFreq = freqHz;
-    this.qsyLock.expiration = Date.now() + 2000;
-
-    // 2. Format Frequency (Flex expects MHz, e.g., 14.020000)
-    const freqMHz = (freqHz / 1e6).toFixed(6);
-
-    // 3. Map Mode
+    // 2. Prepare target values
+    const targetFreqMHzVal = freqHz / 1e6;
+    const freqMHzString = targetFreqMHzVal.toFixed(6);
+    
+    // Normalize requested mode to Flex format
     let flexMode = null;
     if (mode) {
       const inputMode = mode.toUpperCase();
-
-      if (inputMode === 'CW' || inputMode === 'CWL' || inputMode === 'CWU') flexMode = inputMode;
-      else if (inputMode === 'AM') flexMode = 'AM';
-      else if (inputMode === 'FM') flexMode = 'FM';
-      else if (inputMode === 'FT8' || inputMode === 'RTTY' || inputMode === 'DATA' || inputMode === 'DIG') flexMode = 'DIGU';
-      else if (inputMode === 'DIGU' || inputMode === 'DIGL') flexMode = inputMode;
-      else if (inputMode === 'SSB') {
-        flexMode = (freqHz < 10000000) ? 'LSB' : 'USB';
-      } else if (inputMode === 'LSB') flexMode = 'LSB';
-      else if (inputMode === 'USB') flexMode = 'USB';
+      if (['CW', 'CWL', 'CWU', 'AM', 'FM', 'DIGU', 'DIGL', 'LSB', 'USB'].includes(inputMode)) {
+          flexMode = inputMode;
+      } else if (['FT8', 'RTTY', 'DATA', 'DIG'].includes(inputMode)) {
+          flexMode = 'DIGU';
+      } else if (inputMode === 'SSB') {
+          flexMode = (freqHz < 10000000) ? 'LSB' : 'USB';
+      }
     }
 
-    // 4. Construct Commands
-    const tuneCommand = `slice tune ${targetSlice.index} ${freqMHz}`;
-    const modeCommand = flexMode ? `slice set ${targetSlice.index} mode=${flexMode}` : null;
+    // 3. Check what actually needs changing
+    // FlexRadio frequencies are floats, so we use a small epsilon for comparison or compare the fixed string
+    const currentFreqMHzString = targetSlice.frequency.toFixed(6);
+    const needTune = currentFreqMHzString !== freqMHzString;
+    
+    const needMode = flexMode && (targetSlice.mode !== flexMode);
+
+    if (!needTune && !needMode) {
+        this.logger.info(`QSY Ignored: Radio already at ${freqMHzString} MHz / ${targetSlice.mode}`);
+        return { success: true, error: null }; // Return success as we are already there
+    }
+
+    // Update Lock only if we are actually tuning
+    if (needTune) {
+        this.qsyLock.targetFreq = freqHz;
+        this.qsyLock.expiration = Date.now() + 2000;
+    }
 
     this.logger.info(
-      `QSY Request: Slice ${targetSlice.index_letter} -> ${freqMHz} MHz ${flexMode || '(No mode change)'}`
+      `QSY Request: Slice ${targetSlice.index_letter} -> ${needTune ? freqMHzString + ' MHz' : '(No Freq Change)'}, ${needMode ? flexMode : '(No Mode Change)'}`
     );
 
-    // 5. Send commands
-    this.queueCommand(tuneCommand, (response) => {
-      this.logger.debug(`QSY Tune Response: ${response}`);
-    });
+    // 4. Send Commands (Chained)
+    
+    const sendMode = () => {
+        if (needMode) {
+            const modeCmd = `slice set ${targetSlice.index} mode=${flexMode}`;
+            // Small delay to ensure radio processes sequential commands correctly
+            setTimeout(() => {
+                this.queueCommand(modeCmd, (resp) => this.logger.debug(`QSY Mode Response: ${resp}`));
+            }, 50);
+        }
+    };
 
-    if (modeCommand) {
-      this.queueCommand(modeCommand, (response) => {
-        this.logger.debug(`QSY Mode Response: ${response}`);
-      });
+    if (needTune) {
+        const tuneCmd = `slice tune ${targetSlice.index} ${freqMHzString}`;
+        this.queueCommand(tuneCmd, (resp) => {
+            this.logger.debug(`QSY Tune Response: ${resp}`);
+            // Send mode command ONLY after tune command callback
+            sendMode();
+        });
+    } else {
+        // If we didn't need to tune, just send mode immediately
+        sendMode();
     }
 
     return { success: true, error: null };
   }
-
+  
   /**
    * Gracefully disconnects from the FlexRadio server.
    * Closes the socket, cleans up resources, and prevents further reconnection attempts.
