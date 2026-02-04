@@ -863,6 +863,10 @@ case 'dxClusterConnected':
 
 // Listen for 'status-update' events from the main process
 ipcRenderer.on('status-update', (event, status) => {
+  // If we receive a slice update, refresh the DSP UI
+  if (status.event === 'sliceStatus' && status.slice) {
+    updateDspUI(status.slice);
+  }
   handleStatusUpdate(status);
 });
 
@@ -1401,3 +1405,112 @@ if (openQSOBtn) {
     console.log('Requesting to open QSO Assistant...');
   });
 }
+
+// --- DSP UI Logic ---
+let currentSelectedSliceIndex = 'none';
+
+function sendDspCommand(property, value) {
+  if (currentSelectedSliceIndex === 'none') return;
+  ipcRenderer.invoke('flex-set-dsp', { sliceIndex: currentSelectedSliceIndex, property, value });
+}
+
+function updateDspUI(slice) {
+  if (!slice) return;
+  const selector = document.getElementById('dspSliceSelector');
+  if (!selector) return;
+
+  // 1. Sync Dropdown
+  let option = selector.querySelector(`option[value="${slice.index}"]`);
+  if (!option) {
+    if (selector.options[0].value === 'none') selector.innerHTML = '';
+    option = document.createElement('option');
+    option.value = slice.index;
+    selector.appendChild(option);
+  }
+  option.textContent = `Slice ${slice.index_letter} (${slice.frequency.toFixed(3)} MHz)`;
+
+  // 2. Update UI if matches selected
+  if (currentSelectedSliceIndex == slice.index || currentSelectedSliceIndex === 'none') {
+    if (currentSelectedSliceIndex === 'none') currentSelectedSliceIndex = slice.index;
+    
+    document.getElementById('dspActiveModeDisplay').textContent = slice.mode;
+
+    // --- ENHANCED TX LOGIC ---
+    const txBadge = document.getElementById('dspTxBadge');
+    if (txBadge) {
+      // Check both numeric 1 and string "1"
+      const isTx = (slice.tx == 1 || slice.tx === "1"); 
+      txBadge.className = isTx ? 'tx-badge tx-badge-on' : 'tx-badge tx-badge-off';
+    }
+
+    // --- ENHANCED BUTTON/SLIDER LOGIC ---
+    document.querySelectorAll('.dsp-btn').forEach(btn => {
+      const prop = btn.getAttribute('data-prop');
+      
+      // Look for the property in slice, handling Flex string values
+      const val = slice[prop];
+      const isOn = (val == 1 || val === "1" || val === true);
+      
+      btn.classList.toggle('dsp-btn-on', isOn);
+      btn.classList.toggle('dsp-btn-off', !isOn);
+
+      const slider = btn.parentElement.querySelector('.dsp-slider');
+      if (slider) {
+        slider.disabled = !isOn;
+        
+        const levelProp = slider.getAttribute('data-prop');
+        if (slice.hasOwnProperty(levelProp)) {
+          const lVal = parseInt(slice[levelProp]);
+          slider.value = lVal;
+          const valDisplay = btn.parentElement.querySelector('.dsp-value');
+          if (valDisplay) valDisplay.textContent = lVal;
+        }
+      }
+    });
+
+    // Special case APF (Only enabled in CW)
+    const apfBtn = document.getElementById('dspApfBtn');
+    if (apfBtn) apfBtn.disabled = (slice.mode !== 'CW');
+  }
+}
+
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+  // Button Clicks
+  document.querySelectorAll('.dsp-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const isCurrentlyOn = e.target.classList.contains('dsp-btn-on');
+      sendDspCommand(e.target.getAttribute('data-prop'), isCurrentlyOn ? 0 : 1);
+    });
+  });
+
+  // Slider Input
+  document.querySelectorAll('.dsp-slider').forEach(slider => {
+    slider.addEventListener('input', (e) => {
+      const label = document.getElementById(e.target.id + 'Val');
+      if (label) label.textContent = e.target.value;
+      sendDspCommand(e.target.getAttribute('data-prop'), e.target.value);
+    });
+    slider.addEventListener('dblclick', (e) => {
+      e.target.value = 50;
+      sendDspCommand(e.target.getAttribute('data-prop'), 50);
+    });
+  });
+
+  document.getElementById('dspSliceSelector').addEventListener('change', (e) => {
+    currentSelectedSliceIndex = e.target.value;
+  });
+
+  // Trigger slice fetch when DSP tab is shown
+  const dspTab = document.getElementById('dsp-tab');
+  if (dspTab) {
+    dspTab.addEventListener('shown.bs.tab', async () => {
+      const slices = await ipcRenderer.invoke('get-all-slices');
+      if (slices && slices.length > 0) {
+        slices.forEach(s => updateDspUI(s));
+      }
+    });
+  }
+  
+});

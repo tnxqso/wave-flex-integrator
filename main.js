@@ -1115,6 +1115,25 @@ function main() {
 }
 
 /**
+ * Handles IPC request to set DSP properties on the radio.
+ */
+ipcMain.handle('flex-set-dsp', async (event, { sliceIndex, property, value }) => {
+  if (flexRadioClient && flexRadioClient.isConnected()) {
+    return flexRadioClient.setDSP(sliceIndex, property, value);
+  }
+  return { success: false, error: 'Not connected' };
+});
+
+// Request all current slices from the client
+ipcMain.handle('get-all-slices', async () => {
+  if (flexRadioClient && flexRadioClient.isConnected()) {
+    // Returns the current map of slices
+    return Array.from(flexRadioClient.flexSlicesByID.values());
+  }
+  return [];
+});
+
+/**
  * Handles IPC request to get the current configuration.
  */
 ipcMain.handle('get-config', async (event) => {

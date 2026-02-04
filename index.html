@@ -80,6 +80,9 @@
           >Configuration</a
         >
       </li>
+      <li class="nav-item" role="presentation">
+        <a class="nav-link" id="dsp-tab" data-bs-toggle="tab" href="#dsp" role="tab" aria-controls="dsp" aria-selected="false">DSP</a>
+      </li>      
       <!-- Security Tab removed and merged into Configuration -->
       <li class="nav-item" role="presentation">
         <a
@@ -771,6 +774,144 @@
         </div>
       </div>
 
+      <!-- DSP Tab -->
+      <div class="tab-pane fade" id="dsp" role="tabpanel" aria-labelledby="dsp-tab">
+        <div id="dspContent" class="mt-4">
+          
+          <!-- Control Header -->
+          <div class="alert alert-secondary d-flex justify-content-between align-items-center py-1 mb-3">
+            <div class="d-flex align-items-center">
+              <label for="dspSliceSelector" class="me-2 small fw-bold text-uppercase">Control Slice:</label>
+              <select id="dspSliceSelector" class="form-select form-select-sm bg-dark text-white border-secondary" style="width: auto;">
+                <option value="none">Waiting for radio...</option>
+              </select>
+            </div>
+            <div class="d-flex align-items-center">
+              <span id="dspTxBadge" class="tx-badge tx-badge-off">TX</span>
+              <span class="badge bg-primary px-3" id="dspActiveModeDisplay">N/A</span>
+            </div>
+          </div>
+
+          <!-- 2-Column Grid -->
+          <div class="row row-cols-2 g-2">
+            
+            <!-- NB (Noise Blanker) -->
+            <div class="col"><div class="dsp-card rounded shadow-sm">
+              <div class="d-flex align-items-center">
+                <button class="btn btn-sm dsp-btn dsp-btn-off me-2" id="dspNbBtn" data-prop="nb" 
+                        data-bs-toggle="tooltip" 
+                        title="Slice Specific Noise Blanker (NB): Combats fast rise-time pulse noise like ignition or power lines within this specific 24kHz slice. Use the lowest effective level to avoid audio distortion.">NB</button>
+                <input type="range" class="form-range dsp-slider" id="dspNbLevel" data-prop="nb_level" min="0" max="100" disabled>
+                <span class="dsp-value ms-2" id="dspNbLevelVal">0</span>
+              </div>
+            </div></div>
+
+            <!-- NRL (NR Level - v4+) -->
+            <div class="col"><div class="dsp-card rounded shadow-sm">
+              <div class="d-flex align-items-center">
+                <button class="btn btn-sm dsp-btn dsp-btn-off me-2" id="dspNrlBtn" data-prop="nrl_en"
+                        data-bs-toggle="tooltip" 
+                        title="NR Threshold (NRL): Sets the starting point for noise reduction. Lower values are more aggressive. Ideal for fine-tuning noise floor suppression on modern v4.x radios like Aurora.">NRL</button>
+                <input type="range" class="form-range dsp-slider" id="dspNrlLevel" data-prop="nrl" min="0" max="100" disabled>
+                <span class="dsp-value ms-2" id="dspNrlLevelVal">0</span>
+              </div>
+            </div></div>
+
+            <!-- NR (Noise Reduction) -->
+            <div class="col"><div class="dsp-card rounded shadow-sm">
+              <div class="d-flex align-items-center">
+                <button class="btn btn-sm dsp-btn dsp-btn-off me-2" id="dspNrBtn" data-prop="nr"
+                        data-bs-toggle="tooltip" 
+                        title="Noise Reduction (NR): An adaptive filter that reduces random white noise to increase the signal-to-noise ratio. High settings may color the audio; adjust for best clarity and readability.">NR</button>
+                <input type="range" class="form-range dsp-slider" id="dspNrLevel" data-prop="nr_level" min="0" max="100" disabled>
+                <span class="dsp-value ms-2" id="dspNrLevelVal">0</span>
+              </div>
+            </div></div>
+
+            <!-- NRS (NR Smoothing - v4+) -->
+            <div class="col"><div class="dsp-card rounded shadow-sm">
+              <div class="d-flex align-items-center">
+                <button class="btn btn-sm dsp-btn dsp-btn-off me-2" id="dspNrsBtn" data-prop="nrs_en"
+                        data-bs-toggle="tooltip" 
+                        title="NR Smoothing (NRS): Controls how smoothly the NR filter adapts to noise. Higher values reduce watery audio artifacts often found in aggressive NR settings on v4.x firmware.">NRS</button>
+                <input type="range" class="form-range dsp-slider" id="dspNrsLevel" data-prop="nrs" min="0" max="100" disabled>
+                <span class="dsp-value ms-2" id="dspNrsLevelVal">0</span>
+              </div>
+            </div></div>
+
+            <!-- ANF (Auto Notch Filter) -->
+            <div class="col"><div class="dsp-card rounded shadow-sm">
+              <div class="d-flex align-items-center">
+                <button class="btn btn-sm dsp-btn dsp-btn-off me-2" id="dspAnfBtn" data-prop="anf"
+                        data-bs-toggle="tooltip" 
+                        title="Auto Notch Filter (ANF): Automatically detects and removes multiple steady carrier tones (whistles). Very effective against unwanted tuners or digital interference in the passband.">ANF</button>
+                <input type="range" class="form-range dsp-slider" id="dspAnfLevel" data-prop="anf_level" min="0" max="100" disabled>
+                <span class="dsp-value ms-2" id="dspAnfLevelVal">0</span>
+              </div>
+            </div></div>
+
+            <!-- ANFL (ANF Level - v4+) -->
+            <div class="col"><div class="dsp-card rounded shadow-sm">
+              <div class="d-flex align-items-center">
+                <button class="btn btn-sm dsp-btn dsp-btn-off me-2" id="dspAnflBtn" data-prop="anfl_en"
+                        data-bs-toggle="tooltip" 
+                        title="ANF Level (ANFL): Adjusts the aggressiveness of the Auto Notch Filter. Higher levels remove stronger carriers but may affect the quality of the desired audio signal on v4.x+ radios.">ANFL</button>
+                <input type="range" class="form-range dsp-slider" id="dspAnflLevel" data-prop="anfl" min="0" max="100" disabled>
+                <span class="dsp-value ms-2" id="dspAnflLevelVal">0</span>
+              </div>
+            </div></div>
+
+            <!-- WNB (Wideband Noise Blanker) -->
+            <div class="col"><div class="dsp-card rounded shadow-sm">
+              <div class="d-flex align-items-center">
+                <button class="btn btn-sm dsp-btn dsp-btn-off me-2" id="dspWnbBtn" data-prop="wnb"
+                        data-bs-toggle="tooltip" 
+                        title="Wideband NB (WNB): Operates at the SCU hardware level. Best for heavy power line hash. Adjusting it here affects all slices and Panadapters sharing the same SCU hardware unit.">WNB</button>
+                <input type="range" class="form-range dsp-slider" id="dspWnbLevel" data-prop="wnb_level" min="0" max="100" disabled>
+                <span class="dsp-value ms-2" id="dspWnbLevelVal">0</span>
+              </div>
+            </div></div>
+
+            <!-- ANFT (ANF Tracking - v4+) -->
+            <div class="col"><div class="dsp-card rounded shadow-sm">
+              <div class="d-flex align-items-center">
+                <button class="btn btn-sm dsp-btn dsp-btn-off me-2" id="dspAnftBtn" data-prop="anft_en"
+                        data-bs-toggle="tooltip" 
+                        title="ANF Tracking (ANFT): Controls how quickly the filter tracks and notches moving carriers. Fast tracking is effective for dynamic noise but uses more processing on v4.x+ radios.">ANFT</button>
+                <input type="range" class="form-range dsp-slider" id="dspAnftLevel" data-prop="anft" min="0" max="100" disabled>
+                <span class="dsp-value ms-2" id="dspAnftLevelVal">0</span>
+              </div>
+            </div></div>
+
+            <!-- APF (Audio Peaking Filter - CW Only) -->
+            <div class="col"><div class="dsp-card rounded shadow-sm border-info">
+              <div class="d-flex align-items-center">
+                <button class="btn btn-sm dsp-btn dsp-btn-off me-2" id="dspApfBtn" data-prop="apf"
+                        data-bs-toggle="tooltip" 
+                        title="Audio Peaking Filter (APF): A narrow peaking filter specifically for CW. Makes weak signals pop out of the noise by boosting the center frequency. Only available in CW mode.">APF</button>
+                <input type="range" class="form-range dsp-slider" id="dspApfLevel" data-prop="apf_level" min="0" max="100" disabled>
+                <span class="dsp-value ms-2" id="dspApfLevelVal">0</span>
+              </div>
+            </div></div>
+
+            <!-- RNN (Raw Noise Notch - v4+) -->
+            <div class="col"><div class="dsp-card rounded shadow-sm">
+              <div class="d-flex align-items-center">
+                <button class="btn btn-sm dsp-btn dsp-btn-off me-2" id="dspRnnBtn" data-prop="rnn_en"
+                        data-bs-toggle="tooltip" 
+                        title="Raw Noise Notch (RNN): A modern, high-performance noise mitigation algorithm for v4.x radios. Designed for superior clarity and noise removal in difficult band conditions.">RNN</button>
+                <input type="range" class="form-range dsp-slider" id="dspRnnLevel" data-prop="rnn_level" min="0" max="100" disabled>
+                <span class="dsp-value ms-2" id="dspRnnLevelVal">0</span>
+              </div>
+            </div></div>
+
+          </div>
+          <p class="text-muted small mt-2 mb-0">
+            <i class="bi bi-mouse me-1"></i> Double-click slider to reset to 50. Hover buttons for detailed help.
+          </p>
+        </div>
+      </div>
+  
       <!-- About Tab -->
       <div
         class="tab-pane fade"

@@ -822,6 +822,24 @@ handleSpotTriggered(eventData) {
   }
   
   /**
+   * Sets a DSP property on the currently active TX slice.
+   * @param {string} property - The property name (e.g. 'nr', 'nr_level').
+   * @param {number|string} value - The value to set.
+   * @returns {object} - Success status.
+   */
+setDSP(sliceIndex, property, value) {
+    if (!this.isConnected()) return { success: false };
+
+    // Use the specific index passed from the UI
+    const command = `slice set ${sliceIndex} ${property}=${value}`;
+    
+    this.logger.info(`DSP CMD: ${command}`);
+    this.queueCommand(command);
+
+    return { success: true };
+  }
+
+  /**
    * Gracefully disconnects from the FlexRadio server.
    * Closes the socket, cleans up resources, and prevents further reconnection attempts.
    * @returns {Promise<void>} - Resolves when the disconnection is complete.
