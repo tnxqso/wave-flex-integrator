@@ -242,6 +242,8 @@ function populateForm(config) {
   document.getElementById('rotMqttUser').value = mqttConfig.username || '';
   document.getElementById('rotMqttPass').value = mqttConfig.password || '';
   document.getElementById('rotMqttTopic').value = mqttConfig.topicPrefix || '';
+  document.getElementById('rotStartAzimuth').value = rotConfig.startAzimuth || 137;
+  document.getElementById('rotRotationRange').value = rotConfig.rotationRange || 446;
 
   // --- Populate QRZ Settings ---
   const qrzConfig = config.qrz || { enabled: false, username: '', password: '' };
@@ -596,8 +598,10 @@ if (configForm) {
             port: parseInt(document.getElementById('rotMqttPort').value) || 1883,
             username: document.getElementById('rotMqttUser').value.trim(),
             password: document.getElementById('rotMqttPass').value.trim(),
-            topicPrefix: document.getElementById('rotMqttTopic').value.trim().replace(/\/$/, '') // Remove trailing slash
-        }
+            topicPrefix: document.getElementById('rotMqttTopic').value.trim().replace(/\/$/, '')
+        },
+        startAzimuth: parseInt(document.getElementById('rotStartAzimuth').value) || 137,
+        rotationRange: parseInt(document.getElementById('rotRotationRange').value) || 446
       },
       // --- QRZ Settings ---
       qrz: {

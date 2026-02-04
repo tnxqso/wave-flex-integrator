@@ -37,7 +37,9 @@ const defaultConfig = {
         username: 'home',
         password: '',
         topicPrefix: 'YOURCALLSIGN/0/ROT' // The root of your topics
-    }
+    },
+    startAzimuth: 137,  // The raw value when pointing North
+    rotationRange: 446  // Total range in degrees (e.g. 360 + overlap)
   },
 
   // ==============================
