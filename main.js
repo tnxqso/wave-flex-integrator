@@ -536,15 +536,15 @@ app.on('ready', () => {
   loadConfig()
     .then(async (config) => {
       if (isConfigValid()) {
+        // --- Configuration Logging ---
         let safeConfig = redactSensitiveInfo();
         logger.debug(
           `Final Merged Configuration: ${JSON.stringify(safeConfig, null, 2)}`
         );
 
+        // Check for placeholder callsign indicating a fresh install
         if (config.dxCluster.callsign === 'YOUR-CALLSIGN-HERE') {
-          logger.warn(
-            'First start of application, configuration has not been done yet.'
-          );
+          logger.warn('First start of application, configuration has not been done yet.');
           appConfigured = false;
         } else {
           appConfigured = true;
@@ -552,7 +552,8 @@ app.on('ready', () => {
 
         setUtilLogger(logger);
 
-        // Initialize Certificate Manager
+        // --- System & Security Setup ---
+        // Initialize SSL Certificate Manager for secure local connections (HTTPS/WSS)
         const userDataPath = app.getPath('userData');
         certManager = new CertificateManager(userDataPath, logger);
         const certs = certManager.getOrCreateCertificate();
@@ -560,32 +561,38 @@ app.on('ready', () => {
         // Apply startup settings (Start with Windows/Mac)
         updateLoginSettings();
 
-        createWindow(); // Create the main window, but don't show it yet
+        // Create the main window (hidden initially based on config)
+        createWindow();
 
-        // Create clients (except flexRadioClient)
+        // --- Client Initialization ---
+        // Initialize core service clients. FlexRadio is initialized later if configured.
         wavelogClient = new WavelogClient(config, logger, mainWindow);
         dxClusterClient = new DXClusterClient(config, logger);
         qrzClient = new QRZClient(config, logger);
-        // Init Rotator Client
+        
+        // Initialize Rotator Client (MQTT)
         mqttRotatorClient = new MqttRotatorClient(config, logger);
         if (config.rotator && config.rotator.enabled) {
-            mqttRotatorClient.connect();
+          mqttRotatorClient.connect();
         }
+
+        // Initialize Spot Cache
         augmentedSpotCache = new AugmentedSpotCache(config.augmentedSpotCache.maxSize, logger, config);
 
+        // Start periodic cache health updates to the UI
         setTimeout(() => {
           if (augmentedSpotCache) {
-             const healthStatus = augmentedSpotCache.getHealthStatus();
-             uiManager.sendCacheHealthUpdate(healthStatus);
+            const healthStatus = augmentedSpotCache.getHealthStatus();
+            uiManager.sendCacheHealthUpdate(healthStatus);
 
-             setInterval(() => {
-               const healthStatus = augmentedSpotCache.getHealthStatus();
-               uiManager.sendCacheHealthUpdate(healthStatus);
-             }, 300000);
+            setInterval(() => {
+              const healthStatus = augmentedSpotCache.getHealthStatus();
+              uiManager.sendCacheHealthUpdate(healthStatus);
+            }, 300000); // Update every 5 minutes
           }
         }, 5000);
 
-        // Initialize WSJT-X client if enabled
+        // Initialize WSJT-X integration
         if (config.wsjt.enabled) {
           logger.info('WSJT-X integration is enabled.');
           wsjtClient = new WSJTClient(config, logger);
@@ -594,73 +601,73 @@ app.on('ready', () => {
           logger.info('WSJT-X integration is disabled.');
         }
 
-        // Attach event listeners for all clients, except flexRadioClient
+        // Attach global event listeners
         attachEventListeners();
 
-        // Fetch station information from Wavelog (stationFetched will be emitted)
+        // Fetch station profile from Wavelog
         if (appConfigured) {
           await fetchStationDetails(true); // Suppress errors during startup
         }
 
-        // Now that we have stationCallsign, create the flexRadioClient
+        // --- FlexRadio & Server Initialization ---
+        // Only initialize radio connection if a callsign is configured
         if (stationCallsign) {
           flexRadioClient = new FlexRadioClient(config, logger, stationCallsign);
           attachFlexRadioEventListeners();
 
-          // Initialize HTTP CAT Listener (Incoming QSY commands from Wavelog)
+          // 1. Initialize HTTP CAT Listener (Incoming QSY commands from Wavelog)
           httpCatListener = new HttpCatListener(config, logger);
           httpCatListener.onQsy((freq, mode) => {
             if (flexRadioClient) {
-                // 1. Send command to radio (This will now also set the internal qsyLock)
-                const qsyResult = flexRadioClient.setSliceFrequency(freq, mode);
+              // Send command to radio (Set internal qsyLock)
+              const qsyResult = flexRadioClient.setSliceFrequency(freq, mode);
 
-                // 2. Perform Optimistic Update
-                if (qsyResult.success && flexRadioClient.activeTXSlices && flexRadioClient.activeTXSlices.length > 0) {
-                    const activeSlice = flexRadioClient.activeTXSlices[0];
-                    activeSlice.frequency = freq / 1000000.0;
-                    if (mode) activeSlice.mode = mode.toUpperCase();
-                    
-                    logger.info(`Optimistic QSY Update: Pushing ${freq} Hz to Wavelog via WebSocket.`);
-                    if (wavelogWsServer) wavelogWsServer.broadcastStatus(activeSlice);
+              // Perform Optimistic Update: Push new state to UI immediately
+              if (qsyResult.success && flexRadioClient.activeTXSlices && flexRadioClient.activeTXSlices.length > 0) {
+                const activeSlice = flexRadioClient.activeTXSlices[0];
+                activeSlice.frequency = freq / 1000000.0;
+                if (mode) activeSlice.mode = mode.toUpperCase();
 
-                    // We do NOT send to Wavelog API here because the WebSocket is active,
-                    // and we want to let the QSY Lock handle the eventual radio feedback.
-                }
-                return qsyResult;
+                logger.info(`Optimistic QSY Update: Pushing ${freq} Hz to Wavelog via WebSocket.`);
+                if (wavelogWsServer) wavelogWsServer.broadcastStatus(activeSlice);
+              }
+              return qsyResult;
             }
             return { success: false, error: 'FlexRadio client not initialized' };
           });
 
           httpCatListener.start(certs);
 
-          // Initialize Wavelog WebSocket Server (Live Frequency/Metadata broadcast)
+          // 2. Initialize Wavelog WebSocket Server (Live Frequency/Metadata broadcast)
           wavelogWsServer = new WavelogWsServer(config, logger);
-          
-          wavelogWsServer.on('client-connected', () => {
-              const isConnected = flexRadioClient && flexRadioClient.isConnected();
-              const hasSlice = flexRadioClient && flexRadioClient.activeTXSlices?.length > 0;
-              
-              if (isConnected && hasSlice) {
-                  wavelogWsServer.broadcastStatus(flexRadioClient.activeTXSlices[0]);
-              } else {
-                  wavelogWsServer.broadcastStatus({
-                      radio: config.wavelogAPI?.radioName || 'wave-flex-integrator',
-                      frequency: 14.000, 
-                      mode: 'N/A',
-                      power: 0
-                  });
-              }
 
-              uiManager.sendStatusUpdate({ event: 'connectionMode', mode: 'live' });
+          // Event: Wavelog web client connected
+          wavelogWsServer.on('client-connected', () => {
+            const isConnected = flexRadioClient && flexRadioClient.isConnected();
+            const hasSlice = flexRadioClient && flexRadioClient.activeTXSlices?.length > 0;
+
+            // Send immediate status update to the new client
+            if (isConnected && hasSlice) {
+              wavelogWsServer.broadcastStatus(flexRadioClient.activeTXSlices[0]);
+            } else {
+              wavelogWsServer.broadcastStatus({
+                radio: config.wavelogAPI?.radioName || 'wave-flex-integrator',
+                frequency: 14.000,
+                mode: 'N/A',
+                power: 0
+              });
+            }
+
+            uiManager.sendStatusUpdate({ event: 'connectionMode', mode: 'live' });
           });
 
-          // Listener for when Wavelog closes the connection (e.g. switch to None/Polling)
+          // Event: All Wavelog clients disconnected (Revert UI to polling mode)
           wavelogWsServer.on('all-clients-disconnected', () => {
-              logger.info('All Wavelog clients disconnected. Reverting UI to Polling mode.');
-              uiManager.sendStatusUpdate({ event: 'connectionMode', mode: 'polling' });
-          });          
+            logger.info('All Wavelog clients disconnected. Reverting UI to Polling mode.');
+            uiManager.sendStatusUpdate({ event: 'connectionMode', mode: 'polling' });
+          });
 
-
+          // Event: Handle Lookup Trigger from Wavelog (QSO Assistant)
           wavelogWsServer.on('lookup', (data) => {
             logger.info(`External lookup trigger from Wavelog: ${data.callsign}`);
             data.radio_connected = flexRadioClient && flexRadioClient.isConnected();
@@ -670,53 +677,46 @@ app.on('ready', () => {
               qsoWindow.show();
             }
           });
+
           wavelogWsServer.start(certs);
 
           // --- CORE LOGIC: Handle Frequency Updates ---
+          // Connect FlexRadio events to Wavelog outputs
           if (flexRadioClient) {
-              flexRadioClient.on('sliceStatus', (slice) => {
-                  
-                  // 1. WebSocket Broadcast (Immediate GUI Update)
-                  if (wavelogWsServer) {
-                      wavelogWsServer.broadcastStatus(slice);
-                  }
+            flexRadioClient.on('sliceStatus', (slice) => {
 
-                  // 2. Update Wavelog API (Heartbeat / Keep-alive)
-                  const now = Date.now();
-                  const timeElapsed = now - lastApiUpdate;
-                  const isChanged = (slice.frequency !== lastRadioState.frequency) || (slice.mode !== lastRadioState.mode);
-                  
-                  // Send update if changed OR if 20 minutes (1200000ms) have passed
-                  if (isChanged || timeElapsed > 1200000) {
-                      wavelogClient.sendActiveSliceToWavelog(slice).then(() => {
-                          lastApiUpdate = now;
-                          lastRadioState = { 
-                              frequency: slice.frequency, 
-                              mode: slice.mode 
-                          };
-                          
-                          if (isChanged) {
-                              logger.info(`[API-SIDE] Sent active slice to Wavelog API: ${slice.frequency} Hz`);
-                          } else {
-                              logger.info(`[API-SIDE] Sent Heartbeat (Keep-alive) to Wavelog API`);
-                          }
-                      }).catch((err) => {
-                          logger.error(`Error sending API update: ${err.message}`);
-                      });
-                  }
-              });
+              // 1. WebSocket Broadcast (Immediate GUI Update)
+              if (wavelogWsServer) {
+                wavelogWsServer.broadcastStatus(slice);
+              }
+
+              // 2. Update Wavelog API (Only on change)
+              const isChanged = (slice.frequency !== lastRadioState.frequency) || (slice.mode !== lastRadioState.mode);
+
+              if (isChanged) {
+                wavelogClient.sendActiveSliceToWavelog(slice).then(() => {
+                  lastApiUpdate = Date.now();
+                  lastRadioState = {
+                    frequency: slice.frequency,
+                    mode: slice.mode
+                  };
+                  logger.info(`[API-SIDE] Sent active slice to Wavelog API: ${slice.frequency} Hz`);
+                }).catch((err) => {
+                  logger.error(`Error sending API update: ${err.message}`);
+                });
+              }
+            });
           }
 
         } else {
           logger.warn('No station callsign found; FlexRadio client will not be initialized.');
         }
 
-        main(); // Start main logic
-  
-        // Schedule the WSJT status update and Wavelog status update after n seconds
+        // Start main application logic
+        main();
+
+        // Update UI status after startup delay
         setTimeout(async () => {
-          // We can not do this since the main window shows
-          // earlier attempts may have failed
           if (config.wsjt.enabled) {
             uiManager.updateWSJTStatus('WSJTEnabled');
           } else {
@@ -727,7 +727,6 @@ app.on('ready', () => {
             uiManager.updateWavelogStatus('WavelogResponsive', await (wavelogClient.getStationProfileName()));
           }
         }, 2000);
-
 
       }
     })
@@ -1088,7 +1087,27 @@ function main() {
       // Auto-open QSO Assistant?
       if (config.application?.autoOpenQSO) {
           createQSOWindow();
-      }      
+      }
+
+      // --- Dedicated Heartbeat Loop (Every 5 minutes) ---
+      setInterval(() => {
+        // Only send heartbeat if radio is actually connected and has a slice
+        if (flexRadioClient && flexRadioClient.isConnected() && flexRadioClient.activeTXSlices.length > 0) {
+            const slice = flexRadioClient.activeTXSlices[0];
+            const now = Date.now();
+            const timeElapsed = now - lastApiUpdate;
+
+            // Double check to not spam if a change JUST happened
+            if (timeElapsed > 250000) { // > 4 minutes roughly
+                wavelogClient.sendActiveSliceToWavelog(slice).then(() => {
+                    lastApiUpdate = now;
+                    logger.info(`[API-SIDE] Sent Heartbeat (Keep-alive) to Wavelog API`);
+                }).catch((err) => {
+                    logger.error(`Error sending API Heartbeat: ${err.message}`);
+                });
+            }
+        }
+      }, 300000); // Check every 5 minutes
 
       logger.info('All services started successfully.');
     }
