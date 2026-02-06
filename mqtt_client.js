@@ -1,10 +1,12 @@
 'use strict';
 const mqtt = require('mqtt');
+const EventEmitter = require('events');
 
-class MqttRotatorClient {
+class MqttRotatorClient extends EventEmitter {
   constructor(config, logger) {
+    super();
     this.config = config;
-    this.logger = logger || console;
+    this.logger = logger;
     this.client = null;
 
     this.remoteStartAzimuth = this.config.rotator.startAzimuth || 137;
@@ -43,6 +45,7 @@ class MqttRotatorClient {
 
     this.client.on('connect', () => {
         this.logger.info('Connected to Rotator MQTT Broker');
+        this.emit('connected');
         this.subscribeAndSync();
     });
 
@@ -52,6 +55,7 @@ class MqttRotatorClient {
 
     this.client.on('error', (err) => {
         this.logger.error(`MQTT Error: ${err.message}`);
+        this.emit('error', err);
     });
   }
 

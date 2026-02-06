@@ -149,6 +149,9 @@ function populateForm(config) {
   const minTrayCheck = document.getElementById('appMinimizeToTray');
   if (minTrayCheck) minTrayCheck.checked = appConfig.minimizeToTray || false;
 
+  const showSbCheck = document.getElementById('appShowStatusBar');
+  if (showSbCheck) showSbCheck.checked = appConfig.showStatusBar !== false;
+
   const startMinCheck = document.getElementById('appStartMinimized');
   if (startMinCheck) startMinCheck.checked = appConfig.startMinimized || false;
 
@@ -199,10 +202,18 @@ function populateForm(config) {
   if (showMediaCheckbox) showMediaCheckbox.checked = appConfig.showQsoMedia || false;
   
     // Compact Mode
-  const compactModeCheckbox = document.getElementById('appCompactMode');
+const compactModeCheckbox = document.getElementById('appCompactMode');
   if (compactModeCheckbox) {
     compactModeCheckbox.checked = appConfig.compactMode || false;
     applyCompactMode(appConfig.compactMode);
+  }
+
+// Handle Status Bar initial state
+  const showStatusBarCheckbox = document.getElementById('appShowStatusBar');
+  if (showStatusBarCheckbox) {
+    const isVisible = appConfig.showStatusBar !== false;
+    showStatusBarCheckbox.checked = isVisible;
+    toggleStatusBar(isVisible);
   }
 
   // Auto Open QSO Assistant
@@ -564,7 +575,9 @@ if (configForm) {
         theme: document.getElementById('appTheme').value,
         startAtLogin: document.getElementById('appStartAtLogin').checked,
         minimizeToTray: document.getElementById('appMinimizeToTray').checked,
-        startMinimized: document.getElementById('appStartMinimized').checked,        
+        showStatusBar: document.getElementById('appShowStatusBar').checked,
+        startMinimized: document.getElementById('appStartMinimized').checked,
+        showStatusBar: document.getElementById('appShowStatusBar').checked,
         startupTab: document.getElementById('appStartupTab').value,
         compactMode: document.getElementById('appCompactMode').checked,
         autoOpenQSO: document.getElementById('appAutoOpenQSO').checked,
@@ -732,6 +745,7 @@ if (configForm) {
 
     // Apply theme immediately so user sees the change without restart
     applyTheme(newConfig.application.theme);
+    toggleStatusBar(newConfig.application.showStatusBar);
 
     // Send the updated config back to the main process
     try {
@@ -783,18 +797,29 @@ if (installCertBtn) {
 }
 
 /**
- * Handles various status update events.
+ * Handles various status update events and updates both the UI tabs and the Status Bar.
+ * @param {object} status - The status object containing event type and related data.
+ */
+/**
+ * Handles various status update events and updates both the UI tabs and the Status Bar.
  * @param {object} status - The status object containing event type and related data.
  */
 function handleStatusUpdate(status) {
   switch (status.event) {
     case 'flexRadioConnected':
-      // Display Host IP if available, otherwise fallback to "Connected"
-      const flexMsg = status.host ? status.host : 'Connected';
-      updateFlexRadioStatus(flexMsg);
+      updateFlexRadioStatus(status.host || 'Connected');
       
+      // Update Status Bar: Label Neutral, Value Green
+      const radioLabel = document.getElementById('sb-radio-model');
+      const radioVal = document.getElementById('sb-radio-ver');
+      
+      radioLabel.textContent = 'FlexRadio';
+      radioLabel.classList.remove('text-success'); 
+      
+      radioVal.textContent = status.host || 'connected';
+      radioVal.classList.add('text-success');
+
       isFlexRadioConnected = true;
-      // If we are currently on the Profiles tab, load data automatically now
       const activeTab = document.querySelector('.nav-link.active');
       if (activeTab && activeTab.id === 'profiles-tab') {
           loadProfiles();
@@ -803,64 +828,122 @@ function handleStatusUpdate(status) {
 
     case 'flexRadioDisconnected':
       updateFlexRadioStatus('Disconnected');
-      isFlexRadioConnected = false; // Mark as disconnected
+      
+      document.getElementById('sb-radio-model').textContent = 'Disconnected';
+      
+      const radioValDisc = document.getElementById('sb-radio-ver');
+      radioValDisc.textContent = 'no radio found';
+      radioValDisc.classList.remove('text-success');
+      
+      document.getElementById('sb-radio-freq').textContent = '---.---';
+      document.getElementById('sb-radio-mode').textContent = '---';
+      isFlexRadioConnected = false;
       break;
+
     case 'flexRadioError':
       updateFlexRadioStatus(`Error: ${status.error}`);
+      document.getElementById('sb-radio-model').textContent = 'Radio Error';
+      document.getElementById('sb-radio-model').classList.add('text-danger');
       break;
-case 'dxClusterConnected':
-      // Just show the hostname to save space. It implies "Connected".
-      if (status.server) {
-          updateDXClusterStatus(status.server);
-      } else {
-          updateDXClusterStatus('Connected');
-      }
+
+    case 'dxClusterConnected':
+      const dxcSrv = status.server || 'Connected';
+      updateDXClusterStatus(dxcSrv);
+      document.getElementById('sb-icon-dxc').className = 'bi bi-circle-fill sb-icon-ok';
+      document.getElementById('sb-label-dxc').classList.add('sb-label-active');
       break;
+
     case 'dxClusterDisconnected':
       updateDXClusterStatus('Disconnected');
+      document.getElementById('sb-icon-dxc').className = 'bi bi-circle-fill sb-icon-err';
+      document.getElementById('sb-label-dxc').classList.remove('sb-label-active');
       break;
+
     case 'dxClusterError':
       updateDXClusterStatus(`Error: ${status.error}`);
+      document.getElementById('sb-icon-dxc').className = 'bi bi-circle-fill sb-icon-err';
+      document.getElementById('sb-label-dxc').classList.remove('sb-label-active');
       break;
+
+    case 'rotatorConnected':
+      document.getElementById('sb-icon-rot').className = 'bi bi-circle-fill sb-icon-ok';
+      document.getElementById('sb-label-rot').classList.add('sb-label-active');
+      break;
+
+    case 'rotatorError':
+    case 'rotatorDisconnected':
+      document.getElementById('sb-icon-rot').className = 'bi bi-circle-fill sb-icon-disabled';
+      document.getElementById('sb-label-rot').classList.remove('sb-label-active');
+      break;
+
     case 'WavelogResponsive':
       updateWavelogStatus(status.message);
+      
+      const wlProfileEl = document.getElementById('sb-wl-profile');
+      wlProfileEl.textContent = status.message;
+      wlProfileEl.classList.add('sb-label-active');
+      document.getElementById('sb-icon-person').className = 'bi bi-person-fill sb-icon-ok';
+      
+      // Force Status Bar to match Polling state if not Live
       if (!isWavelogLive) {
-          updateConnectionBadge('polling'); 
+          updateConnectionBadge('polling');
+          document.getElementById('sb-conn-mode').innerHTML = '<i class="bi bi-arrow-repeat text-warning"></i> <span class="text-warning">POLLING</span>';
       }
       break;
+
     case 'WavelogUnresponsive':
       updateWavelogStatus('Unresponsive');
+      document.getElementById('sb-icon-person').className = 'bi bi-person-fill sb-icon-err';
+      document.getElementById('sb-wl-profile').textContent = 'OFFLINE';
+      document.getElementById('sb-wl-profile').classList.remove('sb-label-active');
       updateConnectionBadge('offline');
       break;
+
     case 'WSJTEnabled':
       updateWSJTStatus('Enabled');
+      document.getElementById('sb-icon-wsjt').className = 'bi bi-circle-fill sb-icon-ok';
+      document.getElementById('sb-label-wsjt').classList.add('sb-label-active');
       break;
+
     case 'WSJTDisabled':
       updateWSJTStatus('Disabled');
+      document.getElementById('sb-icon-wsjt').className = 'bi bi-circle-fill sb-icon-disabled';
+      document.getElementById('sb-label-wsjt').classList.remove('sb-label-active');
       break;
+
     case 'WSJTError':
       updateWSJTStatus(`Error: ${status.error}`);
+      document.getElementById('sb-icon-wsjt').className = 'bi bi-circle-fill sb-icon-err';
+      document.getElementById('sb-label-wsjt').classList.remove('sb-label-active');
       break;
+
     case 'newSpot':
       displayNewSpot(status.spot);
       break;
+
     case 'cacheHealth':
       displayCacheHealth(status.healthStatus);
       break;
+
     case 'configUpdated':
       showAlert(status.message, 'info');
       break;
+
     case 'connectionMode':
-      // Update state and badge
-      if (status.mode === 'live') {
-          isWavelogLive = true;
-      } else if (status.mode === 'polling' || status.mode === 'offline') {
-          isWavelogLive = false;
-      }
+      isWavelogLive = (status.mode === 'live');
       updateConnectionBadge(status.mode); 
+
+      const connEl = document.getElementById('sb-conn-mode');
+      if (status.mode === 'live') {
+        connEl.innerHTML = '<i class="bi bi-lightning-charge-fill text-success"></i> <span class="text-success">LIVE (WS)</span>';
+      } else if (status.mode === 'polling') {
+        connEl.innerHTML = '<i class="bi bi-arrow-repeat text-warning"></i> <span class="text-warning">POLLING</span>';
+      } else {
+        connEl.innerHTML = '<i class="bi bi-cloud-slash-fill text-muted"></i> OFFLINE';
+      }
       break;
+
     default:
-      // Unknown event; no action required
       break;
   }
 }
@@ -1404,4 +1487,41 @@ if (openQSOBtn) {
     ipcRenderer.invoke('open-qso-assistant'); 
     console.log('Requesting to open QSO Assistant...');
   });
+}
+
+/**
+ * Listener for frequency and mode updates from the radio for the Status Bar.
+ */
+ipcRenderer.on('slice-status-update', (event, slice) => {
+  if (slice) {
+    // Update Frequency (with 3 decimals) and Mode
+    const freqEl = document.getElementById('sb-radio-freq');
+    const modeEl = document.getElementById('sb-radio-mode');
+    
+    if (freqEl) freqEl.textContent = (slice.frequency).toFixed(3) + ' MHz';
+    if (modeEl) modeEl.textContent = slice.mode;
+    
+    // Update model name if available in the slice data
+    const modelEl = document.getElementById('sb-radio-model');
+    if (modelEl && slice.station) {
+        modelEl.textContent = slice.station;
+    }
+  }
+});
+
+/**
+ * Toggles the visibility of the status bar using Bootstrap classes.
+ * @param {boolean} visible - True to show, false to hide.
+ */
+function toggleStatusBar(visible) {
+    const sb = document.getElementById('appStatusBar');
+    if (sb) {
+        if (visible) {
+            sb.classList.remove('d-none');
+            document.body.style.paddingBottom = '40px';
+        } else {
+            sb.classList.add('d-none');
+            document.body.style.paddingBottom = '0px';
+        }
+    }
 }

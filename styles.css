@@ -138,3 +138,72 @@ h1 {
 .mode-digi { background-color: #0d6efd !important; color: white !important; }
 .mode-fm { background-color: #6f42c1 !important; color: white !important; }
 .mode-default { background-color: #6c757d !important; color: white !important; }
+
+/* --- Status Bar Framework --- */
+.status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 36px;
+  background-color: var(--bs-tertiary-bg);
+  border-top: 2px solid var(--bs-border-color);
+  font-size: 10px;
+  z-index: 1030;
+  user-select: none;
+  line-height: 1.1;
+  box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+}
+
+/* Compensate body padding to avoid content hiding behind status bar */
+body {
+  padding-bottom: 40px;
+}
+
+.sb-section {
+  height: 100%;
+}
+
+.sb-text-main {
+  font-size: 11px;
+  color: var(--bs-body-color);
+  white-space: nowrap;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sb-text-sub {
+  font-size: 9px;
+  color: var(--bs-secondary-color);
+}
+
+/* Indicator Icon Colors */
+.sb-icon-disabled { 
+  color: #999 !important;
+  opacity: 0.5 !important; 
+}
+
+.sb-icon-ok { color: var(--bs-success); }
+.sb-icon-err { color: var(--bs-danger); }
+.sb-icon-wait { color: var(--bs-warning); }
+
+.sb-label {
+  font-size: 9px;
+  color: var(--bs-secondary-color);
+  margin-left: 2px;
+  text-transform: uppercase;
+}
+
+/* Force text color to current theme body color when active */
+.sb-label-active {
+  color: var(--bs-body-color) !important;
+  font-weight: 600;
+  opacity: 1 !important;
+}
+
+@media (max-width: 650px) {
+  .sb-label, .sb-text-sub { display: none; }
+  .sb-section.gap-3 { gap: 10px !important; }
+}

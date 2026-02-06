@@ -16,6 +16,8 @@ class WavelogWsServer extends EventEmitter {
     this.wss = null;       // Standard WebSocket
     this.wssSecure = null; // Secure WebSocket
     this.clients = new Set();
+    this.heartbeatInterval = null; // Heartbeat timer
+    this.disconnectTimer = null;   // Debounce timer for disconnects
   }
 
   /**
@@ -66,6 +68,24 @@ class WavelogWsServer extends EventEmitter {
     } else {
       this.logger.warn('SSL certificates not provided. WSS (Secure) will not be available.');
     }
+
+    // 3. Start Heartbeat Monitor (Check for zombies every 5s)
+    this.heartbeatInterval = setInterval(() => {
+      this.clients.forEach((ws) => {
+        if (ws.isAlive === false) {
+          this.logger.info('Terminating inactive/zombie WebSocket client.');
+          ws.terminate();
+          this.clients.delete(ws); // Force remove immediately
+          
+          if (this.clients.size === 0) {
+             this._scheduleDisconnectEvent();
+          }
+          return;
+        }
+        ws.isAlive = false;
+        ws.ping();
+      });
+    }, 5000);
   }
 
   /**
@@ -73,11 +93,28 @@ class WavelogWsServer extends EventEmitter {
    */
   _setupServerLogic(serverInstance, label) {
     serverInstance.on('connection', (ws) => {
+      // CLEAR TIMER: If we get a connection, we are LIVE. Cancel any pending disconnect.
+      if (this.disconnectTimer) {
+        clearTimeout(this.disconnectTimer);
+        this.disconnectTimer = null;
+      }
+
+      // CLEANUP: Remove old clients that are not OPEN (1) before adding new one
+      this.clients.forEach(client => {
+          if (client.readyState !== 1) this.clients.delete(client);
+      });
+
       this.clients.add(ws);
-      this.logger.info(`Wavelog client connected via ${label}.`);
+      ws.isAlive = true; // Mark as alive initially
+      this.logger.info(`Wavelog client connected via ${label}. Total clients: ${this.clients.size}`);
 
       // Trigger status refresh so the UI turns green immediately
       this.emit('client-connected');
+
+      // Heartbeat listener
+      ws.on('pong', () => {
+        ws.isAlive = true;
+      });
 
       ws.on('message', (data) => {
         this.logger.info(`WS INCOMING RAW: ${data.toString()}`);
@@ -95,15 +132,16 @@ class WavelogWsServer extends EventEmitter {
 
       ws.on('close', () => {
         this.clients.delete(ws);
-        this.logger.info(`Wavelog client disconnected from ${label}.`);
+        this.logger.info(`Wavelog client disconnected from ${label}. Remaining clients: ${this.clients.size}`);
         
         if (this.clients.size === 0) {
-            this.emit('all-clients-disconnected');
+            this._scheduleDisconnectEvent();
         }
       });
 
       ws.on('error', (err) => {
         this.logger.error(`WebSocket Client Error (${label}): ${err.message}`);
+        this.clients.delete(ws); // Ensure we clean up on error too
       });
 
       // Send initial welcome message
@@ -112,6 +150,21 @@ class WavelogWsServer extends EventEmitter {
         message: `Connected to Wave-Flex Integrator ${label}`
       }));
     });
+  }
+
+  /**
+   * Schedules the disconnect event with a 2-second delay (Debounce).
+   * Prevents UI flickering if Wavelog reconnects immediately.
+   */
+  _scheduleDisconnectEvent() {
+    if (this.disconnectTimer) clearTimeout(this.disconnectTimer);
+    
+    this.disconnectTimer = setTimeout(() => {
+        // Double check that we are still empty
+        if (this.clients.size === 0) {
+            this.emit('all-clients-disconnected');
+        }
+    }, 2000);
   }
 
   /**
@@ -144,6 +197,13 @@ class WavelogWsServer extends EventEmitter {
     this.clients.forEach(client => {
       if (client.readyState === 1) { // 1 = OPEN
         client.send(message);
+      } else {
+        // Clean up dead connections lazily
+        this.clients.delete(client);
+        // If cleanup made it empty, schedule disconnect
+        if (this.clients.size === 0) {
+            this._scheduleDisconnectEvent();
+        }
       }
     });
   }
@@ -152,6 +212,8 @@ class WavelogWsServer extends EventEmitter {
    * Stops both servers and cleans up connections.
    */
   stop() {
+    if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+    if (this.disconnectTimer) clearTimeout(this.disconnectTimer);
     if (this.wss) this.wss.close();
     if (this.wssSecure) this.wssSecure.close();
   }

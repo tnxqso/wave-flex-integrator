@@ -573,7 +573,18 @@ app.on('ready', () => {
         // Initialize Rotator Client (MQTT)
         mqttRotatorClient = new MqttRotatorClient(config, logger);
         if (config.rotator && config.rotator.enabled) {
-          mqttRotatorClient.connect();
+          // Listen for events to update UI status bar
+          mqttRotatorClient.on('connected', () => {
+            uiManager.sendStatusUpdate({ event: 'rotatorConnected' });
+          });
+          mqttRotatorClient.on('error', (err) => {
+            uiManager.sendStatusUpdate({ event: 'rotatorError', error: err.message });
+          });
+          
+          // Delay connection to ensure GUI is ready to receive the event
+          setTimeout(() => {
+            mqttRotatorClient.connect();
+          }, 2000);
         }
 
         // Initialize Spot Cache
@@ -690,6 +701,11 @@ app.on('ready', () => {
                 wavelogWsServer.broadcastStatus(slice);
               }
 
+              // Send update to the UI for the status bar
+              if (mainWindow) {
+                mainWindow.webContents.send('slice-status-update', slice);
+              }
+              
               // 2. Update Wavelog API (Only on change)
               const isChanged = (slice.frequency !== lastRadioState.frequency) || (slice.mode !== lastRadioState.mode);
 

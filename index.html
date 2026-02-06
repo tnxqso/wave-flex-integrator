@@ -4,27 +4,28 @@
   <meta charset="UTF-8" />
   <title>Wave-Flex Integrator</title>
   
+  <!-- Strict CSP for Offline Use -->
   <meta
     http-equiv="Content-Security-Policy"
     content="
       default-src 'self'; 
-      script-src 'self' https://cdnjs.cloudflare.com; 
-      style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; 
-      font-src 'self' https://cdnjs.cloudflare.com; 
-      img-src 'self' https://cdnjs.cloudflare.com data:;
+      script-src 'self' 'unsafe-inline'; 
+      style-src 'self' 'unsafe-inline'; 
+      font-src 'self' data:; 
+      img-src 'self' data:;
     "
   />
   
-  <!-- Include Bootstrap CSS from CDNJS -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" integrity="sha512-t4GWSVZO1eC8BM339Xd7Uphw5s17a86tIZIj8qRxhnKub6WoyhnrxeCIMeAqBPgdZGlCcG2PrZjMc+Wr78+5Xg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <!-- Local Bootstrap CSS -->
+  <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css" />
 
-  <!-- Include Bootstrap Icons from CDNJS -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" integrity="sha512-dPXYHHenicH9AgASjnT44v788xYV1e+I9K/zGf2yUaXlO9bT/fO+o27lKjB5q8tC1n9jC6A3C4z8+6m3K5yA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <!-- Local Bootstrap Icons -->
+  <link rel="stylesheet" href="assets/bootstrap-icons/bootstrap-icons.css">
 
-  <!-- Include flag-icon-css from CDNJS -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/6.6.6/css/flag-icons.min.css" integrity="sha512-uvXdJud8WaOlQFjlz9B15Yy2Au/bMAvz79F7Xa6OakCl2jvQPdHD0hb3dEqZRdSwG4/sknePXlE7GiarwA/9Wg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <!-- Local Flag Icons -->
+  <link rel="stylesheet" href="assets/flag-icons/css/flag-icons.min.css" />
   
-  <!-- Link to External Custom CSS -->
+  <!-- Local Custom CSS -->
   <link rel="stylesheet" href="styles.css" />
   
   <style>
@@ -294,6 +295,10 @@
                             <div class="form-check form-switch mb-2">
                                 <input class="form-check-input" type="checkbox" id="appCompactMode">
                                 <label class="form-check-label" for="appCompactMode">Compact Mode (Hide Banner)</label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="appShowStatusBar">
+                                <label class="form-check-label" for="appShowStatusBar">Show Status Bar</label>
                             </div>
                             <div class="form-check form-switch">
                                 <input class="form-check-input" type="checkbox" id="appUseImperial">
@@ -883,10 +888,48 @@
 
   </div> <!-- End of container-fluid -->
 
-  <!-- Include Bootstrap JS from CDNJS -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js" integrity="sha512-VK2zcvntEufaimc+efOYi622VN5ZacdnufnmX7zIhCPmjhKnOi9ZDMtg1/ug5l183f19gG1/cBstPO4D8N/Img==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- Status Bar (Fixed at 36px height) -->
+  <footer id="appStatusBar" class="status-bar d-flex align-items-center justify-content-between px-2">
+    <!-- Left: Radio Info -->
+    <div class="sb-section d-flex align-items-center">
+      <div class="sb-cell border-end pe-2 me-2">
+        <div id="sb-radio-model" class="sb-text-main">Disconnected</div>
+        <div id="sb-radio-ver" class="sb-text-sub">no radio found</div>
+      </div>
+      <div class="sb-cell">
+        <div id="sb-radio-freq" class="sb-text-main fw-bold">---.---</div>
+        <div id="sb-radio-mode" class="sb-text-sub">---</div>
+      </div>
+    </div>
 
-    <!-- Include renderer script -->
+    <!-- Center: Integration Indicators -->
+    <div class="sb-section d-flex align-items-center gap-3">
+      <div class="sb-indicator-item" title="DX Cluster">
+        <i id="sb-icon-dxc" class="bi bi-circle-fill sb-icon-disabled"></i>
+        <span id="sb-label-dxc" class="sb-label">DXC</span>
+      </div>
+      <div class="sb-indicator-item" title="WSJT-X">
+        <i id="sb-icon-wsjt" class="bi bi-circle-fill sb-icon-disabled"></i>
+        <span id="sb-label-wsjt" class="sb-label">WSJT</span>
+      </div>
+      <div class="sb-indicator-item" title="Rotator">
+        <i id="sb-icon-rot" class="bi bi-circle-fill sb-icon-disabled"></i>
+        <span id="sb-label-rot" class="sb-label">ROT</span>
+      </div>
+      <div class="sb-indicator-item border-start ps-3" title="Wavelog Profile">
+        <i id="sb-icon-person" class="bi bi-person-fill sb-icon-disabled"></i> 
+        <span id="sb-wl-profile" class="sb-label">No Profile</span>
+      </div>
+    </div>
+
+    <!-- Right: Connection Mode -->
+    <div class="sb-section d-flex align-items-center">
+      <div id="sb-conn-mode" class="sb-text-main"><i class="bi bi-cloud-slash-fill text-muted"></i> OFFLINE</div>
+    </div>
+  </footer>
+
+  <script src="assets/bootstrap/js/bootstrap.bundle.min.js"></script>
   <script src="renderer.js"></script>
+
 </body>
 </html>

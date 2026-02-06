@@ -15,6 +15,7 @@ const defaultConfig = {
     startMinimized: false,
     minimizeToTray: true,
     startAtLogin: false,
+    showStatusBar: true,
     window: {
       width: 900,
       height: 800
