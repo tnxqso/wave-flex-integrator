@@ -463,7 +463,7 @@ Run the application with debug logging:
 
 
   ```bash
-  /Applications/Wave-Flex\ Integrator.app/Contents/MacOS/wave-flex-integrator -- -- --debug
+  /Applications/WaveFlexIntegrator.app/Contents/MacOS/WaveFlexIntegrator -- -- --debug
   ```
 
 This creates a `debug.log` file with detailed logs.
