@@ -54,10 +54,24 @@ let currentGoogleMapsLink = '';
 let appConfig = {};
 
 // --- Initialize ---
+
 window.onload = async () => {
-    appConfig = await ipcRenderer.invoke('get-config');
-    applyTheme(appConfig.application?.theme || 'system');
+    // 2. Initial UI Reset
     resetUI(); 
+
+    try {
+        // 3. Load full config asynchronously
+        appConfig = await ipcRenderer.invoke('get-config');
+        
+        // 4. Re-apply theme from config source of truth (ensures sync)
+        if (appConfig.application?.theme) {
+            applyTheme(appConfig.application.theme);
+        }
+    } catch (err) {
+        console.error("Error loading config:", err);
+        // Fallback to empty config to prevent crash
+        appConfig = {}; 
+    }
 };
 
 // --- 1. Wavelog Live Metadata Listener (Primary Source) ---
@@ -206,7 +220,7 @@ function updateUI(data) {
     // Update LCD Display
     if(callDisplay) {
         callDisplay.innerText = currentCallsign || '---';
-        callDisplay.style.color = "#0dcaf0"; // Cyan/Blue
+        callDisplay.style.color = "#0dcaf0"; 
     }
     
     currentBearingSP = data.bearing; 
@@ -218,6 +232,33 @@ function updateUI(data) {
     dxRow.classList.remove('d-none');   
     controlsRow.classList.remove('d-none');
 
+    // Handle Rotor Buttons Visibility
+    const rotorEnabled = appConfig.rotator && appConfig.rotator.enabled;
+    
+    if (rotorEnabled) {
+        // --- ROTOR ON: Grid layout ---
+        rotateSP.style.display = 'flex';
+        rotateLP.style.display = 'flex';
+        controlsRow.style.display = 'grid';
+        controlsRow.style.gridTemplateColumns = 'repeat(4, 1fr)';
+        
+        if(spotFlexBtn) {
+            spotFlexBtn.style.gridColumn = 'span 2';
+            spotFlexBtn.style.width = '100%'; 
+        }
+    } else {
+        // --- ROTOR OFF: Flex layout (Centered) ---
+        rotateSP.style.display = 'none';
+        rotateLP.style.display = 'none';
+        controlsRow.style.display = 'flex';
+        controlsRow.style.justifyContent = 'center';
+        
+        if(spotFlexBtn) {
+            spotFlexBtn.style.gridColumn = 'auto';
+            spotFlexBtn.style.width = '50%'; 
+        }
+    }
+
     // Show Media?
     if (appConfig.application?.showQsoMedia) {
         mediaRow.classList.remove('d-none');
@@ -226,19 +267,27 @@ function updateUI(data) {
     }
 
     // Handle Radio Status & Buttons
-    // Allow spotting if radio connected OR in test mode
     const isRadioConnected = data.radio_connected === true;
     const isTestMode = data.test_mode === true;
     const canSpot = isRadioConnected || isTestMode;
+    const clusterEnabled = appConfig.dxCluster && appConfig.dxCluster.host;
 
-    if (canSpot) {
-        if(spotDxClusterBtn) spotDxClusterBtn.disabled = false;
+    if (canSpot && clusterEnabled) {
+        if(spotDxClusterBtn) {
+             spotDxClusterBtn.disabled = false;
+             spotDxClusterBtn.title = "Send Spot to Cluster";
+        }
         dxComment.disabled = false;
         dxComment.setAttribute("placeholder", "DX Comment (e.g. 5 up)");
     } else {
-        if(spotDxClusterBtn) spotDxClusterBtn.disabled = true;
+        if(spotDxClusterBtn) {
+            spotDxClusterBtn.disabled = true;
+            const reason = !canSpot ? "Radio Disconnected" : "DX Cluster Not Configured";
+            spotDxClusterBtn.title = reason;
+        }
         dxComment.disabled = true;
-        dxComment.setAttribute("placeholder", "Radio Disconnected");
+        const placeholder = !canSpot ? "Radio Disconnected" : "DX Cluster Disabled";
+        dxComment.setAttribute("placeholder", placeholder);
     }
 
     // Flex Spot Button: ONLY if real radio is connected
@@ -296,10 +345,8 @@ function updateUI(data) {
 
     // Extended Stats Row
     valGrid.innerText = data.gridsquare || '---';
-    
     valBear.innerText = data.bearing ? `${data.bearing}°` : '-';
     valDist.innerText = distSP ? `${distSP} ${unit}` : '-';
-
     valBearLP.innerText = data.bearing_lp ? `${data.bearing_lp}°` : '-';
     valDistLP.innerText = distLP ? `${distLP} ${unit}` : '-';
 
@@ -325,11 +372,8 @@ function updateUI(data) {
         
         if (data.lotw_days !== null && data.lotw_days !== undefined) {
             statusLotw.innerText = `LOTW (${data.lotw_days}D)`;
-            
-            // Warning color for old uploads (> 1 year)
             if (parseInt(data.lotw_days) > 365) {
                 statusLotw.style.backgroundColor = '#d63384'; 
-                statusLotw.title = "Warning: Last upload > 1 year ago";
             }
         } else {
             statusLotw.innerText = "LOTW";

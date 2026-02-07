@@ -24,7 +24,7 @@ function applyTheme(theme) {
       document.documentElement.setAttribute('data-bs-theme', 'light');
     }
   } else {
-    document.documentElement.setAttribute('data-bs-theme', 'theme');
+    document.documentElement.setAttribute('data-bs-theme', theme);
   }
 }
 

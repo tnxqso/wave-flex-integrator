@@ -3,6 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <title>QSO Assistant</title>
+
+  <!-- BLOCKING SCRIPT: Sets theme immediately to prevent White Flash -->
+  <script>
+    (function() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const theme = params.get('theme') || 'system';
+        
+        const isDark = theme === 'dark' || 
+          (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+        if (isDark) {
+          document.documentElement.setAttribute('data-bs-theme', 'dark');
+        } else {
+          document.documentElement.setAttribute('data-bs-theme', 'light');
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  </script>
   
   <!-- Strict CSP for Offline Use -->
   <meta
