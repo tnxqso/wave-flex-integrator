@@ -93,6 +93,7 @@ function getDebugLogPath() {
 }
 
 module.exports = { getDebugLogPath };
+const debugLogPath = getDebugLogPath();
 
 if (isDebug) {
   // Ensure the directory exists
