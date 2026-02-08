@@ -1137,9 +1137,10 @@ function main() {
       // If everything is configured, start the services
       flexRadioClient.connect();
 
-      // Only connect to DX Cluster if configuration is valid
+      // Only connect to DX Cluster if enabled and configuration is valid
       if (
         config.dxCluster &&
+        config.dxCluster.enabled &&
         config.dxCluster.host &&
         config.dxCluster.callsign &&
         config.dxCluster.host.trim() !== '' &&
@@ -1147,7 +1148,11 @@ function main() {
       ) {
         dxClusterClient.connect();
       } else {
-        logger.info('DX Cluster configuration is incomplete. Skipping connection.');
+        if (!config.dxCluster?.enabled) {
+            logger.info('DX Cluster is disabled in configuration. Skipping connection.');
+        } else {
+            logger.info('DX Cluster configuration is incomplete. Skipping connection.');
+        }
       }
 
       // Auto-open QSO Assistant?

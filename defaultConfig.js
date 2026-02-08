@@ -9,7 +9,7 @@ const defaultConfig = {
     theme: 'system',
     startupTab: 'status',
     compactMode: false,
-    autoOpenQSO: false,
+    autoOpenQSO: false,host: 'dxc.ve7cc.net',     // Primary Hostname or IPhost: 'dxc.ve7cc.net',     // Primary Hostname or IP
     useImperial: false,
     showQsoMedia: false,
     startMinimized: false,
@@ -64,6 +64,7 @@ const defaultConfig = {
   // DX Cluster Configuration
   // ==============================
   dxCluster: {
+    enabled: true,             // Master switch for DX Cluster connection
     host: 'dxc.ve7cc.net',     // Primary Hostname or IP
     port: 23,                  // Primary Port
     backupHost: 'sk3w.se',     // Backup: SK3W (Sweden, reliable DXSpider)

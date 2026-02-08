@@ -275,6 +275,12 @@ const compactModeCheckbox = document.getElementById('appCompactMode');
   }
 
   // Populate DX Cluster Configuration
+  const dxClusterEnabledCheck = document.getElementById('dxClusterEnabled');
+  if (dxClusterEnabledCheck) {
+    // Default to true if undefined to maintain backward compatibility
+    dxClusterEnabledCheck.checked = config.dxCluster.enabled !== false;
+  }
+
   const dxClusterHostInput = document.getElementById('dxClusterHost');
   if (dxClusterHostInput) {
     dxClusterHostInput.value = config.dxCluster.host;
@@ -626,6 +632,7 @@ if (configForm) {
         maxSize: parseInt(document.getElementById('augmentedSpotCacheMaxSize').value, 10),
       },
       dxCluster: {
+        enabled: document.getElementById('dxClusterEnabled').checked,
         host: document.getElementById('dxClusterHost').value.trim(),
         port: parseInt(document.getElementById('dxClusterPort').value, 10),
         backupHost: document.getElementById('dxClusterBackupHost').value.trim(),
