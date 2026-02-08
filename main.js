@@ -799,14 +799,8 @@ app.on('ready', () => {
  * Checks if the essential configuration is valid.
  */
 function isConfigValid() {
-  if (
-    !config.dxCluster ||
-    !config.dxCluster.callsign ||
-    !config.dxCluster.host ||
-    config.dxCluster.callsign.trim() === ''
-  ) {
-    return false;
-  }
+  // DX Cluster config is optional now. We check validity before connecting later.
+  
   if (
     !config.flexRadio ||
     !config.flexRadio.host ||
@@ -1142,7 +1136,19 @@ function main() {
     } else {
       // If everything is configured, start the services
       flexRadioClient.connect();
-      dxClusterClient.connect();
+
+      // Only connect to DX Cluster if configuration is valid
+      if (
+        config.dxCluster &&
+        config.dxCluster.host &&
+        config.dxCluster.callsign &&
+        config.dxCluster.host.trim() !== '' &&
+        config.dxCluster.callsign.trim() !== ''
+      ) {
+        dxClusterClient.connect();
+      } else {
+        logger.info('DX Cluster configuration is incomplete. Skipping connection.');
+      }
 
       // Auto-open QSO Assistant?
       if (config.application?.autoOpenQSO) {
