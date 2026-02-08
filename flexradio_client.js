@@ -169,19 +169,26 @@ module.exports = class FlexRadioClient extends EventEmitter {
     });
   }
 
-  /**
+/**
    * Processes incoming data from the FlexRadio server.
    * @param {Buffer|string} data - Data received from the server.
    */
   processData(data) {
-    this.flexBuffer += data.toString();
+    const rawString = data.toString();
+    this.logger.debug(`[TCP RAW IN] ${JSON.stringify(rawString)}`);
+
+    this.flexBuffer += rawString;
     let lines = this.flexBuffer.split('\n');
     this.flexBuffer = lines.pop();
+    
     lines.forEach((line) => {
-      try {
-        this.messageParser.parseMessage(line.trim());
-      } catch (error) {
-        this.logger.error(`Error processing line: ${error.message}, Line: ${line}`);
+      if (line.trim().length > 0) {
+          try {
+            // this.logger.debug(`[PARSER IN] ${line.trim()}`); 
+            this.messageParser.parseMessage(line.trim());
+          } catch (error) {
+            this.logger.error(`Error processing line: ${error.message}, Line: ${line}`);
+          }
       }
     });
   }
@@ -208,6 +215,7 @@ module.exports = class FlexRadioClient extends EventEmitter {
    * @param {object} eventData - Data associated with the event.
    */
   handleSliceStatus(eventData) {
+    this.logger.debug(`[HANDLE SLICE] Index: ${eventData.index}, Msg: ${eventData.statusMessage}`);
     const { handle, index, statusMessage } = eventData;
     let slice = this.flexSlicesByID.get(index);
     let sliceAdded = false;
@@ -223,6 +231,11 @@ module.exports = class FlexRadioClient extends EventEmitter {
     if (sliceAdded) {
       this.flexSlicesByID.set(index, slice);
       this.logger.info(`Added new slice with label ${slice.index_letter}`);
+    }
+    if (this.pendingQsy) {
+        this.logger.debug(`[FILTER CHECK] Active. Target: ${this.pendingQsy.frequency} Hz, Mode: ${this.pendingQsy.mode}`);
+    } else {
+        this.logger.debug(`[FILTER CHECK] Inactive.`);
     }
 
     // --- NEW LOGIC: Pending QSY Filter ---
