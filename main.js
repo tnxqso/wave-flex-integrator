@@ -668,9 +668,18 @@ app.on('ready', () => {
               // Send command to radio (Set internal qsyLock)
               const qsyResult = flexRadioClient.setSliceFrequency(freq, mode);
 
+              logger.debug(`[OPTIMISTIC DEBUG] qsyResult.success: ${qsyResult.success}`);
+              logger.debug(`[OPTIMISTIC DEBUG] activeTXSlices exists: ${!!flexRadioClient.activeTXSlices}`);
+              if (flexRadioClient.activeTXSlices) {
+                  logger.debug(`[OPTIMISTIC DEBUG] activeTXSlices length: ${flexRadioClient.activeTXSlices.length}`);
+              } else {
+                  logger.debug(`[OPTIMISTIC DEBUG] activeTXSlices is NULL or UNDEFINED`);
+              }
+
               // Perform Optimistic Update: Push new state to UI immediately
               if (qsyResult.success && flexRadioClient.activeTXSlices && flexRadioClient.activeTXSlices.length > 0) {
-                const activeSlice = flexRadioClient.activeTXSlices[0];
+                const activeSlice = { ...flexRadioClient.activeTXSlices[0] }; 
+                
                 activeSlice.frequency = freq / 1000000.0;
                 if (mode) activeSlice.mode = mode.toUpperCase();
 

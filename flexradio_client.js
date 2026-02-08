@@ -16,6 +16,7 @@ module.exports = class FlexRadioClient extends EventEmitter {
    * Creates an instance of FlexRadioClient.
    * @param {object} config - Configuration object.
    * @param {object} logger - Logger instance.
+   * @param {string} stationCallsign - The callsign of the station.
    */
   constructor(config, logger, stationCallsign) {
     super();
@@ -41,7 +42,7 @@ module.exports = class FlexRadioClient extends EventEmitter {
     this.isDisconnecting = false;
     this.activeTXSlices = null;
     this.lastConnectionWarningTime = 0;
-    this.qsyLock = { expiration: 0, targetFreq: 0 };
+    this.pendingQsy = null; 
 
     this.messageParser = new FlexRadioMessageParser();
     this.wavelogClient = new WavelogClient(this.config, this.logger);
@@ -217,25 +218,53 @@ module.exports = class FlexRadioClient extends EventEmitter {
     }
 
     slice.statusUpdate(handle, statusMessage);
-    slice.updateStationName(this.handleStationMap); // Set the station name based on the handle here to ensure it is populated with the correct Station Name
+    slice.updateStationName(this.handleStationMap); 
 
-    const radioFreqHz = Math.round(slice.frequency * 1e6);
-    const isLocked = Date.now() < this.qsyLock.expiration;
-    
-    if (isLocked) {
-        if (radioFreqHz !== this.qsyLock.targetFreq) {
-            this.logger.debug(`QSY Lock: Suppressing stale radio status (${radioFreqHz} Hz) while waiting for ${this.qsyLock.targetFreq} Hz`);
-            return; // Exit early and do not broadcast this stale update to Wavelog
-        } else {
-            this.logger.debug(`QSY Lock: Target frequency ${radioFreqHz} Hz reached. Releasing lock.`);
-            this.qsyLock.expiration = 0; // Target reached, clear lock early
-        }
-    }
-    
     if (sliceAdded) {
       this.flexSlicesByID.set(index, slice);
       this.logger.info(`Added new slice with label ${slice.index_letter}`);
     }
+
+    // --- NEW LOGIC: Pending QSY Filter ---
+    // Purpose: Prevent sending updates to Wavelog if frequency has changed 
+    // but mode hasn't updated yet (intermediate state).
+    if (this.pendingQsy) {
+        const now = Date.now();
+        
+        // 1. Timeout Check (Safety valve: 3 seconds)
+        // If the radio fails to switch mode within 3 seconds, release the filter
+        // to prevent the UI from getting stuck.
+        if (now - this.pendingQsy.timestamp > 3000) {
+            this.logger.warn(`QSY Filter: Timeout waiting for target state. Releasing filter.`);
+            this.pendingQsy = null;
+        } else {
+            // 2. Check if current slice matches the pending target state
+            const currentFreqHz = Math.round(slice.frequency * 1e6);
+            const targetFreqHz = this.pendingQsy.frequency;
+            
+            // Compare frequency (allow small epsilon for rounding errors)
+            const freqMatch = Math.abs(currentFreqHz - targetFreqHz) < 50; 
+            
+            // Compare mode (only if a target mode was set)
+            let modeMatch = true;
+            if (this.pendingQsy.mode) {
+                modeMatch = (slice.mode === this.pendingQsy.mode);
+            }
+
+            if (freqMatch && !modeMatch) {
+                // CRITICAL: This is the problem state (Right Freq, Wrong Mode).
+                // We suppress this specific update so Wavelog doesn't log with the old mode.
+                this.logger.debug(`QSY Filter: Suppressing intermediate state (${slice.frequency.toFixed(6)} MHz, ${slice.mode}) while waiting for mode: ${this.pendingQsy.mode}`);
+                return; // Stop processing. Do NOT update ActiveTXSlices or emit event.
+            }
+
+            if (freqMatch && modeMatch) {
+                this.logger.info(`QSY Filter: Target reached (${slice.frequency.toFixed(6)} MHz, ${slice.mode}). Sending update.`);
+                this.pendingQsy = null; // Target reached, return to normal operation
+            }
+        }
+    }
+    // ------------------------------------
 
     const activeTXSlices = Array.from(this.flexSlicesByID.values()).filter((s) => s.tx);
 
@@ -246,7 +275,7 @@ module.exports = class FlexRadioClient extends EventEmitter {
       const existingSlice = this.activeTXSlices?.find((activeSlice) => activeSlice.index === slice.index);
       if (!existingSlice) {
         this.logger.info(
-          `New Active TX Slice: Slice ${slice.index_letter}, Frequency: ${slice.frequency.toFixed(6)} MHz, Mode: ${slice.mode}, XIT: ${xitAdjustment} Hz, Adjusted Frequency: ${(adjustedFrequencyHz / 1e6).toFixed(6)} MHz`
+          `New Active TX Slice: Slice ${slice.index_letter}, Frequency: ${slice.frequency.toFixed(6)} MHz, Mode: ${slice.mode}, XIT: ${xitAdjustment} Hz`
         );
       } else if (
         existingSlice.frequency !== slice.frequency ||
@@ -255,7 +284,7 @@ module.exports = class FlexRadioClient extends EventEmitter {
         existingSlice.xit_freq !== slice.xit_freq
       ) {
         this.logger.info(
-          `Updated Active TX Slice: Slice ${slice.index_letter}, Frequency: ${slice.frequency.toFixed(6)} MHz, Mode: ${slice.mode}, XIT: ${xitAdjustment} Hz, Adjusted Frequency: ${(adjustedFrequencyHz / 1e6).toFixed(6)} MHz`
+          `Updated Active TX Slice: Slice ${slice.index_letter}, Frequency: ${slice.frequency.toFixed(6)} MHz, Mode: ${slice.mode}, XIT: ${xitAdjustment} Hz`
         );
         existingSlice.frequency = slice.frequency;
         existingSlice.mode = slice.mode;
@@ -277,11 +306,10 @@ module.exports = class FlexRadioClient extends EventEmitter {
     }
 
     // Update the active TX slices array
-  this.activeTXSlices = updatedActiveTXSlices;
+    this.activeTXSlices = updatedActiveTXSlices;
   
-  // Forward the event so that main.js can intercept it
-  this.emit('sliceStatus', slice);
-
+    // Forward the event so that main.js can intercept it
+    this.emit('sliceStatus', slice);
   }
 
   async sendActiveSliceToWavelog(activeTXSlice) {
@@ -296,14 +324,13 @@ module.exports = class FlexRadioClient extends EventEmitter {
    * Handles a spot being triggered.
    * @param {object} eventData - Data associated with the event.
    */
-handleSpotTriggered(eventData) {
+  handleSpotTriggered(eventData) {
     const { handle, index } = eventData;
     const spotData = this.flexSpotsByID.get(index);
     if (spotData) {
       this.logger.info(`Spot triggered: callsign=${spotData.callsign}, index=${index}`);
       utils.openLogQSO(spotData.callsign, this.config);
       this.emit('externalSpotTriggered', spotData.callsign);
-      // --------------------------------------------------------
     } else {
       this.logger.warn(`No spot data found for FlexRadio Spot ID ${index}`);
     }
@@ -729,7 +756,7 @@ handleSpotTriggered(eventData) {
 
   /**
    * Sets the frequency and mode of the currently active Transmit Slice.
-   * Checks current state to avoid sending redundant commands.
+   * MODIFIED: Uses non-blocking fire-and-forget commands with pending state filtering.
    * @param {number} freqHz - Frequency in Hertz.
    * @param {string} mode - Mode string (e.g., 'cw', 'ssb').
    * @returns {object} - { success: boolean, error: string|null }
@@ -773,10 +800,8 @@ handleSpotTriggered(eventData) {
     }
 
     // 3. Check what actually needs changing
-    // FlexRadio frequencies are floats, so we use a small epsilon for comparison or compare the fixed string
     const currentFreqMHzString = targetSlice.frequency.toFixed(6);
     const needTune = currentFreqMHzString !== freqMHzString;
-    
     const needMode = flexMode && (targetSlice.mode !== flexMode);
 
     if (!needTune && !needMode) {
@@ -784,38 +809,38 @@ handleSpotTriggered(eventData) {
         return { success: true, error: null }; // Return success as we are already there
     }
 
-    // Update Lock only if we are actually tuning
-    if (needTune) {
-        this.qsyLock.targetFreq = freqHz;
-        this.qsyLock.expiration = Date.now() + 2000;
-    }
-
+    // Set up the Target State for filtering ---
+    // We expect the radio to eventually match these values.
+    // handleSliceStatus will suppress updates until this matches.
+    this.pendingQsy = {
+        frequency: freqHz,
+        mode: flexMode, // Can be null if only frequency changes
+        timestamp: Date.now()
+    };
+    
     this.logger.info(
       `QSY Request: Slice ${targetSlice.index_letter} -> ${needTune ? freqMHzString + ' MHz' : '(No Freq Change)'}, ${needMode ? flexMode : '(No Mode Change)'}`
     );
 
-    // 4. Send Commands (Chained)
+    // 4. Send Commands (Sequential / Fire-and-Forget)
+    // We do NOT wait for the tune command callback before queuing the mode command.
+    // We rely on TCP ordering and removed the software lock to prevent deadlocks.
     
-    const sendMode = () => {
-        if (needMode) {
-            const modeCmd = `slice set ${targetSlice.index} mode=${flexMode}`;
-            // Small delay to ensure radio processes sequential commands correctly
-            setTimeout(() => {
-                this.queueCommand(modeCmd, (resp) => this.logger.debug(`QSY Mode Response: ${resp}`));
-            }, 50);
-        }
-    };
-
     if (needTune) {
         const tuneCmd = `slice tune ${targetSlice.index} ${freqMHzString}`;
         this.queueCommand(tuneCmd, (resp) => {
             this.logger.debug(`QSY Tune Response: ${resp}`);
-            // Send mode command ONLY after tune command callback
-            sendMode();
         });
-    } else {
-        // If we didn't need to tune, just send mode immediately
-        sendMode();
+    }
+
+    if (needMode) {
+        const modeCmd = `slice set ${targetSlice.index} mode=${flexMode}`;
+        // Small delay (50ms) to ensure TCP packet separation if needed, generally safer
+        setTimeout(() => {
+             this.queueCommand(modeCmd, (resp) => {
+                 this.logger.debug(`QSY Mode Response: ${resp}`);
+             });
+        }, 50);
     }
 
     return { success: true, error: null };
