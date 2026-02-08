@@ -51,46 +51,48 @@ let qrzClient;
 
 const isDebug = process.argv.includes('--debug');
 
+// We cache the path to ensure consistency throughout the app's lifecycle.
+// This prevents the path from changing if called before vs. after app.isReady().
+let cachedLogPath = null;
+
 function getDebugLogPath() {
-  /**
-   * METHOD 1: The Electron Way (Recommended)
-   * app.getPath('logs') automatically points to:
-   * macOS: ~/Library/Logs/<AppName>/
-   * Windows: C:\Users\<User>\AppData\Local\<AppName>\
-   */
-  try {
-    // Check if the Electron app module is available and initialized
-    if (app && app.isReady()) {
-      return path.join(app.getPath('logs'), 'debug.log');
-    }
-  } catch (err) {
-    // If Electron is not yet ready, we fall back to manual path construction
+  if (cachedLogPath) {
+    return cachedLogPath;
   }
 
-  /**
-   * METHOD 2: Manual Fallback (Cross-Platform)
-   * This respects the standard directories for each Operating System.
-   */
+  // 1. Try to use Electron's native API (Main Process only)
+  try {
+    if (typeof app !== 'undefined' && app.isReady()) {
+      cachedLogPath = path.join(app.getPath('logs'), 'debug.log');
+      return cachedLogPath;
+    }
+  } catch (err) {
+    // Ignore errors (e.g. running in Renderer process without remote module)
+  }
+
+  // 2. Fallback logic (Renderer process or early startup)
   const platform = process.platform;
   const home = os.homedir();
   let baseDir;
 
   if (platform === 'win32') {
-    // Windows standard: Local AppData
-    baseDir = process.env.LOCALAPPDATA || path.join(home, 'AppData', 'Local');
+    // Windows: Use LocalAppData (better for logs than Roaming)
+    const localAppData = process.env.LOCALAPPDATA || path.join(home, 'AppData', 'Local');
+    baseDir = path.join(localAppData, 'wave-flex-integrator', 'logs');
   } else if (platform === 'darwin') {
-    // macOS standard: Application Support
-    baseDir = path.join(home, 'Library', 'Application Support');
+    // macOS: ~/Library/Logs/wave-flex-integrator/
+    baseDir = path.join(home, 'Library', 'Logs', 'wave-flex-integrator');
   } else {
-    // Linux/Unix standard: .config
-    baseDir = process.env.XDG_CONFIG_HOME || path.join(home, '.config');
+    // Linux: ~/.cache/wave-flex-integrator/logs/
+    const cacheHome = process.env.XDG_CACHE_HOME || path.join(home, '.cache');
+    baseDir = path.join(cacheHome, 'wave-flex-integrator', 'logs');
   }
 
-  // Combine the base directory with the app-specific folder and file name
-  return path.join(baseDir, 'wave-flex-integrator', 'logs', 'debug.log');
+  cachedLogPath = path.join(baseDir, 'debug.log');
+  return cachedLogPath;
 }
 
-const debugLogPath = getDebugLogPath();
+module.exports = { getDebugLogPath };
 
 if (isDebug) {
   // Ensure the directory exists

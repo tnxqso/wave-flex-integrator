@@ -483,13 +483,13 @@ Use the application until the problem occurs to ensure relevant information is l
 - **Linux**:
 
   ```
-  ~/.config/wave-flex-integrator/logs/debug.log
+  ~/.cache/wave-flex-integrator/logs/debug.log
   ```
 
 - **macOS**:
 
   ```
-  ~/Library/Application Support/wave-flex-integrator/logs/debug.log
+  ~/Library/Logs/wave-flex-integrator/debug.log
   ```
 
 ### Send the `debug.log` File
