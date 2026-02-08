@@ -18,6 +18,7 @@ class WavelogWsServer extends EventEmitter {
     this.clients = new Set();
     this.heartbeatInterval = null; // Heartbeat timer
     this.disconnectTimer = null;   // Debounce timer for disconnects
+    this.nextClientId = 1;         // Counter for generating unique debugging IDs
   }
 
   /**
@@ -73,7 +74,7 @@ class WavelogWsServer extends EventEmitter {
     this.heartbeatInterval = setInterval(() => {
       this.clients.forEach((ws) => {
         if (ws.isAlive === false) {
-          this.logger.info('Terminating inactive/zombie WebSocket client.');
+          this.logger.info(`Terminating inactive/zombie WebSocket client [ID #${ws.id}].`);
           ws.terminate();
           this.clients.delete(ws); // Force remove immediately
           
@@ -93,6 +94,9 @@ class WavelogWsServer extends EventEmitter {
    */
   _setupServerLogic(serverInstance, label) {
     serverInstance.on('connection', (ws) => {
+      // Assign a unique ID for debugging purposes
+      ws.id = this.nextClientId++;
+
       // CLEAR TIMER: If we get a connection, we are LIVE. Cancel any pending disconnect.
       if (this.disconnectTimer) {
         clearTimeout(this.disconnectTimer);
@@ -106,7 +110,7 @@ class WavelogWsServer extends EventEmitter {
 
       this.clients.add(ws);
       ws.isAlive = true; // Mark as alive initially
-      this.logger.info(`Wavelog client connected via ${label}. Total clients: ${this.clients.size}`);
+      this.logger.info(`Wavelog client [ID #${ws.id}] connected via ${label}. Total clients: ${this.clients.size}`);
 
       // Trigger status refresh so the UI turns green immediately
       this.emit('client-connected');
@@ -117,12 +121,14 @@ class WavelogWsServer extends EventEmitter {
       });
 
       ws.on('message', (data) => {
-        this.logger.info(`WS INCOMING RAW: ${data.toString()}`);
+        // --- DEBUG: Log with Client ID ---
+        this.logger.info(`[Client #${ws.id}] WS INCOMING RAW: ${data.toString()}`);
+        
         try {
           const message = JSON.parse(data);
           // Handle metadata broadcast from our Wavelog PR
           if (message.type === 'lookup_result') {
-            this.logger.debug(`Received callsign lookup from Wavelog: ${message.payload.callsign}`);
+            this.logger.debug(`Received callsign lookup from Wavelog [Client #${ws.id}]: ${message.payload.callsign}`);
             this.emit('lookup', message.payload);
           }
         } catch (e) {
@@ -132,7 +138,7 @@ class WavelogWsServer extends EventEmitter {
 
       ws.on('close', () => {
         this.clients.delete(ws);
-        this.logger.info(`Wavelog client disconnected from ${label}. Remaining clients: ${this.clients.size}`);
+        this.logger.info(`Wavelog client [ID #${ws.id}] disconnected from ${label}. Remaining clients: ${this.clients.size}`);
         
         if (this.clients.size === 0) {
             this._scheduleDisconnectEvent();
@@ -140,7 +146,7 @@ class WavelogWsServer extends EventEmitter {
       });
 
       ws.on('error', (err) => {
-        this.logger.error(`WebSocket Client Error (${label}): ${err.message}`);
+        this.logger.error(`WebSocket Client Error ([ID #${ws.id}] ${label}): ${err.message}`);
         this.clients.delete(ws); // Ensure we clean up on error too
       });
 
