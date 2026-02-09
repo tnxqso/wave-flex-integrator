@@ -185,8 +185,8 @@ async function performLookup(callsign) {
             updateUI(result);
         } else {
             if(callDisplay) {
-                callDisplay.style.color = "#dc3545"; 
-                setTimeout(() => callDisplay.style.color = "#0dcaf0", 2000);
+                callDisplay.style.color = "var(--bs-danger)"; 
+                setTimeout(() => callDisplay.style.color = "var(--bs-primary)", 2000);
             }
         }
     } catch (err) {
@@ -199,7 +199,7 @@ function updateUI(data) {
     
     if(callDisplay) {
         callDisplay.innerText = currentCallsign || '---';
-        callDisplay.style.color = "#0dcaf0"; 
+        callDisplay.style.color = "var(--bs-primary)";
     }
     
     currentBearingSP = data.bearing; 
@@ -415,7 +415,7 @@ function resetUI() {
     
     if(callDisplay) {
         callDisplay.innerText = "WAITING...";
-        callDisplay.style.color = "#6c757d";
+        callDisplay.style.color = "var(--bs-secondary-color)";
     }
     
     if(spotDxClusterBtn) spotDxClusterBtn.disabled = true;
