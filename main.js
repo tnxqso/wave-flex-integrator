@@ -691,6 +691,19 @@ app.on('ready', () => {
             return { success: false, error: 'FlexRadio client not initialized' };
           });
 
+          // Listen for fatal errors (like Port busy)
+          httpCatListener.on('error', (err) => {
+              if (err.code === 'EADDRINUSE') {
+                  const port = config.catListener?.port || 54321;
+                  dialog.showErrorBox(
+                      'Port Conflict Detected',
+                      `Unable to start the CAT Listener on port ${port}.\n\n` +
+                      `Another application (like WaveLogGate) is likely already using this port.\n\n` +
+                      `Please close conflicting applications or change the port in Settings.`
+                  );
+              }
+          });
+
           httpCatListener.start(certs);
 
           // 2. Initialize Wavelog WebSocket Server (Live Frequency/Metadata broadcast)

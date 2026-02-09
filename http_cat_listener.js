@@ -3,18 +3,21 @@
 
 const http = require('http');
 const httpolyglot = require('httpolyglot');
+const EventEmitter = require('events');
 
 /**
  * Listener for incoming QSY (Tuning) commands from Wavelog.
  * Uses httpolyglot to support both HTTP and HTTPS on port 54321.
+ * Extends EventEmitter to report startup errors (e.g. Port Busy) to the main process.
  */
-class HttpCatListener {
+class HttpCatListener extends EventEmitter {
   /**
    * Creates an instance of HttpCatListener.
    * @param {object} config - Configuration object.
    * @param {object} logger - Logger instance.
    */
   constructor(config, logger) {
+    super(); // Initialize EventEmitter
     this.config = config;
     this.logger = logger;
     this.server = null;
@@ -151,8 +154,11 @@ class HttpCatListener {
       this.server.on('error', (err) => {
           if (err.code === 'EADDRINUSE') {
               this.logger.error(`HTTP CAT Listener Error: Port ${port} is already in use.`);
+              // Emit error to main process for UI alert
+              this.emit('error', err);
           } else {
               this.logger.error(`HTTP CAT Listener Error: ${err.message}`);
+              this.emit('error', err);
           }
       });
 
@@ -162,6 +168,7 @@ class HttpCatListener {
       });
     } catch (e) {
         this.logger.error(`Failed to start HTTP CAT Listener: ${e.message}`);
+        this.emit('error', e);
     }
   }
 
