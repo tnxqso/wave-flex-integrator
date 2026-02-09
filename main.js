@@ -1355,6 +1355,14 @@ ipcMain.handle('open-qso-assistant', () => {
   createQSOWindow();
 });
 
+/**
+ * Returns the current connection status of the FlexRadio.
+ * Used by QSO Assistant to enable/disable buttons.
+ */
+ipcMain.handle('get-radio-status', () => {
+  return flexRadioClient && flexRadioClient.isConnected();
+});
+
 ipcMain.handle('lookup-callsign', async (event, callsign) => {
   logger.info(`Performing lookup for: ${callsign}`);
   
