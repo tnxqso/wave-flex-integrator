@@ -775,14 +775,21 @@ app.on('ready', () => {
         // Start main application logic
         main();
 
-        // Update UI status after startup delay
-        setTimeout(async () => {
+          // Update UI status after startup delay
+          setTimeout(async () => {
+          // Check WSJT
           if (config.wsjt.enabled) {
             uiManager.updateWSJTStatus('WSJTEnabled');
           } else {
             uiManager.updateWSJTStatus('WSJTDisabled');
           }
 
+          // Check DX Cluster (Force UI update if disabled)
+          if (!config.dxCluster?.enabled) {
+             uiManager.updateDXClusterStatus('dxClusterDisabled');
+          }
+
+          // Check Wavelog Profile
           if (stationCallsign) {
             uiManager.updateWavelogStatus('WavelogResponsive', await (wavelogClient.getStationProfileName()));
           }
@@ -1150,8 +1157,10 @@ function main() {
       } else {
         if (!config.dxCluster?.enabled) {
             logger.info('DX Cluster is disabled in configuration. Skipping connection.');
+            uiManager.updateDXClusterStatus('dxClusterDisabled');
         } else {
             logger.info('DX Cluster configuration is incomplete. Skipping connection.');
+            // Optional: You could send a specific error status here too if desired
         }
       }
 
