@@ -131,7 +131,7 @@ function updateConnectionBadge(status) {
 /**
  * Function to populate form with config values
  */
-function populateForm(config) {
+function populateForm(config, isPackaged = true) {
   // Early validation for the config object
   if (!config) {
     showAlert('Configuration data is missing.', 'danger');
@@ -142,9 +142,18 @@ function populateForm(config) {
   // IMPORTANT: Must be defined before using it for Tray settings
   const appConfig = config.application || {};
 
-// Tray & Startup Settings
-  const startLoginCheck = document.getElementById('appStartAtLogin'); // <-- NY
-  if (startLoginCheck) startLoginCheck.checked = appConfig.startAtLogin || false;
+  // Tray & Startup Settings
+  const startLoginCheck = document.getElementById('appStartAtLogin');
+  if (startLoginCheck) {
+      startLoginCheck.checked = appConfig.startAtLogin || false;
+      
+      // Disable this option in Development Mode
+      if (!isPackaged) {
+          startLoginCheck.disabled = true;
+          startLoginCheck.parentElement.title = "Disabled in Development Mode";
+          // Optional: Add a visual indicator via class if needed
+      }
+  }
 
   const minTrayCheck = document.getElementById('appMinimizeToTray');
   if (minTrayCheck) minTrayCheck.checked = appConfig.minimizeToTray || false;
@@ -1195,16 +1204,19 @@ function populateAboutTab() {
 
 // Initialize the form once the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', () => {
-  // Load configuration and populate form
-  ipcRenderer
-    .invoke('get-config')
-    .then((config) => {
-      populateForm(config); // Call to populate form fields
+  // Load configuration AND package status in parallel
+  Promise.all([
+    ipcRenderer.invoke('get-config'),
+    ipcRenderer.invoke('is-packaged')
+  ])
+  .then(([config, isPackaged]) => {
+      populateForm(config, isPackaged); // Call to populate form fields with dev-mode awareness
       setupOpacitySliders(); // Set up event listeners for opacity sliders
-    })
-    .catch(() => {
+  })
+  .catch((err) => {
+      console.error(err);
       showAlert('Error fetching configuration.', 'danger');
-    });
+  });
 
   // Populate About tab
   populateAboutTab();

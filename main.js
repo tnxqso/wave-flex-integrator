@@ -242,25 +242,24 @@ function updateLoginSettings() {
   
   if (!app.isPackaged) {
     // DEVELOPMENT MODE
-    // In dev, process.execPath is the electron binary.
-    // We must pass the project path as an argument so it knows what to run.
+    // We forcefully disable auto-start in development to prevent 
+    // polluting the registry/startup items with the Electron binary.
     app.setLoginItemSettings({
-      openAtLogin: isEnabled,
+      openAtLogin: false, // Force Disabled
       path: process.execPath, 
-      args: [path.resolve(__dirname)] // Points electron.exe to the current folder
+      args: [path.resolve(__dirname)]
     });
+    logger.info('Development Mode: Auto-start registration skipped/cleared to prevent double startup entries.');
   } else {
     // PRODUCTION MODE
     // In prod, process.execPath is the actual WaveFlexIntegrator.exe.
-    // No arguments needed.
     app.setLoginItemSettings({
       openAtLogin: isEnabled,
       path: process.execPath,
       args: [] 
     });
+    logger.info(`Updated Login Item Settings: openAtLogin=${isEnabled}, isPackaged=${app.isPackaged}`);
   }
-  
-  logger.info(`Updated Login Item Settings: openAtLogin=${isEnabled}, isPackaged=${app.isPackaged}`);
 }
 
 /**
@@ -1297,6 +1296,13 @@ ipcMain.handle('update-config', async (event, newConfig) => {
  */
 ipcMain.handle('get-app-version', async (event) => {
   return app.getVersion();
+});
+
+/**
+ * Handles IPC request to check if the app is packaged (Production) or not (Development).
+ */
+ipcMain.handle('is-packaged', () => {
+  return app.isPackaged;
 });
 
 /**
