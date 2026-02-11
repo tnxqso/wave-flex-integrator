@@ -4,7 +4,7 @@
 [![Node.js Version](https://img.shields.io/badge/node.js-12%2B-green.svg)](https://nodejs.org/)
 [![Beta Status](https://img.shields.io/badge/status-beta-orange.svg)](#)
 
-*A seamless bridge between your FlexRadio and Wavelog logging software, integrating DX Cluster data, WSJT-X, QSO Assistant, and synchronizing frequency and mode, all without traditional CAT software.*
+*A seamless bridge between your [FlexRadio](https://www.flexradio.com/) and [Wavelog](https://www.wavelog.org) logging software, integrating DX Cluster data, WSJT-X, QSO Assistant, and synchronizing frequency and mode—all without traditional CAT software.*
 
 ![Wave-Flex Integrator main tab](assets/wave-flex-integrator-main-tab.png)
 
@@ -15,8 +15,9 @@
 ## Table of Contents
 
 - [Introduction](#introduction)
-- [Features](#features)
+- [Key Features](#key-features)
 - [What is Wave-Flex Integrator?](#what-is-wave-flex-integrator)
+- [How it Works (The Event-Driven Advantage)](#how-it-works-the-event-driven-advantage)
 - [What is Wavelog?](#what-is-wavelog)
   - [Try Wavelog Before You Commit](#try-wavelog-before-you-commit)
 - [Requirements](#requirements)
@@ -29,10 +30,13 @@
 - [Auto-Updating](#auto-updating)
 - [Configuration](#configuration)
   - [Configuration Parameters](#configuration-parameters)
-- [Features in Detail](#features-in-detail)
-  - [Wavelog Click-to-Tune (CAT Listener)](#wavelog-click-to-tune-cat-listener)
+  - [Linking Wavelog (Crucial Step for CAT Control)](#linking-wavelog-crucial-step-for-cat-control)
+  - [SSL & HTTPS Support](#ssl--https-support)
+- [Feature Details](#feature-details)
+  - [CAT Listener (QSY Support)](#cat-listener-qsy-support)
   - [QSO Assistant](#qso-assistant)
   - [Profile Manager](#profile-manager)
+  - [WSJT-X Integration](#wsjt-x-integration)
 - [Usage](#usage)
   - [Security Warning on First Startup (Windows and macOS)](#security-warning-on-first-startup-windows-and-macos)
 - [How DXCC Confirmation is Determined](#how-dxcc-confirmation-is-determined)
@@ -50,7 +54,7 @@
 
 ## Introduction
 
-Wave-Flex Integrator simplifies your ham radio setup by directly connecting your **FlexRadio** to the **Wavelog** web-based logging software. It integrates DX Cluster data, enhances spot information, enables "Click-to-Tune" from Wavelog, and provides a powerful QSO Assistant tool, all without the need for traditional CAT software.
+**Wave-Flex Integrator** simplifies your ham radio setup by directly connecting your **FlexRadio** to the **Wavelog** web-based logging software. It integrates DX Cluster data, enhances spot information, enables "Click-to-Tune" from Wavelog, and provides a powerful QSO Assistant tool, all without the need for traditional CAT software.
 
 ![SmartSDR Panadapter with Color-Coded Spots](assets/panadapter.png)
 
@@ -64,13 +68,13 @@ Additionally, the application provides a dedicated **QSO Assistant** window for 
 
 ---
 
-## Features
+## Key Features
 
 - **DX Cluster Integration**: Connects to a DX Cluster to receive real-time spot data.
-- **Wavelog Click-to-Tune**: A local listener allows you to click spots in the Wavelog Bandmap to instantly tune your FlexRadio (replaces WavelogGate/FlRig).
+- **CAT Listener (QSY Support)**: A local listener allows you to click spots in the Wavelog Bandmap to instantly tune your FlexRadio (replaces WavelogGate/FlRig).
 - **QSO Assistant**: A dedicated, compact window for:
-  - Callsign lookups (Wavelog & QRZ.com).
-  - Profile images and Grid maps.
+  - Callsign lookups (Wavelog & [QRZ.com](https://www.qrz.com)).
+  - Profile images and Grid maps (OpenStreetMap).
   - Bearing/Distance calculation (Short & Long Path).
   - Rotator control (via MQTT).
 - **Profile Manager**: View and load your FlexRadio Global Profiles via a simple grid interface, organized by Band and Mode.
@@ -80,7 +84,7 @@ Additionally, the application provides a dedicated **QSO Assistant** window for 
   - Shows if the station is a **LoTW** (Logbook of The World) member.
 - **WSJT-X Integration**:
   - Detects active QSOs and displays details of the current callsign being worked in Wavelog's live logging tab (fully configurable and optional).
-  - Automatically logs completed QSOs from WSJT-X ADIF broadcasts directly into Wavelog (fully configurable and optional).
+  - Automatically logs completed QSOs from [WSJT-X](https://wsjt.sourceforge.io/wsjtx.html) ADIF broadcasts directly into Wavelog (fully configurable and optional).
 - **Color-Coded Spots**:
   - Sends data enriched, color-coded spots to your FlexRadio, visible on your SmartSDR panadapter.
   - Customize colors and transparency based on DXCC status, worked-before status, and LoTW membership.
@@ -99,9 +103,34 @@ Wave-Flex Integrator is a powerful tool designed to enhance your ham radio exper
 
 ---
 
+## How it Works (The Event-Driven Advantage)
+
+Traditional CAT software relies on **Polling** — a legacy method where the software constantly pesters the radio: *"What is your frequency? What is your mode?"*, often dozens of times per second.
+
+On a network-native radio like FlexRadio, this approach is disastrous. It floods your network with redundant traffic, consumes radio CPU cycles, and introduces significant latency—especially when operating remotely via SmartLink. It makes a snappy radio feel sluggish.
+
+**Let’s be honest: Why invest in a state-of-the-art SDR only to communicate with it using Stone Age protocols from the 1980s?**
+
+Wave-Flex Integrator respects the hardware. Instead of asking, it **listens**. It establishes a direct TCP stream with the radio API. When you spin the VFO on your Maestro, the radio *pushes* that event instantly to the application. The result is zero unnecessary network traffic, zero polling lag, and immediate synchronization.
+
+### The Hybrid Connection
+To integrate this modern speed with Wavelog's web interface, the application runs two local servers that work in tandem:
+
+1.  **CAT Listener (HTTP Port 54321):**
+    *   **Direction:** Wavelog Browser → Wave-Flex Integrator.
+    *   **Purpose:** **Control.** When you click a spot in Wavelog's DX Cluster, Wavelog sends a command to this port to tune your FlexRadio.
+2.  **Live Integration (WebSocket Port 54322):**
+    *   **Direction:** Wave-Flex Integrator → Wavelog Browser.
+    *   **Purpose:** **Display.** As soon as your radio changes frequency (via VFO or software), the application pushes this data instantly to the Wavelog browser tab via a WebSocket. This is much faster than the standard API "heartbeat" (Polling).
+
+**Why this matters:**
+For the **CAT Control** (clicking spots) to work, Wavelog needs to know where to send the commands. You must ensure the **Hardware Interface** in Wavelog points to the CAT Listener port.
+
+---
+
 ## What is Wavelog?
 
-**Wavelog** is a free, web-based logging software for ham radio enthusiasts. Feature-rich and easy to set up, Wavelog can be hosted on your own server at no cost, or you can opt for affordable hosting services.
+[**Wavelog**](https://www.wavelog.org) is a free, web-based logging software for ham radio enthusiasts. Feature-rich and easy to set up, Wavelog can be hosted on your own server at no cost, or you can opt for affordable hosting services.
 
 - **Install on Your Own Server**: Full control over your logging software with free setup.
 - **Hosted Solutions**: Affordable services that handle server administration and updates.
@@ -225,6 +254,7 @@ Upon first startup, no services gets connected. This is normal. Configure the ap
 
 #### DX Cluster Settings
 
+- **Enabled**: Master switch to enable/disable DX Cluster connection.
 - **Host**: The hostname or IP address of the DX Cluster server.
 - **Port**: The port number for the server connection (typically 7300 or 7373).
 - **Callsign**: Your amateur radio callsign (for logging in to DX Cluster only).
@@ -267,24 +297,45 @@ Upon first startup, no services gets connected. This is normal. Configure the ap
 
 > **Note:** Both **Show ongoing WSJT-X QSO in Wavelog live logging** and **Log WSJT-X QSO in Wavelog** options only take effect if WSJT-X integration (`WSJT-X integration Enabled`) is set to `true`. If WSJT-X integration is disabled, these features will not function, even if individually enabled.
 
+### Linking Wavelog (Crucial Step for CAT Control)
+
+When Wave-Flex Integrator connects to Wavelog, it registers the radio automatically. However, to enable the **CAT Control** features (clicking a spot in Wavelog to tune the radio), you might want to verify the Hardware Interface URL.
+
+1.  Log in to **Wavelog**.
+2.  Go to **Settings** -> **Hardware Interfaces** -> **Radios**.
+3.  Look for a radio named **`wave-flex-integrator`**.
+4.  Edit the radio and ensure the following settings are correct:
+    *   **CAT URL:** Set this **EXACTLY** to:
+        ```
+        http://127.0.0.1:54321
+        ```
+        *(If Wave-Flex Integrator is running on a different computer, replace 127.0.0.1 with that computer's IP address).*
+5.  Save changes.
+
+### SSL & HTTPS Support
+
+If your Wavelog is hosted on **HTTPS** (e.g., `https://mylog.com`), your browser might block connections to Wave-Flex Integrator (Localhost) due to "Mixed Content" security policies.
+
+*   **The Fix:** Wave-Flex Integrator includes a built-in Certificate Manager.
+*   Go to **Configuration** -> **HTTPS & Security**.
+*   Click **"Install Local Certificate"**.
+*   Restart your browser. Wave-Flex Integrator will now serve secure WebSockets (WSS) on port `54323`, allowing seamless connection with secure Wavelog sites.
+
 ---
 
-## Features in Detail
+## Feature Details
 
-### Wavelog Click-to-Tune (CAT Listener)
+### CAT Listener (QSY Support)
 
-This feature allows you to click spots in the Wavelog Bandmap or Cluster list to instantly tune your FlexRadio, replacing the need for external tools like WavelogGate or FlRig.
+This feature enables Wavelog to send QSY (Frequency Change) commands to your FlexRadio when you click on a spot in the DX Cluster or Bandmap. It effectively replaces external bridges like WavelogGate or FlRig.
 
-1.  **Enable the Listener**: In Wave-Flex Integrator, go to **Configuration** -> **Wavelog Click-to-Tune** and check "Enable Local Callback Listener".
-2.  **Configure Wavelog Hardware**:
-    *   In Wavelog, go to **Settings** -> **Hardware Interfaces**.
-    *   Create or Edit your Radio.
-    *   Set **Radio Interface** to: `http://127.0.0.1:54321` (assuming you used the default port).
-3.  **Activate in QSO Panel (Crucial Step!)**:
-    *   Go to the **DX Cluster / QSO Panel** in Wavelog.
-    *   Locate the **"CAT Connection"** button (usually near the top left of the cluster list).
+1.  **Enable the Listener**: In Wave-Flex Integrator, go to **Configuration** -> **Local Listeners** and check "Enable Callback URL Listener".
+2.  **Verify Wavelog**: Ensure the Hardware Interface URL in Wavelog matches the port shown in the application (Default: `54321`).
+3.  **Activate in Wavelog**:
+    *   Open the **DX Cluster** view in Wavelog.
+    *   Locate the **"CAT Connection"** button (usually top left).
     *   **Click it so it turns GREEN.**
-    *   *If this button is not green, Wavelog will not attempt to send tuning commands.*
+    *   *Note: If this button is red/off, Wavelog will not attempt to tune the radio when you click a spot.* Wavelog does not save this setting. You must enable this button every time you open or refresh the DX Cluster page.
 
 ### QSO Assistant
 
@@ -377,12 +428,6 @@ Examples that work:
 
 ---
 
-#### Why many operators keep Global Profiles per band and mode
-
-This is common with Flex/SmartSDR because Profiles help you return to a known-good setup instantly, and **what you want differs by band and by mode**. If you operate multiple modes across many bands, profiles reduce mistakes and speed up band/mode changes.
-
----
-
 ## Usage
 
 Start the application by launching it from the Start Menu (Windows), the Applications menu (Linux), or by opening the **Applications** folder and double-clicking on **Wave-Flex Integrator** (macOS). On macOS you can also use **Spotlight** by pressing `Command + Space`, typing "Wave-Flex Integrator," and pressing `Enter` to launch the app.
@@ -416,9 +461,6 @@ To run the app:
 
 This step is necessary because the app hasn't yet been signed with an Apple Developer certificate. We recommend doing this only for trusted applications like Wave-Flex Integrator.
 
-#### Build the Application from Source
-For users who prefer to build the application themselves, the full source code is available on the [GitHub repository](https://github.com/tnxqso/wave-flex-integrator). While we don't provide specific build instructions, users with the necessary experience can compile the application independently, giving them full control over the build process.
-
 ---
 
 ## How DXCC Confirmation is Determined
@@ -438,6 +480,13 @@ If you encounter issues, follow these steps to help diagnose and resolve them ef
 ### Check that Wavelog can be reached on the About tab
 
 On the About tab, below the title **Wavelog Station Location** you should be able to see the `Station ID`, `Station Name`, `Station Grid Square` and `Station Callsign` fetched from the configured Wavelog server's `Active Station` in `Station Setup`. If there is no information you should check that your Wavelog server is up and running and that your configuration is correct. If you change the `Active Station` in Wavelog, you will need to restart the application to fetch the new values. The values you see here will be used by the application in various places.
+
+### Radio does not tune when clicking spots (CAT Failure)
+If the application is running but the radio doesn't react when you click a spot in Wavelog:
+
+1.  **Check the "CAT Connection" Button:** Inside the Wavelog DX Cluster view, ensure the **CAT Connection** button is **GREEN**. If it is red, Wavelog is not sending any commands.
+2.  **Verify the URL:** Go to **Hardware Interfaces** in Wavelog. If the URL is empty or incorrect, Wavelog doesn't know where to send the command. It must match your local listener (Default: `http://127.0.0.1:54321`).
+3.  **Check Port Conflicts:** Ensure no other software (like **WaveLogGate**) is running and blocking port **54321**. Wave-Flex Integrator will usually warn you on startup if this port is busy.
 
 ### Ensure No Other Applications Are Creating Spots on the SmartSDR panadapter
 
@@ -460,7 +509,6 @@ Run the application with debug logging:
   ```
 
 - **macOS**: Run from terminal with the -- -- --debug flag:
-
 
   ```bash
   /Applications/WaveFlexIntegrator.app/Contents/MacOS/WaveFlexIntegrator -- -- --debug
