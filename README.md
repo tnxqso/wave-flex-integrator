@@ -111,7 +111,7 @@ On a network-native radio like FlexRadio, this approach is disastrous. It floods
 
 **Let’s be honest: Why invest in a state-of-the-art SDR only to communicate with it using Stone Age protocols from the 1980s?**
 
-Wave-Flex Integrator respects the hardware. Instead of asking, it **listens**. It establishes a direct TCP stream with the radio API. When you spin the VFO on your Maestro, the radio *pushes* that event instantly to the application. The result is zero unnecessary network traffic, zero polling lag, and immediate synchronization.
+Wave-Flex Integrator respects the hardware. Instead of asking, it **listens**. It establishes a direct TCP stream with the radio API. When you spin the VFO on your Maestro or changing the frequency or mode using SmartSDR, the radio *pushes* that event instantly to the application. The result is zero unnecessary network traffic, zero polling lag, and immediate synchronization.
 
 ### The Hybrid Connection
 To integrate this modern speed with Wavelog's web interface, the application runs two local servers that work in tandem:
