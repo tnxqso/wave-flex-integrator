@@ -4,7 +4,7 @@
 [![Node.js Version](https://img.shields.io/badge/node.js-12%2B-green.svg)](https://nodejs.org/)
 [![Beta Status](https://img.shields.io/badge/status-beta-orange.svg)](#)
 
-*A seamless bridge between your [FlexRadio](https://www.flexradio.com/) and [Wavelog](https://www.wavelog.org) logging software, integrating DX Cluster data, WSJT-X, QSO Assistant, and synchronizing frequency and mode—all without traditional CAT software.*
+*A seamless bridge between your [FlexRadio](https://www.flexradio.com/) and [Wavelog](https://www.wavelog.org) logging software, integrating DX Cluster data, WSJT-X, QSO Assistant, and synchronizing frequency and mode, all without traditional CAT software.*
 
 ![Wave-Flex Integrator main tab](assets/wave-flex-integrator-main-tab.png)
 
@@ -105,9 +105,9 @@ Wave-Flex Integrator is a powerful tool designed to enhance your ham radio exper
 
 ## How it Works (The Event-Driven Advantage)
 
-Traditional CAT software relies on **Polling** — a legacy method where the software constantly pesters the radio: *"What is your frequency? What is your mode?"*, often dozens of times per second.
+Traditional CAT software relies on **Polling** - a legacy method where the software constantly pesters the radio: *"What is your frequency? What is your mode?"*, often dozens of times per second.
 
-On a network-native radio like FlexRadio, this approach is disastrous. It floods your network with redundant traffic, consumes radio CPU cycles, and introduces significant latency—especially when operating remotely via SmartLink. It makes a snappy radio feel sluggish.
+On a network-native radio like FlexRadio, this approach is disastrous. It floods your network with redundant traffic, consumes radio CPU cycles, and introduces significant latency, especially when operating remotely via SmartLink. It makes a snappy radio feel sluggish.
 
 **Let’s be honest: Why invest in a state-of-the-art SDR only to communicate with it using Stone Age protocols from the 1980s?**
 
@@ -226,7 +226,7 @@ Wave-Flex Integrator binaries for macOS are available on the [GitHub Releases](h
 
 ## Auto-Updating
 
-Wave-Flex Integrator includes an auto-update feature that automatically downloads and installs new versions as they become available. Simply restart the application to apply updates—no manual intervention is required.
+Wave-Flex Integrator includes an auto-update feature that automatically downloads and installs new versions as they become available. Simply restart the application to apply updates, no manual intervention is required.
 
 ---
 
