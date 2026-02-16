@@ -1519,19 +1519,55 @@ if (openQSOBtn) {
  * Listener for frequency and mode updates from the radio for the Status Bar.
  */
 ipcRenderer.on('slice-status-update', (event, slice) => {
-  if (slice) {
-    // Update Frequency (with 3 decimals) and Mode
-    const freqEl = document.getElementById('sb-radio-freq');
-    const modeEl = document.getElementById('sb-radio-mode');
-    
-    if (freqEl) freqEl.textContent = (slice.frequency).toFixed(3) + ' MHz';
-    if (modeEl) modeEl.textContent = slice.mode;
-    
-    // Update model name if available in the slice data
-    const modelEl = document.getElementById('sb-radio-model');
-    if (modelEl && slice.station) {
-        modelEl.textContent = slice.station;
-    }
+  const txContainer = document.getElementById('sb-tx-container');
+  const txBadge = document.getElementById('sb-tx-badge');
+  const freqEl = document.getElementById('sb-radio-freq');
+  const modeEl = document.getElementById('sb-radio-mode');
+  const modelEl = document.getElementById('sb-radio-model');
+
+  // Handle Disconnected State or Empty Data
+  if (!slice) return;
+
+  // Handle "No Active TX Slice" Warning
+  if (slice.noTx) {
+      if (txContainer && txBadge) {
+          txContainer.classList.remove('d-none');
+          // Restore the "Badge/Pill" look for warnings
+          txBadge.className = 'badge rounded-pill blink-orange'; 
+          txBadge.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> NO TX'; 
+          txBadge.title = "No Active TX Slice found on Radio";
+      }
+      
+      // Clear frequency and mode to avoid confusion with stale data
+      if (freqEl) {
+          freqEl.textContent = '---.---';
+          freqEl.style.opacity = '0.5';
+      }
+      if (modeEl) {
+          modeEl.textContent = '---';
+      }
+      return;
+  }
+
+  // Handle Normal Active State (Slice A, B etc)
+  if (txContainer && txBadge) {
+      txContainer.classList.remove('d-none');
+      // Use text-only style for the letter (No badge class)
+      txBadge.className = 'sb-tx-letter'; 
+      txBadge.textContent = slice.index_letter || 'TX'; 
+      txBadge.title = `Active Transmit Slice: ${slice.index_letter}`;
+  }
+
+  if (freqEl) {
+      freqEl.style.opacity = '1.0';
+      freqEl.textContent = (slice.frequency).toFixed(3) + ' MHz';
+  }
+  
+  if (modeEl) modeEl.textContent = slice.mode;
+  
+  // Update model name if available in the slice data
+  if (modelEl && slice.station) {
+      modelEl.textContent = slice.station;
   }
 });
 

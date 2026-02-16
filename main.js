@@ -751,6 +751,30 @@ app.on('ready', () => {
           // Connect FlexRadio events to Wavelog outputs
           if (flexRadioClient) {
             flexRadioClient.on('sliceStatus', (slice) => {
+              
+              // 1. Check Global TX Status
+              // We check the internal array maintained by FlexRadioClient.
+              const activeTxSlices = flexRadioClient.activeTXSlices || [];
+              
+              if (activeTxSlices.length === 0) {
+                  // Scenario: User turned off TX on all slices.
+                  // Action: Send warning to UI, do NOT update Wavelog API (keep last known).
+                  if (mainWindow) {
+                      mainWindow.webContents.send('slice-status-update', { 
+                          noTx: true, // Flag to tell UI to warn
+                          frequency: 0, 
+                          mode: '' 
+                      });
+                  }
+                  return; 
+              }
+
+              // 2. Filter: Ignore Non-TX Slices
+              // If we have active TX slices, we ONLY want to process the one that is transmitting.
+              // This prevents 'sub slice all' from overwriting the log with a listener frequency.
+              if (!slice.tx) {
+                return;
+              }
 
               // 1. WebSocket Broadcast (Immediate GUI Update)
               if (wavelogWsServer) {

@@ -207,3 +207,35 @@ body {
   .sb-label, .sb-text-sub { display: none; }
   .sb-section.gap-3 { gap: 10px !important; }
 }
+
+/* Animation for missing TX slice */
+@keyframes blink-warning {
+  0% { opacity: 1; }
+  50% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+
+/* Warning State - The "Badge" look (Orange Background) */
+.blink-orange {
+  animation: blink-warning 1s infinite;
+  background-color: #fd7e14 !important; /* Bootstrap orange-500 */
+  color: #000 !important; /* Black text for high contrast */
+  font-weight: bold;
+  font-size: 11px;
+  /* Space adjustments */
+  padding: 5px 10px !important; /* More internal breathing room */
+  margin-right: 12px; /* More space between badge and frequency */
+  margin-left: 4px;   /* Slight separation from the divider */
+}
+
+/* Active State - Large Green Letter (No Background) */
+.sb-tx-letter {
+  color: #28a745 !important; /* Bright Green */
+  font-weight: 900 !important; /* Extra Bold */
+  font-size: 24px !important; /* Big text */
+  line-height: 1;
+  margin-right: 10px; /* Space between Letter and Frequency */
+  margin-left: 2px;
+  text-shadow: 0px 0px 8px rgba(40, 167, 69, 0.4); /* Subtle green glow */
+  vertical-align: middle;
+}
