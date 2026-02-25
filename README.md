@@ -18,8 +18,9 @@
 - [Key Features](#key-features)
 - [What is Wave-Flex Integrator?](#what-is-wave-flex-integrator)
 - [How it Works (The Event-Driven Advantage)](#how-it-works-the-event-driven-advantage)
+  - [The Tri-Channel Architecture (How WFI talks to Wavelog)](#the-tri-channel-architecture-how-wfi-talks-to-wavelog)
 - [What is Wavelog?](#what-is-wavelog)
-  - [Try Wavelog Before You Commit](#try-wavelog-before-you-commit)
+  -[Try Wavelog Before You Commit](#try-wavelog-before-you-commit)
 - [Requirements](#requirements)
   - [FlexRadio Compatibility](#flexradio-compatibility)
   - [SmartSDR Versions and Compatibility](#smartsdr-versions-and-compatibility)
@@ -29,25 +30,28 @@
   - [macOS Installation](#macos-installation)
 - [Auto-Updating](#auto-updating)
 - [Configuration](#configuration)
-  - [Configuration Parameters](#configuration-parameters)
+  -[Configuration Parameters](#configuration-parameters)
   - [Linking Wavelog (Crucial Step for CAT Control)](#linking-wavelog-crucial-step-for-cat-control)
-  - [SSL & HTTPS Support](#ssl--https-support)
+  -[SSL & HTTPS Support](#ssl--https-support)
 - [Feature Details](#feature-details)
-  - [CAT Listener (QSY Support)](#cat-listener-qsy-support)
+  -[CAT Listener (QSY Support)](#cat-listener-qsy-support)
   - [QSO Assistant](#qso-assistant)
   - [Profile Manager](#profile-manager)
   - [WSJT-X Integration](#wsjt-x-integration)
 - [Usage](#usage)
   - [Security Warning on First Startup (Windows and macOS)](#security-warning-on-first-startup-windows-and-macos)
-- [How DXCC Confirmation is Determined](#how-dxcc-confirmation-is-determined)
+-[How DXCC Confirmation is Determined](#how-dxcc-confirmation-is-determined)
 - [Debugging and Troubleshooting](#debugging-and-troubleshooting)
+  - [Check that Wavelog can be reached on the About tab](#check-that-wavelog-can-be-reached-on-the-about-tab)
+  -[Radio does not tune when clicking spots (CAT Failure)](#radio-does-not-tune-when-clicking-spots-cat-failure)
+  - [Ensure No Other Applications Are Creating Spots on the SmartSDR panadapter](#ensure-no-other-applications-are-creating-spots-on-the-smartsdr-panadapter)
   - [Enable Debug Mode](#enable-debug-mode)
   - [Reproduce the Issue](#reproduce-the-issue)
-  - [Locate the `debug.log` File](#locate-the-debuglog-file)
-  - [Send the `debug.log` File](#send-the-debuglog-file)
+  - [Locate the debug.log File](#locate-the-debuglog-file)
+  - [Send the debug.log File](#send-the-debuglog-file)
   - [Additional Troubleshooting Tips](#additional-troubleshooting-tips)
 - [Contributing](#contributing)
-- [License](#license)
+-[License](#license)
 - [Acknowledgments](#acknowledgments)
 
 ---
@@ -113,15 +117,27 @@ On a network-native radio like FlexRadio, this approach is disastrous. It floods
 
 Wave-Flex Integrator respects the hardware. Instead of asking, it **listens**. It establishes a direct TCP stream with the radio API. When you spin the VFO on your Maestro or changing the frequency or mode using SmartSDR, the radio *pushes* that event instantly to the application. The result is zero unnecessary network traffic, zero polling lag, and immediate synchronization.
 
-### The Hybrid Connection
-To integrate this modern speed with Wavelog's web interface, the application runs two local servers that work in tandem:
+### The Tri-Channel Architecture (How WFI talks to Wavelog)
 
-1.  **CAT Listener (HTTP Port 54321):**
-    *   **Direction:** Wavelog Browser → Wave-Flex Integrator.
-    *   **Purpose:** **Control.** When you click a spot in Wavelog's DX Cluster, Wavelog sends a command to this port to tune your FlexRadio.
-2.  **Live Integration (WebSocket Port 54322):**
-    *   **Direction:** Wave-Flex Integrator → Wavelog Browser.
-    *   **Purpose:** **Display.** As soon as your radio changes frequency (via VFO or software), the application pushes this data instantly to the Wavelog browser tab via a WebSocket. This is much faster than the standard API "heartbeat" (Polling).
+To fully integrate with Wavelog's ecosystem, Wave-Flex Integrator acts as a universal translator, maintaining three distinct communication channels simultaneously. This is required because Wavelog separates its database, user interface, and hardware control into different protocols.
+
+#### 1. The REST API (To SAVE & SYNC)
+- **Direction:** Wave-Flex Integrator ➔ Wavelog Server (Database)
+- **What it does:** This is the connection that updates the Wavelog server's "memory".
+- **Why it's needed:** Without this connection, the server doesn't know what frequency your radio is actually tuned to. Even if your screen shows the correct frequency (thanks to the WebSocket), the server itself must "know" the frequency to accurately log the QSO into the database when you hit save. The API ensures that the server's reality perfectly matches the radio's reality.
+
+#### 2. The WebSocket (To DISPLAY)
+- **Direction:** Wave-Flex Integrator ➔ Your Web Browser (Screen)
+- **What it does:** This is a high-speed "live stream" directly from your computer to your monitor.
+- **Why it's needed:** The API (above) is too slow to keep up in real-time. To make the frequency numbers on your screen update smoothly and instantly without lag when you spin the VFO, this technology is required. It updates your *eyes*, but it does *not* save anything to the database.
+
+#### 3. The HTTP CAT Listener (To CONTROL)
+- **Direction:** Your Web Browser ➔ Wave-Flex Integrator ➔ FlexRadio
+- **What it does:** It listens for commands from the Wavelog webpage to tune your radio. This is the channel working when you click a spot in the DX Cluster to change frequencies ("Click-to-Tune").
+- **Why it's needed:** Wavelog's web interface is programmed to send a simple local web request (HTTP) when you click a spot. Wavelog cannot currently send tuning commands via the WebSocket. If the Integrator didn't listen on this channel (default port `54321`), clicking spots in the bandmap simply wouldn't work.
+
+**Summary:**
+If we only used a WebSocket, you would get a fast display on your screen, but you would lose the ability to click on spots, and there would be a high risk of the logbook losing track of what your Maestro or SmartSDR client is doing. Wave-Flex Integrator simply adapts to how Wavelog is built.
 
 **Why this matters:**
 For the **CAT Control** (clicking spots) to work, Wavelog needs to know where to send the commands. You must ensure the **Hardware Interface** in Wavelog points to the CAT Listener port.
