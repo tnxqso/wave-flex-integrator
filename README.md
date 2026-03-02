@@ -48,7 +48,7 @@
   - [Enable Debug Mode](#enable-debug-mode)
   - [Reproduce the Issue](#reproduce-the-issue)
   - [Locate the debug.log File](#locate-the-debuglog-file)
-  - [Send the debug.log File](#send-the-debuglog-file)
+  - [Report an Issue](#report-an-issue)
   - [Additional Troubleshooting Tips](#additional-troubleshooting-tips)
 - [Contributing](#contributing)
 -[License](#license)
@@ -556,16 +556,22 @@ Use the application until the problem occurs to ensure relevant information is l
   ~/Library/Logs/wave-flex-integrator/debug.log
   ```
 
-### Send the `debug.log` File
+### Report an Issue
 
-Email the `debug.log` file to us for analysis:
+If you cannot resolve the problem using the steps above, the best way to get help is to open a Bug Report on our GitHub repository. 
 
-- **Email**: [ankeborg@duck.com](mailto:ankeborg@duck.com)
-- **Subject**: Wave-Flex Integrator Debug Log
-- **Attach**: The `debug.log` file
-- **Include**: A brief description of the issue
+**Why use GitHub Issues?**
+- **Community Visibility:** Other users might have the same problem and can "chime in" with their own observations or find a workaround.
+- **Pattern Recognition:** It helps us see if a bug affects specific operating systems or setups.
+- **Structured Tracking:** It allows us to track the bug from discovery to resolution in upcoming releases.
 
-> **Note:** The `debug.log` file is overwritten each time you start a new debug session.
+**How to report:**
+1. Go to our [GitHub Issues page](https://github.com/tnxqso/wave-flex-integrator/issues).
+2. Click **New Issue** and select **Bug report**.
+3. Fill out the template with as much detail as possible.
+4. **Attach your `debug.log` file** directly to the issue by dragging and dropping the file into the text box.
+
+> **Note:** The `debug.log` file is overwritten each time you start a new debug session. Sensitive information (like passwords, tokens, and API keys) are automatically redacted `[REDACTED]` from the log to protect your privacy.
 
 ### Additional Troubleshooting Tips
 
