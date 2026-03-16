@@ -42,10 +42,10 @@ module.exports = class FlexRadioClient extends EventEmitter {
     this.isDisconnecting = false;
     this.activeTXSlices = null;
     this.lastConnectionWarningTime = 0;
-    
+
     // State filtering and Timer
-    this.pendingQsy = null; 
-    this.qsyTimer = null; 
+    this.pendingQsy = null;
+    this.qsyTimer = null;
 
     this.messageParser = new FlexRadioMessageParser();
     this.wavelogClient = new WavelogClient(this.config, this.logger);
@@ -63,7 +63,7 @@ module.exports = class FlexRadioClient extends EventEmitter {
     this.messageParser.on('globalProfileList', (profiles) => {
         this.logger.info(`Received ${profiles.length} global profiles from radio.`);
         this.emit('globalProfilesList', profiles);
-    });    
+    });
     this.messageParser.on('handle', (data) => {
       this.logger.info(`Received handle: ${data.handle}`);
     });
@@ -221,7 +221,16 @@ module.exports = class FlexRadioClient extends EventEmitter {
     }
 
     slice.statusUpdate(handle, statusMessage);
-    slice.updateStationName(this.handleStationMap); 
+
+    // Extract antenna details from statusMessage safely using Regex
+    const rxantMatch = statusMessage.match(/rxant=([^ \n]+)/);
+    if (rxantMatch) slice.rxant = rxantMatch[1];
+
+    // FlexRadio sometimes outputs txant= and sometimes tx_ant= depending on version/context
+    const txantMatch = statusMessage.match(/txant=([^ \n]+)/) || statusMessage.match(/tx_ant=([^ \n]+)/);
+    if (txantMatch) slice.txant = txantMatch[1];
+
+    slice.updateStationName(this.handleStationMap);
 
     if (sliceAdded) {
       this.flexSlicesByID.set(index, slice);
@@ -229,15 +238,15 @@ module.exports = class FlexRadioClient extends EventEmitter {
     }
 
     // --- PENDING QSY FILTER LOGIC ---
-    // Prevent sending updates to Wavelog if frequency has changed 
+    // Prevent sending updates to Wavelog if frequency has changed
     // but mode hasn't updated yet (intermediate state).
     if (this.pendingQsy) {
         const currentFreqHz = Math.round(slice.frequency * 1e6);
         const targetFreqHz = this.pendingQsy.frequency;
-        
+
         // Compare frequency (allow small epsilon for rounding errors)
-        const freqMatch = Math.abs(currentFreqHz - targetFreqHz) < 50; 
-        
+        const freqMatch = Math.abs(currentFreqHz - targetFreqHz) < 50;
+
         // Compare mode (only if a target mode was set)
         let modeMatch = true;
         if (this.pendingQsy.mode) {
@@ -251,13 +260,13 @@ module.exports = class FlexRadioClient extends EventEmitter {
 
         if (freqMatch && modeMatch) {
             this.logger.info(`QSY Filter: Target reached (${slice.frequency.toFixed(6)} MHz, ${slice.mode}). Sending update.`);
-            
+
             // SUCCESS: Clear the safety timer and the filter
             if (this.qsyTimer) {
                 clearTimeout(this.qsyTimer);
                 this.qsyTimer = null;
             }
-            this.pendingQsy = null; 
+            this.pendingQsy = null;
         }
     }
     // ------------------------------------
@@ -277,15 +286,19 @@ module.exports = class FlexRadioClient extends EventEmitter {
         existingSlice.frequency !== slice.frequency ||
         existingSlice.mode !== slice.mode ||
         existingSlice.xit_on !== slice.xit_on ||
-        existingSlice.xit_freq !== slice.xit_freq
+        existingSlice.xit_freq !== slice.xit_freq ||
+        existingSlice.rxant !== slice.rxant ||
+        existingSlice.txant !== slice.txant
       ) {
         this.logger.info(
-          `Updated Active TX Slice: Slice ${slice.index_letter}, Frequency: ${slice.frequency.toFixed(6)} MHz, Mode: ${slice.mode}, XIT: ${xitAdjustment} Hz`
+          `Updated Active TX Slice: Slice ${slice.index_letter}, Freq: ${slice.frequency.toFixed(6)} MHz, Mode: ${slice.mode}, RX: ${slice.rxant || '-'}, TX: ${slice.txant || '-'}`
         );
         existingSlice.frequency = slice.frequency;
         existingSlice.mode = slice.mode;
         existingSlice.xit_on = slice.xit_on;
         existingSlice.xit_freq = slice.xit_freq;
+        existingSlice.rxant = slice.rxant;
+        existingSlice.txant = slice.txant;
       }
       return Object.assign({}, slice);
     });
@@ -303,7 +316,7 @@ module.exports = class FlexRadioClient extends EventEmitter {
 
     // Update the active TX slices array
     this.activeTXSlices = updatedActiveTXSlices;
-  
+
     // Forward the event so that main.js can intercept it
     this.emit('sliceStatus', slice);
   }
@@ -345,7 +358,7 @@ module.exports = class FlexRadioClient extends EventEmitter {
     // 3. Force the update to Wavelog API
     this.logger.info(`Forced Update: Slice ${sliceLetter}, Frequency: ${targetFreqMHz.toFixed(6)} MHz, Mode: ${targetMode}`);
     this.sendActiveSliceToWavelog(forcedSlice);
-    
+
     // 4. Also emit to main.js so the WebSocket gets the "Official" status
     this.emit('sliceStatus', forcedSlice);
   }
@@ -436,15 +449,15 @@ module.exports = class FlexRadioClient extends EventEmitter {
         this.handleStationMap.set(handle, stationName);
         this.logger.info(`Connected GUI client ${handle} with name ${stationName}`);
       } else {
-        this.logger.warn(`Station name not found in statusMessage: ${statusMessage}`); 
+        this.logger.warn(`Station name not found in statusMessage: ${statusMessage}`);
       }
-    } else if (statusParts[0] == 'disconnected') {  
+    } else if (statusParts[0] == 'disconnected') {
       // Remove the handle from the Map
       this.logger.info(`Station ${this.handleStationMap.get(handle)} disconnected.`);
-      this.handleStationMap.delete(handle);      
+      this.handleStationMap.delete(handle);
     } else {
       this.logger.error(`Unhandled client status: ${statusMessage}`);
-    }  
+    }
   }
 
   /**
@@ -795,6 +808,7 @@ module.exports = class FlexRadioClient extends EventEmitter {
   /**
    * Sets the frequency and mode of the currently active Transmit Slice.
    * Starts a background timer to ensure state synchronization even if the radio is silent.
+   * Includes logic to load Global Profiles or force Antenna Matrix based on config.
    * @param {number} freqHz - Frequency in Hertz.
    * @param {string} mode - Mode string (e.g., 'cw', 'ssb').
    * @returns {object} - { success: boolean, error: string|null }
@@ -823,7 +837,7 @@ module.exports = class FlexRadioClient extends EventEmitter {
     // 2. Prepare target values
     const targetFreqMHzVal = freqHz / 1e6;
     const freqMHzString = targetFreqMHzVal.toFixed(6);
-    
+
     // Normalize requested mode to Flex format
     let flexMode = null;
     if (mode) {
@@ -837,18 +851,48 @@ module.exports = class FlexRadioClient extends EventEmitter {
       }
     }
 
-    // 3. Check what actually needs changing
+    // 3. Check what actually needs changing (Frequency & Mode)
     const currentFreqMHzString = targetSlice.frequency.toFixed(6);
     const needTune = currentFreqMHzString !== freqMHzString;
     const needMode = flexMode && (targetSlice.mode !== flexMode);
 
-    if (!needTune && !needMode) {
-        this.logger.info(`QSY Ignored: Radio already at ${freqMHzString} MHz / ${targetSlice.mode}`);
-        return { success: true, error: null }; // Return success as we are already there
+    // --- NEW: Check Antenna Management & Profiles ---
+    const antMgmt = this.config.flexRadio.antennaManagement || { mode: 'off' };
+    const targetBand = utils.freqToBand(freqHz);
+    const currentBand = utils.freqToBand(targetSlice.frequency * 1e6);
+
+    let needAntennaMatrix = false;
+    let needProfileLoad = false;
+    let rxAntTarget = null;
+    let txAntTarget = null;
+    let profileNameTarget = null;
+
+    if (antMgmt.mode === 'matrix' && targetBand && antMgmt.bands && antMgmt.bands[targetBand]) {
+        rxAntTarget = antMgmt.bands[targetBand].rxant;
+        txAntTarget = antMgmt.bands[targetBand].txant;
+
+        // Trigger antenna command if target antennas differ from the currently active ones on the slice
+        const currentRx = targetSlice.rxant || '';
+        const currentTx = targetSlice.txant || '';
+        if ((rxAntTarget && rxAntTarget !== currentRx) || (txAntTarget && txAntTarget !== currentTx)) {
+            needAntennaMatrix = true;
+        }
+    } else if (antMgmt.mode === 'profiles' && targetBand) {
+        // Only load a profile if we are changing BANDS (prevents extreme relay-wear and delays on same-band spots)
+        if (targetBand !== currentBand) {
+            needProfileLoad = true;
+            const modeForProfile = flexMode || targetSlice.mode;
+            profileNameTarget = `${targetBand.toUpperCase()} ${modeForProfile}`;
+        }
     }
 
-    // --- NEW: Set Target State AND Start Timer ---
-    // Cancel existing timer if one is running
+    // Bail out early if absolutely nothing needs changing
+    if (!needTune && !needMode && !needAntennaMatrix && !needProfileLoad) {
+        this.logger.info(`QSY Ignored: Radio already at ${freqMHzString} MHz / ${targetSlice.mode} with correct antenna/profile.`);
+        return { success: true, error: null };
+    }
+
+    // --- SET TARGET STATE AND START TIMER (Safety Filter) ---
     if (this.qsyTimer) clearTimeout(this.qsyTimer);
 
     this.pendingQsy = {
@@ -861,41 +905,74 @@ module.exports = class FlexRadioClient extends EventEmitter {
     this.qsyTimer = setTimeout(() => {
         this._handleQsyTimeout();
     }, 3000);
-    
+
     this.logger.info(
-      `QSY Request: Slice ${targetSlice.index_letter} -> ${needTune ? freqMHzString + ' MHz' : '(No Freq Change)'}, ${needMode ? flexMode : '(No Mode Change)'}`
+      `QSY Request: Slice ${targetSlice.index_letter} -> ${needTune ? freqMHzString + ' MHz' : '(No Freq)'}, ${needMode ? flexMode : '(No Mode)'}`
     );
 
-    // 4. Send Commands (Sequential / Fire-and-Forget)
+    // 4. Send Commands (Sequential with delays to ensure proper parsing by the radio)
+    let delayMs = 0;
+
+    // A. Load Profile FIRST if needed (takes time for the radio hardware to settle)
+    if (needProfileLoad) {
+        const profileCmd = `profile global load "${profileNameTarget}"`;
+        this.logger.info(`Antenna Management: Loading Global Profile '${profileNameTarget}'`);
+        setTimeout(() => {
+            this.queueCommand(profileCmd, (resp) => {
+                this.logger.debug(`QSY Profile Load Response: ${resp}`);
+            });
+        }, delayMs);
+        delayMs += 1000; // Give the radio 1000ms to switch hardware relays before sending tune/mode
+    }
+
+    // B. Send Antenna Matrix commands
+    if (needAntennaMatrix) {
+        const rxStr = rxAntTarget ? "rxant=" + rxAntTarget : "";
+        const txStr = txAntTarget ? "txant=" + txAntTarget : "";
+        const combinedArgs =[rxStr, txStr].filter(Boolean).join(" ");
+
+        if (combinedArgs.length > 0) {
+            setTimeout(() => {
+                this.queueCommand(`slice set ${targetSlice.index} ${combinedArgs}`, (resp) => {
+                    this.logger.debug(`QSY Antenna Response: ${resp}`);
+                });
+            }, delayMs);
+            delayMs += 50;
+        }
+    }
+
+    // C. Send Frequency Tune
     if (needTune) {
         const tuneCmd = `slice tune ${targetSlice.index} ${freqMHzString}`;
-        this.queueCommand(tuneCmd, (resp) => {
-            this.logger.debug(`QSY Tune Response: ${resp}`);
-        });
+        setTimeout(() => {
+            this.queueCommand(tuneCmd, (resp) => {
+                this.logger.debug(`QSY Tune Response: ${resp}`);
+            });
+        }, delayMs);
+        delayMs += 50;
     }
 
+    // D. Send Mode
     if (needMode) {
         const modeCmd = `slice set ${targetSlice.index} mode=${flexMode}`;
-        // Small delay (50ms) to ensure TCP packet separation if needed
         setTimeout(() => {
-             this.queueCommand(modeCmd, (resp) => {
-                 this.logger.debug(`QSY Mode Response: ${resp}`);
-             });
-        }, 50);
+            this.queueCommand(modeCmd, (resp) => {
+                this.logger.debug(`QSY Mode Response: ${resp}`);
+            });
+        }, delayMs);
+        delayMs += 50;
     }
 
-    // --- THE KICKER: Active Polling ---
-    // We send 'sub slice all' to force the radio to re-send the full status 
-    // of all slices (including RF_frequency), in case it suppressed the update.
+    // E. Active Polling (The Kicker)
     setTimeout(() => {
         this.queueCommand('sub slice all', (resp) => {
-             this.logger.debug(`QSY Verification Poll Sent: ${resp}`);
+            this.logger.debug(`QSY Verification Poll Sent: ${resp}`);
         });
-    }, 250); 
+    }, delayMs + 200);
 
     return { success: true, error: null };
   }
-  
+
   /**
    * Gracefully disconnects from the FlexRadio server.
    * Closes the socket, cleans up resources, and prevents further reconnection attempts.
@@ -967,16 +1044,16 @@ module.exports = class FlexRadioClient extends EventEmitter {
 
   /**
    * Loads a specific global profile.
-   * @param {string} profileName 
+   * @param {string} profileName
    */
   loadGlobalProfile(profileName) {
     if (!this.isConnected()) return;
-    
+
     this.logger.info(`Loading Global Profile: ${profileName}`);
     // Quotes are important if the name contains spaces
     this.queueCommand(`profile global load "${profileName}"`, (response) => {
       this.logger.debug(`Profile load response: ${response}`);
     });
-  } 
+  }
 
 };

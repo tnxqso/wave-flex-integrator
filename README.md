@@ -20,7 +20,7 @@
 - [How it Works (The Event-Driven Advantage)](#how-it-works-the-event-driven-advantage)
   - [The Tri-Channel Architecture (How WFI talks to Wavelog)](#the-tri-channel-architecture-how-wfi-talks-to-wavelog)
 - [What is Wavelog?](#what-is-wavelog)
-  -[Try Wavelog Before You Commit](#try-wavelog-before-you-commit)
+  - [Try Wavelog Before You Commit](#try-wavelog-before-you-commit)
 - [Requirements](#requirements)
   - [FlexRadio Compatibility](#flexradio-compatibility)
   - [SmartSDR Versions and Compatibility](#smartsdr-versions-and-compatibility)
@@ -30,20 +30,21 @@
   - [macOS Installation](#macos-installation)
 - [Auto-Updating](#auto-updating)
 - [Configuration](#configuration)
-  -[Configuration Parameters](#configuration-parameters)
+  - [Configuration Parameters](#configuration-parameters)
   - [Linking Wavelog (Crucial Step for CAT Control)](#linking-wavelog-crucial-step-for-cat-control)
-  -[SSL & HTTPS Support](#ssl--https-support)
+  - [SSL & HTTPS Support](#ssl--https-support)
 - [Feature Details](#feature-details)
-  -[CAT Listener (QSY Support)](#cat-listener-qsy-support)
+  - [CAT Listener (QSY Support)](#cat-listener-qsy-support)
+  - [Antenna Management (QSY Override)](#antenna-management-qsy-override)
   - [QSO Assistant](#qso-assistant)
   - [Profile Manager](#profile-manager)
   - [WSJT-X Integration](#wsjt-x-integration)
 - [Usage](#usage)
   - [Security Warning on First Startup (Windows and macOS)](#security-warning-on-first-startup-windows-and-macos)
--[How DXCC Confirmation is Determined](#how-dxcc-confirmation-is-determined)
+- [How DXCC Confirmation is Determined](#how-dxcc-confirmation-is-determined)
 - [Debugging and Troubleshooting](#debugging-and-troubleshooting)
   - [Check that Wavelog can be reached on the About tab](#check-that-wavelog-can-be-reached-on-the-about-tab)
-  -[Radio does not tune when clicking spots (CAT Failure)](#radio-does-not-tune-when-clicking-spots-cat-failure)
+  - [Radio does not tune when clicking spots (CAT Failure)](#radio-does-not-tune-when-clicking-spots-cat-failure)
   - [Ensure No Other Applications Are Creating Spots on the SmartSDR panadapter](#ensure-no-other-applications-are-creating-spots-on-the-smartsdr-panadapter)
   - [Enable Debug Mode](#enable-debug-mode)
   - [Reproduce the Issue](#reproduce-the-issue)
@@ -51,7 +52,7 @@
   - [Report an Issue](#report-an-issue)
   - [Additional Troubleshooting Tips](#additional-troubleshooting-tips)
 - [Contributing](#contributing)
--[License](#license)
+- [License](#license)
 - [Acknowledgments](#acknowledgments)
 
 ---
@@ -76,6 +77,7 @@ Additionally, the application provides a dedicated **QSO Assistant** window for 
 
 - **DX Cluster Integration**: Connects to a DX Cluster to receive real-time spot data.
 - **CAT Listener (QSY Support)**: A local listener allows you to click spots in the Wavelog Bandmap to instantly tune your FlexRadio (replaces WavelogGate/FlRig).
+- **Antenna Management**: Automatically handles RX/TX antenna switching or loads Global Profiles when changing bands via QSY, ensuring you never transmit into the wrong antenna.
 - **QSO Assistant**: A dedicated, compact window for:
   - Callsign lookups (Wavelog & [QRZ.com](https://www.qrz.com)).
   - Profile images and Grid maps (OpenStreetMap).
@@ -285,6 +287,10 @@ Upon first startup, no services gets connected. This is normal. Configure the ap
 - **Enabled**: Toggle FlexRadio integration.
 - **Host**: FlexRadio's hostname or IP address.
 - **Port**: Port number (default is 4992).
+- **Antenna Management (QSY Override)**: Manage how antennas are handled when clicking a spot in Wavelog.
+  - **Mode**: Choose between `Off`, `Global Profiles`, or `Manual Matrix`.
+  - **Global Profiles**: Commands the radio to load a matching Global Profile (e.g., `20M CW`) before tuning.
+  - **Manual Matrix**: Forces specific RX/TX antenna ports based on a configured per-band matrix.
 - **Spot Management**:
   - **Spot Age Limit**: Time after which spots are removed.
   - **Color Settings**: Customize spot colors based on criteria.
@@ -352,6 +358,19 @@ This feature enables Wavelog to send QSY (Frequency Change) commands to your Fle
     *   Locate the **"CAT Connection"** button (usually top left).
     *   **Click it so it turns GREEN.**
     *   *Note: If this button is red/off, Wavelog will not attempt to tune the radio when you click a spot.* Wavelog does not save this setting. You must enable this button every time you open or refresh the DX Cluster page.
+
+### Antenna Management (QSY Override)
+
+Because the FlexRadio API unfortunately does not natively store per-band antenna selections on the hardware itself (it relies on fat clients like SmartSDR and Maestro to remember this state), Wave-Flex Integrator can optionally manage antenna switching during QSY to prevent transmitting into the wrong antenna. A QSY typically occurs when you click a SPOT in Wavelog's DX Cluster window while having the "CAT Connection" enabled.
+
+You can choose between two override modes in the **Configuration** tab:
+
+1. **Global Profiles (Recommended)**:
+   Wave-Flex Integrator will command the radio to load a matching Global Profile (e.g., `20M CW`) before tuning the slice. This ensures that not only the antennas, but also TX power, DSP filters, and mic profiles are correctly set.
+   > **Important**: This requires your Global Profiles to follow a strict naming convention (Band + Mode). See the [Profile Manager](#profile-manager) section below for exact naming rules. Profiles are only loaded when switching to a *new* band to prevent unnecessary relay wear and audio dropouts.
+
+2. **Manual Matrix**:
+   If you do not use Global Profiles, you can manually map specific antenna ports (e.g., `ANT1`, `ANT2`, `RX_A`) to each amateur band (160m to 6m). Wave-Flex Integrator will construct an exact antenna command and send it to the radio on QSY.
 
 ### QSO Assistant
 

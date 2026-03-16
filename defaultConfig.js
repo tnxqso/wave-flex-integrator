@@ -92,6 +92,23 @@ const defaultConfig = {
     port: 4992,                     // Port for FlexRadio Telnet connection
     commandTimeout: 15000,          // Time to wait for a response after a command was sent
   
+    antennaManagement: {
+      mode: 'off',                  // 'off', 'profiles', or 'matrix'
+      bands: {
+        '160m': { rxant: '', txant: '' },
+        '80m':  { rxant: '', txant: '' },
+        '60m':  { rxant: '', txant: '' },
+        '40m':  { rxant: '', txant: '' },
+        '30m':  { rxant: '', txant: '' },
+        '20m':  { rxant: '', txant: '' },
+        '17m':  { rxant: '', txant: '' },
+        '15m':  { rxant: '', txant: '' },
+        '12m':  { rxant: '', txant: '' },
+        '10m':  { rxant: '', txant: '' },
+        '6m':   { rxant: '', txant: '' }
+      }
+    },
+
     spotManagement: {
       lifetimeSeconds: 500,          // Lifetime of each spot in seconds
       cleanupIntervalSeconds: 60,    // Interval for cleaning up expired spots in seconds

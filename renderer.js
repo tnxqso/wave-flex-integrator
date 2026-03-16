@@ -115,7 +115,7 @@ function updateConnectionBadge(status) {
 
     // Reset Classes
     badge.className = 'badge rounded-pill p-2';
-    
+
     if (status === 'live') {
         badge.classList.add('text-bg-success');
         badge.innerHTML = '<i class="bi bi-lightning-charge-fill me-1"></i> Live (WS)';
@@ -146,7 +146,7 @@ function populateForm(config, isPackaged = true) {
   const startLoginCheck = document.getElementById('appStartAtLogin');
   if (startLoginCheck) {
       startLoginCheck.checked = appConfig.startAtLogin || false;
-      
+
       // Disable this option in Development Mode
       if (!isPackaged) {
           startLoginCheck.disabled = true;
@@ -166,7 +166,7 @@ function populateForm(config, isPackaged = true) {
 
   // Populate CAT Listener Settings
   const catConfig = config.catListener || { enabled: false, host: '127.0.0.1', port: 54321 };
-  
+
   const catEnabled = document.getElementById('catListenerEnabled');
   if(catEnabled) catEnabled.checked = catConfig.enabled;
 
@@ -209,7 +209,7 @@ function populateForm(config, isPackaged = true) {
   // QSO Settings
   const showMediaCheckbox = document.getElementById('appShowQsoMedia');
   if (showMediaCheckbox) showMediaCheckbox.checked = appConfig.showQsoMedia || false;
-  
+
     // Compact Mode
 const compactModeCheckbox = document.getElementById('appCompactMode');
   if (compactModeCheckbox) {
@@ -267,7 +267,7 @@ const compactModeCheckbox = document.getElementById('appCompactMode');
 
   // --- Populate QRZ Settings ---
   const qrzConfig = config.qrz || { enabled: false, username: '', password: '' };
-  
+
   const qrzEnabledCheckbox = document.getElementById('qrzEnabled');
   if (qrzEnabledCheckbox) qrzEnabledCheckbox.checked = qrzConfig.enabled;
 
@@ -276,7 +276,7 @@ const compactModeCheckbox = document.getElementById('appCompactMode');
 
   const qrzPasswordInput = document.getElementById('qrzPassword');
   if (qrzPasswordInput) qrzPasswordInput.value = qrzConfig.password;
-  
+
   // --- Populate Augmented Spot Cache ---
   const augmentedSpotCacheMaxSizeInput = document.getElementById('augmentedSpotCacheMaxSize');
   if (augmentedSpotCacheMaxSizeInput) {
@@ -362,6 +362,37 @@ const dxClusterBackupHostInput = document.getElementById('dxClusterBackupHost');
   const flexRadioCommandTimeoutInput = document.getElementById('flexRadioCommandTimeout');
   if (flexRadioCommandTimeoutInput) {
     flexRadioCommandTimeoutInput.value = config.flexRadio.commandTimeout;
+  }
+
+  // Populate Antenna Management Configuration
+  if (config.flexRadio.antennaManagement) {
+      const antMgmt = config.flexRadio.antennaManagement;
+      const modeSelect = document.getElementById('antMgmtMode');
+
+      if (modeSelect) {
+          // Backward compatibility check if it was previously an 'enabled' boolean
+          if (antMgmt.mode === undefined && antMgmt.enabled !== undefined) {
+              modeSelect.value = antMgmt.enabled ? 'matrix' : 'off';
+          } else {
+              modeSelect.value = antMgmt.mode || 'off';
+          }
+
+          modeSelect.addEventListener('change', updateAntennaMgmtUI);
+
+          // Manually trigger the UI toggle based on initial value
+          updateAntennaMgmtUI();
+      }
+
+      if (antMgmt.bands) {
+          const bands =['160', '80', '60', '40', '30', '20', '17', '15', '12', '10', '6'];
+          bands.forEach(b => {
+              const rxInput = document.getElementById(`ant${b}RX`);
+              const txInput = document.getElementById(`ant${b}TX`);
+              const bandKey = `${b}m`;
+              if (rxInput && antMgmt.bands[bandKey]) rxInput.value = antMgmt.bands[bandKey].rxant || '';
+              if (txInput && antMgmt.bands[bandKey]) txInput.value = antMgmt.bands[bandKey].txant || '';
+          });
+      }
   }
 
   // Populate Spot Management Configuration
@@ -461,7 +492,7 @@ const dxClusterBackupHostInput = document.getElementById('dxClusterBackupHost');
   if (stationLocationIdsInput) {
     stationLocationIdsInput.value = config.wavelogAPI.station_location_ids.join(', ');
   }
-  
+
   const wavelogRadioNameInput = document.getElementById('wavelogRadioName');
   if (wavelogRadioNameInput) {
     wavelogRadioNameInput.value = config.wavelogAPI.radioName;
@@ -470,7 +501,7 @@ const dxClusterBackupHostInput = document.getElementById('dxClusterBackupHost');
   const multiFlexEnabledCheckbox = document.getElementById('multiFlexEnabled');
   if (multiFlexEnabledCheckbox) {
     multiFlexEnabledCheckbox.checked = config.wavelogAPI.multiFlexEnabled;
-  }  
+  }
 
   // Populate LoTW Configuration
   const maxDaysConsideredTrueInput = document.getElementById('maxDaysConsideredTrue');
@@ -616,7 +647,7 @@ if (configForm) {
       },
       wavelogLive: {
         port: parseInt(document.getElementById('wavelogLivePort').value) || 54322
-      },      
+      },
       // --- Rotator Settings ---
       rotator: {
         enabled: document.getElementById('rotatorEnabled').checked,
@@ -636,7 +667,7 @@ if (configForm) {
         enabled: document.getElementById('qrzEnabled').checked,
         username: document.getElementById('qrzUsername').value.trim(),
         password: document.getElementById('qrzPassword').value.trim()
-      },      
+      },
       augmentedSpotCache: {
         maxSize: parseInt(document.getElementById('augmentedSpotCacheMaxSize').value, 10),
       },
@@ -665,6 +696,16 @@ if (configForm) {
         host: document.getElementById('flexRadioHost').value.trim(),
         port: parseInt(document.getElementById('flexRadioPort').value, 10),
         commandTimeout: parseInt(document.getElementById('flexRadioCommandTimeout').value, 10),
+        antennaManagement: {
+            mode: document.getElementById('antMgmtMode') ? document.getElementById('antMgmtMode').value : 'off',
+            bands:['160', '80', '60', '40', '30', '20', '17', '15', '12', '10', '6'].reduce((acc, b) => {
+                acc[`${b}m`] = {
+                    rxant: document.getElementById(`ant${b}RX`) ? document.getElementById(`ant${b}RX`).value.trim().toUpperCase() : '',
+                    txant: document.getElementById(`ant${b}TX`) ? document.getElementById(`ant${b}TX`).value.trim().toUpperCase() : ''
+                };
+                return acc;
+            }, {})
+        },
         spotManagement: {
           lifetimeSeconds: parseInt(document.getElementById('spotManagementLifetimeSeconds').value, 10),
           cleanupIntervalSeconds: parseInt(
@@ -797,10 +838,10 @@ if (installCertBtn) {
   installCertBtn.addEventListener('click', async () => {
     installCertBtn.disabled = true;
     installCertBtn.innerText = "Installing...";
-    
+
     // Invoke the main process to run the certutil command
     const success = await ipcRenderer.invoke('install-certificate');
-    
+
     if (success) {
       showAlert("Certificate installation triggered. Please approve the Windows prompt and RESTART your browser.", "success");
       installCertBtn.innerText = "Certificate Installed";
@@ -824,14 +865,14 @@ function handleStatusUpdate(status) {
   switch (status.event) {
     case 'flexRadioConnected':
       updateFlexRadioStatus(status.host || 'Connected');
-      
+
       // Update Status Bar: Label Neutral, Value Green
       const radioLabel = document.getElementById('sb-radio-model');
       const radioVal = document.getElementById('sb-radio-ver');
-      
+
       radioLabel.textContent = 'FlexRadio';
-      radioLabel.classList.remove('text-success'); 
-      
+      radioLabel.classList.remove('text-success');
+
       radioVal.textContent = status.host || 'connected';
       radioVal.classList.add('text-success');
 
@@ -844,13 +885,13 @@ function handleStatusUpdate(status) {
 
     case 'flexRadioDisconnected':
       updateFlexRadioStatus('Disconnected');
-      
+
       document.getElementById('sb-radio-model').textContent = 'Disconnected';
-      
+
       const radioValDisc = document.getElementById('sb-radio-ver');
       radioValDisc.textContent = 'no radio found';
       radioValDisc.classList.remove('text-success');
-      
+
       document.getElementById('sb-radio-freq').textContent = '---.---';
       document.getElementById('sb-radio-mode').textContent = '---';
       isFlexRadioConnected = false;
@@ -898,12 +939,12 @@ function handleStatusUpdate(status) {
 
     case 'WavelogResponsive':
       updateWavelogStatus(status.message);
-      
+
       const wlProfileEl = document.getElementById('sb-wl-profile');
       wlProfileEl.textContent = status.message;
       wlProfileEl.classList.add('sb-label-active');
       document.getElementById('sb-icon-person').className = 'bi bi-person-fill sb-icon-ok';
-      
+
       // Force Status Bar to match Polling state if not Live
       if (!isWavelogLive) {
           updateConnectionBadge('polling');
@@ -951,7 +992,7 @@ function handleStatusUpdate(status) {
 
     case 'connectionMode':
       isWavelogLive = (status.mode === 'live');
-      updateConnectionBadge(status.mode); 
+      updateConnectionBadge(status.mode);
 
       const connEl = document.getElementById('sb-conn-mode');
       if (status.mode === 'live') {
@@ -981,11 +1022,11 @@ function updateFlexRadioStatus(message) {
   const flexStatus = document.getElementById('flexRadioStatus');
   if (flexStatus) {
     flexStatus.textContent = message;
-    
+
     // Reset classes and force Green color (text-success) for active connections
     flexStatus.classList.remove('text-danger', 'text-warning');
     flexStatus.classList.add('text-success');
-    
+
     // If it's an error message (starts with Error or Disconnected), revert to red
     if (message.startsWith('Error') || message === 'Disconnected') {
         flexStatus.classList.remove('text-success');
@@ -1002,10 +1043,10 @@ function updateDXClusterStatus(message) {
   const dxStatus = document.getElementById('dxClusterStatus');
   if (dxStatus) {
     dxStatus.textContent = message;
-    
+
     // Reset colors and inline styles
     dxStatus.classList.remove('text-danger', 'text-warning', 'text-success');
-    dxStatus.style.color = ''; 
+    dxStatus.style.color = '';
 
     // Determine color based on content
     if (message === 'Disabled') {
@@ -1288,7 +1329,7 @@ if (profilesTabElement) {
  */
 function loadProfiles() {
     const grid = document.getElementById('profilesGrid');
-    
+
     // 1. If radio is not connected, show waiting message
     if (!isFlexRadioConnected) {
         grid.innerHTML = `
@@ -1344,7 +1385,7 @@ function renderProfiles(profiles) {
   // 3. Bucket profiles into bands AND detect active modes
   const bandBuckets = {};
   displayOrder.forEach(b => bandBuckets[b] = []);
-  
+
   // Track which modes are actually used across ALL bands
   const activeModesSet = new Set();
 
@@ -1360,7 +1401,7 @@ function renderProfiles(profiles) {
                 activeModesSet.add(mode.id);
             }
         });
-        
+
         // Assign to band bucket
         for (const bandLabel of searchOrder) {
           if (lowerName.includes(bandLabel.toLowerCase())) {
@@ -1382,7 +1423,7 @@ function renderProfiles(profiles) {
                         <i class="bi bi-info-circle-fill me-2"></i>Profile Manager
                     </h5>
                     <p class="card-text">
-                        The Profiles tab automatically organizes your FlexRadio Global Profiles into a grid. 
+                        The Profiles tab automatically organizes your FlexRadio Global Profiles into a grid.
                         However, <strong>no compatible profiles were found</strong>.
                     </p>
                     <div class="alert alert-secondary mt-3">
@@ -1409,7 +1450,7 @@ function renderProfiles(profiles) {
                     </ul>
                     <div class="text-center mt-4">
                         <!-- Added ID profilesHelpLink to attach listener manually -->
-                        <a id="profilesHelpLink" href="https://github.com/tnxqso/wave-flex-integrator?tab=readme-ov-file#profile-manager" 
+                        <a id="profilesHelpLink" href="https://github.com/tnxqso/wave-flex-integrator?tab=readme-ov-file#profile-manager"
                            class="btn btn-outline-primary btn-sm">
                            <i class="bi bi-book me-1"></i> Read Full Documentation
                         </a>
@@ -1455,8 +1496,8 @@ function renderProfiles(profiles) {
         if (matchingProfile) {
             // Yes -> Render Button
             const btn = document.createElement('button');
-            btn.className = 'btn profile-btn grid-slot'; 
-            btn.innerText = modeDef.label; 
+            btn.className = 'btn profile-btn grid-slot';
+            btn.innerText = modeDef.label;
             btn.title = matchingProfile;
 
             if (modeDef.id === 'CW') btn.classList.add('mode-cw');
@@ -1510,7 +1551,7 @@ const openQSOBtn = document.getElementById('openQSOAssistantBtn');
 if (openQSOBtn) {
   openQSOBtn.addEventListener('click', () => {
     // This IPC channel will be implemented in Step 3
-    ipcRenderer.invoke('open-qso-assistant'); 
+    ipcRenderer.invoke('open-qso-assistant');
     console.log('Requesting to open QSO Assistant...');
   });
 }
@@ -1533,11 +1574,11 @@ ipcRenderer.on('slice-status-update', (event, slice) => {
       if (txContainer && txBadge) {
           txContainer.classList.remove('d-none');
           // Restore the "Badge/Pill" look for warnings
-          txBadge.className = 'badge rounded-pill blink-orange'; 
-          txBadge.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> NO TX'; 
+          txBadge.className = 'badge rounded-pill blink-orange';
+          txBadge.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> NO TX';
           txBadge.title = "No Active TX Slice found on Radio";
       }
-      
+
       // Clear frequency and mode to avoid confusion with stale data
       if (freqEl) {
           freqEl.textContent = '---.---';
@@ -1553,8 +1594,8 @@ ipcRenderer.on('slice-status-update', (event, slice) => {
   if (txContainer && txBadge) {
       txContainer.classList.remove('d-none');
       // Use text-only style for the letter (No badge class)
-      txBadge.className = 'sb-tx-letter'; 
-      txBadge.textContent = slice.index_letter || 'TX'; 
+      txBadge.className = 'sb-tx-letter';
+      txBadge.textContent = slice.index_letter || 'TX';
       txBadge.title = `Active Transmit Slice: ${slice.index_letter}`;
   }
 
@@ -1564,6 +1605,12 @@ ipcRenderer.on('slice-status-update', (event, slice) => {
   }
   
   if (modeEl) modeEl.textContent = slice.mode;
+
+  // Render Antennas if present
+  const rxantEl = document.getElementById('sb-radio-rxant');
+  const txantEl = document.getElementById('sb-radio-txant');
+  if (rxantEl && slice.rxant) rxantEl.textContent = 'RX: ' + slice.rxant;
+  if (txantEl && slice.txant) txantEl.textContent = 'TX: ' + slice.txant;
   
   // Update model name if available in the slice data
   if (modelEl && slice.station) {
@@ -1585,5 +1632,39 @@ function toggleStatusBar(visible) {
             sb.classList.add('d-none');
             document.body.style.paddingBottom = '0px';
         }
+    }
+}
+
+/**
+ * Toggles the visibility of the Antenna Management Matrix
+ * and updates the contextual help text based on the selected mode.
+ */
+function updateAntennaMgmtUI() {
+    const modeSelect = document.getElementById('antMgmtMode');
+    const matrixContainer = document.getElementById('antMgmtMatrixContainer');
+    const helpText = document.getElementById('antMgmtHelpText');
+
+    if (!modeSelect || !matrixContainer || !helpText) return;
+
+    if (modeSelect.value === 'matrix') {
+        matrixContainer.classList.remove('d-none');
+        helpText.innerHTML = "Wave-Flex Integrator will construct an exact antenna command (e.g. <code>rxant=ANT1 txant=ANT2</code>) and send it to the radio on QSY.";
+    } else if (modeSelect.value === 'profiles') {
+        matrixContainer.classList.add('d-none');
+        helpText.innerHTML = `Wave-Flex Integrator will command the radio to load a matching Global Profile (e.g. <code>20M CW</code>) before tuning the slice.<br>
+        <i class="bi bi-exclamation-triangle-fill text-warning mt-2"></i> <strong>Important:</strong> Your Global Profiles must use specific naming conventions (Band + Mode).
+        <a href="#" id="profileDocsLink" class="text-decoration-none">Read the documentation here</a>.`;
+
+        // Safely attach the event listener to open the link via IPC
+        const docsLink = document.getElementById('profileDocsLink');
+        if (docsLink) {
+            docsLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                ipcRenderer.invoke('open-external-link', 'https://github.com/tnxqso/wave-flex-integrator?tab=readme-ov-file#profile-manager');
+            });
+        }
+    } else {
+        matrixContainer.classList.add('d-none');
+        helpText.innerHTML = "Wave-Flex Integrator will only change frequency and mode. The current active antennas will remain unchanged.";
     }
 }

@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <title>Wave-Flex Integrator</title>
-  
+
   <!-- Strict CSP for Offline Use -->
   <meta
     http-equiv="Content-Security-Policy"
     content="
-      default-src 'self'; 
-      script-src 'self' 'unsafe-inline'; 
-      style-src 'self' 'unsafe-inline'; 
-      font-src 'self' data:; 
+      default-src 'self';
+      script-src 'self' 'unsafe-inline';
+      style-src 'self' 'unsafe-inline';
+      font-src 'self' data:;
       img-src 'self' data:;
     "
   />
-  
+
   <!-- Local Bootstrap CSS -->
   <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css" />
 
@@ -24,10 +24,10 @@
 
   <!-- Local Flag Icons -->
   <link rel="stylesheet" href="assets/flag-icons/css/flag-icons.min.css" />
-  
+
   <!-- Local Custom CSS -->
   <link rel="stylesheet" href="styles.css" />
-  
+
   <style>
     /* Custom style for section headers in config */
     .config-section-header {
@@ -51,10 +51,10 @@
 <body>
   <div class="container-fluid">
     <img src="assets/wave-flex-integrator-banner-800x70.png" alt="Wave-Flex Integrator" class="banner-image" />
-  
+
     <!-- Alert Container for Dynamic Messages -->
     <div id="alertContainer" class="mt-3"></div>
-    
+
     <!-- Tab Navigation -->
     <ul class="nav nav-tabs" id="mainTab" role="tablist">
       <li class="nav-item" role="presentation">
@@ -94,7 +94,7 @@
           >Profiles</a
         >
       </li>
-         
+
       <!-- About Tab -->
       <li class="nav-item" role="presentation">
         <a
@@ -109,10 +109,10 @@
         >
       </li>
     </ul>
-    
+
     <!-- Tab Contents -->
     <div class="tab-content" id="mainTabContent">
-      
+
       <!-- Status Tab -->
       <div
         class="tab-pane fade show active"
@@ -126,7 +126,7 @@
 
           <!-- Quick Actions & Status Indicator -->
           <div class="d-flex justify-content-end mb-3 align-items-center">
-            
+
             <!-- Connection Mode Indicator -->
             <div class="status-badge-container">
                <span id="connectionModeBadge" class="badge rounded-pill text-bg-secondary p-2">
@@ -204,7 +204,7 @@
         </div>
       </div>
 
-      
+
       <!-- Configuration Tab -->
       <div
         class="tab-pane fade"
@@ -224,7 +224,7 @@
 
             <!-- SECTION 1: General Application Settings -->
             <h5 class="config-section-header"><i class="bi bi-gear-fill me-2"></i>General Application Settings</h5>
-            
+
             <div class="row">
                 <!-- Startup & Tray Behavior -->
                 <div class="col-md-12 mb-3">
@@ -259,7 +259,7 @@
                         <option value="dark">Dark</option>
                     </select>
                 </div>
-                
+
                 <div class="col-md-6 mb-3">
                     <label for="appStartupTab" class="form-label">Startup Tab</label>
                     <select class="form-select" id="appStartupTab">
@@ -347,7 +347,7 @@
                     <input type="text" class="form-control" id="wavelogApiKey" required placeholder="Your API Key" />
                 </div>
             </div>
-            
+
             <div class="row mb-3">
                 <div class="col-md-6">
                     <label for="stationLocationIds" class="form-label">Station Location IDs (comma separated)</label>
@@ -367,7 +367,7 @@
             <div class="card bg-light-subtle mb-3">
                 <div class="card-body">
                     <h6 class="card-title"><i class="bi bi-router me-2"></i>Local Listeners (Live & CAT)</h6>
-                    
+
                     <div class="row">
                         <div class="col-md-6 border-end">
                             <!-- CAT Listener -->
@@ -397,7 +397,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="alert alert-info mt-3 mb-0 py-2 small" role="alert">
                         <i class="bi bi-info-circle-fill me-1"></i>
                         In Wavelog Hardware Interfaces, set Radio Interface to <code class="user-select-all">http://127.0.0.1:54321</code> and enable the <strong>"CAT Connection"</strong> button (Green).
@@ -445,7 +445,7 @@
                             </a>
                         </div>
                     </div>
-                    
+
                     <div class="alert alert-secondary d-flex align-items-center p-2 mt-3 mb-0 small" role="alert">
                         <i class="bi bi-info-circle-fill me-2"></i>
                         <div>Restart your browser after installing the certificate.</div>
@@ -482,6 +482,101 @@
                 </div>
             </div>
 
+            <!-- Antenna Management -->
+            <div class="card mb-3 border-secondary">
+                <div class="card-header bg-light-subtle py-2">
+                    <span class="fw-bold"><i class="bi bi-broadcast-pin me-2"></i>Antenna Management (QSY Override)</span>
+                </div>
+                <div class="card-body p-2 p-md-3">
+                    <div class="alert alert-secondary small mb-3">
+                        <i class="bi bi-info-circle-fill me-1"></i>
+                        <strong>Why is this needed?</strong> Because the FlexRadio API does not natively store per-band antenna selections on the hardware itself (it relies on fat clients like SmartSDR and Maestro to remember this state), Wave-Flex Integrator can optionally manage antenna switching during QSY to prevent transmitting into the wrong antenna. A QSY typically occurs when you click a SPOT in Wavelog's DX Cluster window while having the "CAT Connection" enabled.
+                    </div>
+
+                    <div class="row align-items-center mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label fw-bold mb-0">Management Mode</label>
+                            <select class="form-select" id="antMgmtMode">
+                                <option value="off">Off (Default) - Leave antennas unchanged</option>
+                                <option value="profiles">Global Profiles - Load matched profile on QSY</option>
+                                <option value="matrix">Manual Matrix - Force specific TX/RX ports</option>
+                            </select>
+                        </div>
+                        <div class="col-md-7 text-muted small mt-2 mt-md-0" id="antMgmtHelpText">
+                            <!-- Help text populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Antenna Matrix (Hidden by default) -->
+                    <div id="antMgmtMatrixContainer" class="d-none border-top pt-3">
+                        <p class="small text-muted mb-2">Select the exact antenna ports for each band. Leave as "-" to ignore a specific band.</p>
+                        <div class="row g-2">
+                            <!-- Left Column (Low Bands) -->
+                            <div class="col-md-6 border-end pe-3">
+                                <div class="row mb-1 align-items-center">
+                                    <div class="col-2 small fw-bold text-end">160m</div>
+                                    <div class="col-5"><select class="form-select form-select-sm" id="ant160RX"><option value="">- RX -</option><option value="ANT1">ANT1</option><option value="ANT2">ANT2</option><option value="RX_A">RX A</option><option value="RX_B">RX B</option><option value="XVTA">XVTA</option><option value="XVTB">XVTB</option></select></div>
+                                    <div class="col-5"><select class="form-select form-select-sm" id="ant160TX"><option value="">- TX -</option><option value="ANT1">ANT1</option><option value="ANT2">ANT2</option><option value="XVTA">XVTA</option><option value="XVTB">XVTB</option></select></div>
+                                </div>
+                                <div class="row mb-1 align-items-center">
+                                    <div class="col-2 small fw-bold text-end">80m</div>
+                                    <div class="col-5"><select class="form-select form-select-sm" id="ant80RX"><option value="">- RX -</option><option value="ANT1">ANT1</option><option value="ANT2">ANT2</option><option value="RX_A">RX A</option><option value="RX_B">RX B</option><option value="XVTA">XVTA</option><option value="XVTB">XVTB</option></select></div>
+                                    <div class="col-5"><select class="form-select form-select-sm" id="ant80TX"><option value="">- TX -</option><option value="ANT1">ANT1</option><option value="ANT2">ANT2</option><option value="XVTA">XVTA</option><option value="XVTB">XVTB</option></select></div>
+                                </div>
+                                <div class="row mb-1 align-items-center">
+                                    <div class="col-2 small fw-bold text-end">60m</div>
+                                    <div class="col-5"><select class="form-select form-select-sm" id="ant60RX"><option value="">- RX -</option><option value="ANT1">ANT1</option><option value="ANT2">ANT2</option><option value="RX_A">RX A</option><option value="RX_B">RX B</option><option value="XVTA">XVTA</option><option value="XVTB">XVTB</option></select></div>
+                                    <div class="col-5"><select class="form-select form-select-sm" id="ant60TX"><option value="">- TX -</option><option value="ANT1">ANT1</option><option value="ANT2">ANT2</option><option value="XVTA">XVTA</option><option value="XVTB">XVTB</option></select></div>
+                                </div>
+                                <div class="row mb-1 align-items-center">
+                                    <div class="col-2 small fw-bold text-end">40m</div>
+                                    <div class="col-5"><select class="form-select form-select-sm" id="ant40RX"><option value="">- RX -</option><option value="ANT1">ANT1</option><option value="ANT2">ANT2</option><option value="RX_A">RX A</option><option value="RX_B">RX B</option><option value="XVTA">XVTA</option><option value="XVTB">XVTB</option></select></div>
+                                    <div class="col-5"><select class="form-select form-select-sm" id="ant40TX"><option value="">- TX -</option><option value="ANT1">ANT1</option><option value="ANT2">ANT2</option><option value="XVTA">XVTA</option><option value="XVTB">XVTB</option></select></div>
+                                </div>
+                                <div class="row mb-1 align-items-center">
+                                    <div class="col-2 small fw-bold text-end">30m</div>
+                                    <div class="col-5"><select class="form-select form-select-sm" id="ant30RX"><option value="">- RX -</option><option value="ANT1">ANT1</option><option value="ANT2">ANT2</option><option value="RX_A">RX A</option><option value="RX_B">RX B</option><option value="XVTA">XVTA</option><option value="XVTB">XVTB</option></select></div>
+                                    <div class="col-5"><select class="form-select form-select-sm" id="ant30TX"><option value="">- TX -</option><option value="ANT1">ANT1</option><option value="ANT2">ANT2</option><option value="XVTA">XVTA</option><option value="XVTB">XVTB</option></select></div>
+                                </div>
+                            </div>
+                            <!-- Right Column (High Bands) -->
+                            <div class="col-md-6 ps-3">
+                                <div class="row mb-1 align-items-center">
+                                    <div class="col-2 small fw-bold text-end">20m</div>
+                                    <div class="col-5"><select class="form-select form-select-sm" id="ant20RX"><option value="">- RX -</option><option value="ANT1">ANT1</option><option value="ANT2">ANT2</option><option value="RX_A">RX A</option><option value="RX_B">RX B</option><option value="XVTA">XVTA</option><option value="XVTB">XVTB</option></select></div>
+                                    <div class="col-5"><select class="form-select form-select-sm" id="ant20TX"><option value="">- TX -</option><option value="ANT1">ANT1</option><option value="ANT2">ANT2</option><option value="XVTA">XVTA</option><option value="XVTB">XVTB</option></select></div>
+                                </div>
+                                <div class="row mb-1 align-items-center">
+                                    <div class="col-2 small fw-bold text-end">17m</div>
+                                    <div class="col-5"><select class="form-select form-select-sm" id="ant17RX"><option value="">- RX -</option><option value="ANT1">ANT1</option><option value="ANT2">ANT2</option><option value="RX_A">RX A</option><option value="RX_B">RX B</option><option value="XVTA">XVTA</option><option value="XVTB">XVTB</option></select></div>
+                                    <div class="col-5"><select class="form-select form-select-sm" id="ant17TX"><option value="">- TX -</option><option value="ANT1">ANT1</option><option value="ANT2">ANT2</option><option value="XVTA">XVTA</option><option value="XVTB">XVTB</option></select></div>
+                                </div>
+                                <div class="row mb-1 align-items-center">
+                                    <div class="col-2 small fw-bold text-end">15m</div>
+                                    <div class="col-5"><select class="form-select form-select-sm" id="ant15RX"><option value="">- RX -</option><option value="ANT1">ANT1</option><option value="ANT2">ANT2</option><option value="RX_A">RX A</option><option value="RX_B">RX B</option><option value="XVTA">XVTA</option><option value="XVTB">XVTB</option></select></div>
+                                    <div class="col-5"><select class="form-select form-select-sm" id="ant15TX"><option value="">- TX -</option><option value="ANT1">ANT1</option><option value="ANT2">ANT2</option><option value="XVTA">XVTA</option><option value="XVTB">XVTB</option></select></div>
+                                </div>
+                                <div class="row mb-1 align-items-center">
+                                    <div class="col-2 small fw-bold text-end">12m</div>
+                                    <div class="col-5"><select class="form-select form-select-sm" id="ant12RX"><option value="">- RX -</option><option value="ANT1">ANT1</option><option value="ANT2">ANT2</option><option value="RX_A">RX A</option><option value="RX_B">RX B</option><option value="XVTA">XVTA</option><option value="XVTB">XVTB</option></select></div>
+                                    <div class="col-5"><select class="form-select form-select-sm" id="ant12TX"><option value="">- TX -</option><option value="ANT1">ANT1</option><option value="ANT2">ANT2</option><option value="XVTA">XVTA</option><option value="XVTB">XVTB</option></select></div>
+                                </div>
+                                <div class="row mb-1 align-items-center">
+                                    <div class="col-2 small fw-bold text-end">10m</div>
+                                    <div class="col-5"><select class="form-select form-select-sm" id="ant10RX"><option value="">- RX -</option><option value="ANT1">ANT1</option><option value="ANT2">ANT2</option><option value="RX_A">RX A</option><option value="RX_B">RX B</option><option value="XVTA">XVTA</option><option value="XVTB">XVTB</option></select></div>
+                                    <div class="col-5"><select class="form-select form-select-sm" id="ant10TX"><option value="">- TX -</option><option value="ANT1">ANT1</option><option value="ANT2">ANT2</option><option value="XVTA">XVTA</option><option value="XVTB">XVTB</option></select></div>
+                                </div>
+                                <div class="row mb-0 align-items-center">
+                                    <div class="col-2 small fw-bold text-end">6m</div>
+                                    <div class="col-5"><select class="form-select form-select-sm" id="ant6RX"><option value="">- RX -</option><option value="ANT1">ANT1</option><option value="ANT2">ANT2</option><option value="RX_A">RX A</option><option value="RX_B">RX B</option><option value="XVTA">XVTA</option><option value="XVTB">XVTB</option></select></div>
+                                    <div class="col-5"><select class="form-select form-select-sm" id="ant6TX"><option value="">- TX -</option><option value="ANT1">ANT1</option><option value="ANT2">ANT2</option><option value="XVTA">XVTA</option><option value="XVTB">XVTB</option></select></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Rotator -->
             <div class="card mb-3">
                 <div class="card-body pt-2 pb-2">
@@ -489,7 +584,7 @@
                         <input class="form-check-input" type="checkbox" id="rotatorEnabled">
                         <label class="form-check-label fw-bold" for="rotatorEnabled">Enable Rotator Integration (MQTT)</label>
                     </div>
-                    
+
                     <!-- MQTT Connection Info -->
                     <div class="row g-2 mb-2">
                         <div class="col-md-8">
@@ -639,10 +734,10 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- SECTION 5: Spot Management & Visuals -->
             <h5 class="config-section-header mt-5"><i class="bi bi-palette me-2"></i>Spot Management & Visuals</h5>
-            
+
             <div class="row mb-3">
                 <div class="col-md-4">
                     <label class="form-label">Cache Size</label>
@@ -668,7 +763,7 @@
                 </h2>
                 <div id="collapseColors" class="accordion-collapse collapse" data-bs-parent="#accordionColors">
                   <div class="accordion-body">
-                    
+
                     <div class="row">
                         <!-- Default -->
                         <div class="col-md-4 mb-3">
@@ -771,7 +866,7 @@
                 </div>
               </div>
             </div>
-  
+
             <!-- Form Action Buttons (Bottom) -->
             <div class="mt-4 mb-2">
                 <button type="submit" class="btn btn-primary">Save Configuration</button>
@@ -811,13 +906,13 @@
       >
         <!-- About Content (Unchanged) -->
         <div id="aboutContent" class="mt-4">
-          
+
           <!-- Header Section -->
           <div class="d-flex align-items-center mb-4">
             <img src="assets/icons/icon.png" alt="Logo" style="width: 64px; height: 64px;" class="me-3">
             <div>
               <h2 class="mb-0">Wave-Flex Integrator</h2>
-              <p class="text-muted mb-0">Version <span id="appVersion">1.2.14</span></p>
+              <p class="text-muted mb-0">Version <span id="appVersion">1.3.0</span></p>
             </div>
           </div>
 
@@ -864,7 +959,7 @@
             <li><strong>Support:</strong> <a href="https://github.com/tnxqso/wave-flex-integrator/blob/main/README.md" target="_new">README & Documentation</a></li>
             <li><strong>License:</strong> <a target="_new" href="https://opensource.org/license/mit">MIT License</a></li>
           </ul>
-          
+
           <div class="text-center mt-4 text-muted small">
             <em>Not affiliated with FlexRadio Systems or Wavelog.</em>
           </div>
@@ -901,7 +996,7 @@
         <div id="sb-radio-model" class="sb-text-main">Disconnected</div>
         <div id="sb-radio-ver" class="sb-text-sub">no radio found</div>
       </div>
-      
+
       <!-- TX Indicator (Slice Letter or Warning) -->
       <div id="sb-tx-container" class="sb-cell d-none">
         <span id="sb-tx-badge"></span>
@@ -915,6 +1010,12 @@
 
     <!-- Center: Integration Indicators -->
     <div class="sb-section d-flex align-items-center gap-3">
+      <!-- Antenna Indicators -->
+      <div class="sb-cell border-end pe-3 me-1 d-flex flex-column justify-content-center">
+        <div id="sb-radio-rxant" class="sb-text-sub text-primary fw-bold" style="font-size: 0.65rem; line-height: 1;">RX: -</div>
+        <div id="sb-radio-txant" class="sb-text-sub text-danger fw-bold" style="font-size: 0.65rem; line-height: 1; margin-top: 2px;">TX: -</div>
+      </div>
+
       <div class="sb-indicator-item" title="DX Cluster">
         <i id="sb-icon-dxc" class="bi bi-circle-fill sb-icon-disabled"></i>
         <span id="sb-label-dxc" class="sb-label">DXC</span>
@@ -928,7 +1029,7 @@
         <span id="sb-label-rot" class="sb-label">ROT</span>
       </div>
       <div class="sb-indicator-item border-start ps-3" title="Wavelog Profile">
-        <i id="sb-icon-person" class="bi bi-person-fill sb-icon-disabled"></i> 
+        <i id="sb-icon-person" class="bi bi-person-fill sb-icon-disabled"></i>
         <span id="sb-wl-profile" class="sb-label">No Profile</span>
       </div>
     </div>
