@@ -805,7 +805,7 @@ module.exports = class FlexRadioClient extends EventEmitter {
     this.logger.debug(`Current lookup table size: ${this.flexSpotsByID.size} spot(s).`);
   }
 
-  /**
+/**
    * Sets the frequency and mode of the currently active Transmit Slice.
    * Starts a background timer to ensure state synchronization even if the radio is silent.
    * Includes logic to load Global Profiles or force Antenna Matrix based on config.
@@ -882,7 +882,23 @@ module.exports = class FlexRadioClient extends EventEmitter {
         if (targetBand !== currentBand) {
             needProfileLoad = true;
             const modeForProfile = flexMode || targetSlice.mode;
-            profileNameTarget = `${targetBand.toUpperCase()} ${modeForProfile}`;
+
+            // Map specific voice modes to 'SSB' for the profile lookup
+            let profileModeGroup = modeForProfile.toUpperCase();
+            if (['LSB', 'USB'].includes(profileModeGroup)) {
+                profileModeGroup = 'SSB';
+            }
+
+            // Apply strict spacing/dashes rules matching TeensyMaestro CE
+            let separator = " - "; // Default for 2-digit bands (e.g. 10m, 80m)
+            if (targetBand === "160m") {
+                separator = " -- ";
+            } else if (targetBand.length === 2) {
+                // Single digit band like '6m' (length is 2). Needs an extra space for alignment.
+                separator = " -  ";
+            }
+
+            profileNameTarget = `${profileModeGroup}${separator}${targetBand}`;
         }
     }
 
@@ -929,7 +945,7 @@ module.exports = class FlexRadioClient extends EventEmitter {
     if (needAntennaMatrix) {
         const rxStr = rxAntTarget ? "rxant=" + rxAntTarget : "";
         const txStr = txAntTarget ? "txant=" + txAntTarget : "";
-        const combinedArgs =[rxStr, txStr].filter(Boolean).join(" ");
+        const combinedArgs = [rxStr, txStr].filter(Boolean).join(" ");
 
         if (combinedArgs.length > 0) {
             setTimeout(() => {

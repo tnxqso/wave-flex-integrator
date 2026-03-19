@@ -100,7 +100,7 @@ class FlexRadioMessageParser extends EventEmitter {
         break;
       case 'profile':
         this.parseProfileStatus(handle, statusContent);
-        break;        
+        break;
       // Add more cases as needed for different status types
       default:
         // Emit a generic status event for unhandled types
@@ -196,7 +196,7 @@ class FlexRadioMessageParser extends EventEmitter {
             const rawList = parts[1];
             // Split by '^' and filter out empty strings
             const profiles = rawList.split('^').filter(name => name && name.trim().length > 0);
-            
+
             this.emit('globalProfileList', profiles);
         }
     }

@@ -366,8 +366,8 @@ Because the FlexRadio API unfortunately does not natively store per-band antenna
 You can choose between two override modes in the **Configuration** tab:
 
 1. **Global Profiles (Recommended)**:
-   Wave-Flex Integrator will command the radio to load a matching Global Profile (e.g., `20M CW`) before tuning the slice. This ensures that not only the antennas, but also TX power, DSP filters, and mic profiles are correctly set.
-   > **Important**: This requires your Global Profiles to follow a strict naming convention (Band + Mode). See the [Profile Manager](#profile-manager) section below for exact naming rules. Profiles are only loaded when switching to a *new* band to prevent unnecessary relay wear and audio dropouts.
+   Wave-Flex Integrator will command the radio to load a matching Global Profile (e.g., `CW - 20m`) before tuning the slice. This ensures that not only the antennas, but also TX power, DSP filters, and mic profiles are correctly set.
+   > **Important**: This requires your Global Profiles to follow a **strict and exact naming convention**. See the [Profile Manager](#profile-manager) section below for the exact naming rules. Profiles are only loaded when switching to a *new* band to prevent unnecessary relay wear and audio dropouts.
 
 2. **Manual Matrix**:
    If you do not use Global Profiles, you can manually map specific antenna ports (e.g., `ANT1`, `ANT2`, `RX_A`) to each amateur band (160m to 6m). Wave-Flex Integrator will construct an exact antenna command and send it to the radio on QSY.
@@ -393,7 +393,7 @@ This tab depends on **profile name parsing** to classify profiles into a band/mo
 
 #### What this tab does
 
-- **Band grid layout:** Profiles are automatically sorted into columns by **band** (160M → 6M) for fast navigation.
+- **Band grid layout:** Profiles are automatically sorted into columns by **band** (160m → 6m) for fast navigation.
 - **Mode detection:** The app **guesses the mode from the profile name** (CW/SSB/DIGI/FM) and displays a color-coded, clickable button.
 - **One-click load:** Clicking a button commands the radio to **load that Global Profile** immediately.
 
@@ -406,8 +406,8 @@ It classifies profiles using **only the profile name string**.
 
 To be shown and placed correctly, the profile name must contain:
 
-1. A supported **band token** (e.g., `20M`)
-2. A supported **mode token** (e.g., `CW`, `USB`, `FT8`, etc.)
+1. A supported **band token** (e.g., `20m`)
+2. A supported **mode token** (e.g., `CW`, `SSB`, `FT8`, etc.)
 
 If either is missing, the profile cannot be reliably placed in the grid and may not appear.
 
@@ -417,7 +417,7 @@ If either is missing, the profile cannot be reliably placed in the grid and may 
 
 The app searches for one of these exact band strings:
 
-`160M, 80M, 60M, 40M, 30M, 20M, 17M, 15M, 12M, 10M, 6M`
+`160m, 80m, 60m, 40m, 30m, 20m, 17m, 15m, 12m, 10m, 6m`
 
 ---
 
@@ -437,32 +437,64 @@ The app uppercases the profile name and checks for these tokens:
 - **FM**  
   Matches if the name includes: `FM`
 
-##### Practical examples
+##### Practical examples of detection
 
-- `20M FT8` → DIGI (button labeled **DIGU**)
-- `40M USB` → SSB
-- `80M PH` → SSB
-- `15M CW` → CW
-- `10M FM` → FM
-
----
-
-#### Recommended naming convention
-
-Use a consistent, simple format:
-
-`<BAND> <MODE> - <OPTIONAL DETAILS>`
-
-Examples that work:
-
-- `20M CW`
-- `40M LSB`
-- `15M USB`
-- `10M FT8 - Some more details`
-- `60M USB`
+- `DIGI - 20m` → DIGI (button labeled **DIGU**)
+- `SSB - 40m` → SSB
+- `SSB - 80m` → SSB
+- `CW - 15m` → CW
+- `FM - 10m` → FM
 
 ---
 
+#### Strict Naming Convention (Required for Antenna Management)
+
+To ensure full compatibility with the **Antenna Management (QSY Override)** feature in Wave-Flex Integrator—as well as compatibility with the **TeensyMaestro CE** hardware—you **MUST** name your Global Profiles exactly as shown below. 
+
+Pay extremely close attention to the **spaces and dashes**! 
+*   Single-digit bands (`6m`) require **two spaces** after the dash.
+*   Two-digit bands (`10m`-`80m`) require **one space** after the dash.
+*   The `160m` band requires **two dashes** and **one space**.
+
+**Exact SmartSDR Global Profile names for CW**
+```text
+CW -  6m
+CW - 10m
+CW - 12m
+CW - 15m
+CW - 17m
+CW - 20m
+CW - 30m
+CW - 40m
+CW - 60m
+CW - 80m
+CW -- 160m
+```
+
+**Exact SmartSDR Global Profile names for SSB** *(30m intentionally omitted)*
+```text
+SSB -  6m
+SSB - 10m
+SSB - 12m
+SSB - 15m
+SSB - 17m
+SSB - 20m
+SSB - 40m
+SSB - 60m
+SSB - 80m
+SSB -- 160m
+```
+
+**Exact SmartSDR Global Profile names for FM** *(10m and 6m only)*
+```text
+FM - 10m
+FM -  6m
+```
+
+**Data/Digital Modes (DIGU/FT8/RTTY)**
+If you use profiles for digital modes, apply the exact same spacing rules as above, for example: `DIGU - 20m` or `FT8 -  6m`.
+
+---
 ## Usage
 
 Start the application by launching it from the Start Menu (Windows), the Applications menu (Linux), or by opening the **Applications** folder and double-clicking on **Wave-Flex Integrator** (macOS). On macOS you can also use **Spotlight** by pressing `Command + Space`, typing "Wave-Flex Integrator," and pressing `Enter` to launch the app.
