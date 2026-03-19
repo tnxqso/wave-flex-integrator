@@ -1426,27 +1426,27 @@ function renderProfiles(profiles) {
                         The Profiles tab automatically organizes your FlexRadio Global Profiles into a grid.
                         However, <strong>no compatible profiles were found</strong>.
                     </p>
-                    <div class="alert alert-secondary mt-3">
-                        <h6><i class="bi bi-exclamation-triangle me-2"></i>Naming Requirement</h6>
+                    <div class="alert alert-warning mt-3">
+                        <h6><i class="bi bi-exclamation-triangle me-2"></i>Strict Naming Requirement</h6>
                         <p class="mb-0 small">
-                            To appear here, profile names MUST contain <strong>BOTH</strong> a Band and a Mode.
+                            To appear here, and to be compatible with the Antenna Management features, profile names MUST follow a <strong>strict formatting rule</strong> regarding spaces and dashes.
                         </p>
                     </div>
                     <div class="row small text-muted mb-3">
                         <div class="col-md-6">
                             <strong>Recognized Bands:</strong><br>
-                            160M, 80M ... 10M, 6M
+                            160m, 80m ... 10m, 6m
                         </div>
                         <div class="col-md-6">
-                            <strong>Recognized Modes:</strong><br>
-                            CW, SSB (LSB/USB/PH), DIGI (FT8/RTTY), FM
+                            <strong>Recognized Mode Groups:</strong><br>
+                            CW, SSB, DIGU, FM
                         </div>
                     </div>
-                    <p class="small fw-bold">Examples that work:</p>
+                    <p class="small fw-bold">Required format examples (mind the spaces!):</p>
                     <ul class="small text-muted">
-                        <li>"20M CW"</li>
-                        <li>"40M LSB - Contest"</li>
-                        <li>"10M FT8"</li>
+                        <li><code>CW - 20m</code> (Standard: 1 space after dash)</li>
+                        <li><code>SSB -- 160m</code> (160m: 2 dashes, 1 space)</li>
+                        <li><code>FM -&nbsp;&nbsp;6m</code> (Single digit band: 1 dash, 2 spaces)</li>
                     </ul>
                     <div class="text-center mt-4">
                         <!-- Added ID profilesHelpLink to attach listener manually -->
@@ -1603,7 +1603,7 @@ ipcRenderer.on('slice-status-update', (event, slice) => {
       freqEl.style.opacity = '1.0';
       freqEl.textContent = (slice.frequency).toFixed(3) + ' MHz';
   }
-  
+
   if (modeEl) modeEl.textContent = slice.mode;
 
   // Render Antennas if present
@@ -1611,7 +1611,7 @@ ipcRenderer.on('slice-status-update', (event, slice) => {
   const txantEl = document.getElementById('sb-radio-txant');
   if (rxantEl && slice.rxant) rxantEl.textContent = 'RX: ' + slice.rxant;
   if (txantEl && slice.txant) txantEl.textContent = 'TX: ' + slice.txant;
-  
+
   // Update model name if available in the slice data
   if (modelEl && slice.station) {
       modelEl.textContent = slice.station;
