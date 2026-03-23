@@ -805,7 +805,7 @@ module.exports = class FlexRadioClient extends EventEmitter {
     this.logger.debug(`Current lookup table size: ${this.flexSpotsByID.size} spot(s).`);
   }
 
-/**
+  /**
    * Sets the frequency and mode of the currently active Transmit Slice.
    * Starts a background timer to ensure state synchronization even if the radio is silent.
    * Includes logic to load Global Profiles or force Antenna Matrix based on config.
@@ -941,7 +941,29 @@ module.exports = class FlexRadioClient extends EventEmitter {
         delayMs += 1000; // Give the radio 1000ms to switch hardware relays before sending tune/mode
     }
 
-    // B. Send Antenna Matrix commands
+    // B. Send Frequency Tune
+    if (needTune) {
+        const tuneCmd = `slice tune ${targetSlice.index} ${freqMHzString}`;
+        setTimeout(() => {
+            this.queueCommand(tuneCmd, (resp) => {
+                this.logger.debug(`QSY Tune Response: ${resp}`);
+            });
+        }, delayMs);
+        delayMs += 50;
+    }
+
+    // C. Send Mode
+    if (needMode) {
+        const modeCmd = `slice set ${targetSlice.index} mode=${flexMode}`;
+        setTimeout(() => {
+            this.queueCommand(modeCmd, (resp) => {
+                this.logger.debug(`QSY Mode Response: ${resp}`);
+            });
+        }, delayMs);
+        delayMs += 50;
+    }
+
+    // D. Send Antenna Matrix commands (MUST be after Tune so any listening Maestro links antenna to the NEW band)
     if (needAntennaMatrix) {
         const rxStr = rxAntTarget ? "rxant=" + rxAntTarget : "";
         const txStr = txAntTarget ? "txant=" + txAntTarget : "";
@@ -955,28 +977,6 @@ module.exports = class FlexRadioClient extends EventEmitter {
             }, delayMs);
             delayMs += 50;
         }
-    }
-
-    // C. Send Frequency Tune
-    if (needTune) {
-        const tuneCmd = `slice tune ${targetSlice.index} ${freqMHzString}`;
-        setTimeout(() => {
-            this.queueCommand(tuneCmd, (resp) => {
-                this.logger.debug(`QSY Tune Response: ${resp}`);
-            });
-        }, delayMs);
-        delayMs += 50;
-    }
-
-    // D. Send Mode
-    if (needMode) {
-        const modeCmd = `slice set ${targetSlice.index} mode=${flexMode}`;
-        setTimeout(() => {
-            this.queueCommand(modeCmd, (resp) => {
-                this.logger.debug(`QSY Mode Response: ${resp}`);
-            });
-        }, delayMs);
-        delayMs += 50;
     }
 
     // E. Active Polling (The Kicker)
