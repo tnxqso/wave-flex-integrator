@@ -1,7 +1,6 @@
 'use strict';
 
 const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, Notification } = require('electron');
-const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -48,8 +47,9 @@ let stationGridSquare = null;
 let stationCallsign = null;
 let config = null;
 let qrzClient;
+let autoUpdater = null;
 
-const isDebug = process.argv.includes('--debug');
+const isDebug = process.argv.includes('--app-debug');
 
 // We cache the path to ensure consistency throughout the app's lifecycle.
 // This prevents the path from changing if called before vs. after app.isReady().
@@ -360,6 +360,7 @@ function createWindow() {
   uiManager = new UIManager(mainWindow, logger);
 
   // --- Updater Logic ---
+  ({ autoUpdater } = require('electron-updater'));
 
   // Check for updates immediately on startup
   autoUpdater.checkForUpdates();

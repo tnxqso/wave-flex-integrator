@@ -563,22 +563,22 @@ Wave-Flex Integrator actively monitors and manages all spots displayed on the Sm
 
 Run the application with debug logging:
 
-- **Windows**: Launch the application from the command prompt with the `-- -- --debug` flag.
+- **Windows**: Launch the application from the command prompt with the `-- -- --app-debug` flag.
 
   ```bash
-  "C:\Users\<YourUserName>\AppData\Local\Programs\wave-flex-integrator\WaveFlexIntegrator.exe" -- -- --debug
+  "C:\Users\<YourUserName>\AppData\Local\Programs\wave-flex-integrator\WaveFlexIntegrator.exe" -- -- --app-debug
   ```
 
-- **Linux**: Run from terminal with the `-- -- --debug` flag.
+- **Linux**: Run from terminal with the `-- -- --app-debug` flag.
 
   ```bash
-  wave-flex-integrator -- -- --debug
+  wave-flex-integrator -- -- --app-debug
   ```
 
-- **macOS**: Run from terminal with the -- -- --debug flag:
+- **macOS**: Run from terminal with the -- -- --app-debug flag:
 
   ```bash
-  /Applications/WaveFlexIntegrator.app/Contents/MacOS/WaveFlexIntegrator -- -- --debug
+  /Applications/WaveFlexIntegrator.app/Contents/MacOS/WaveFlexIntegrator -- -- --app-debug
   ```
 
 This creates a `debug.log` file with detailed logs.
