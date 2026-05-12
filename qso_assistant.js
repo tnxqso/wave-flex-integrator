@@ -1,15 +1,15 @@
 const { ipcRenderer } = require('electron');
 
 // UI Elements
-const callDisplay = document.getElementById('callsignDisplay'); 
+const callDisplay = document.getElementById('callsignDisplay');
 const radioStatusFooter = document.getElementById('radioStatusFooter');
 
 // Layout Containers
-const headerData = document.getElementById('headerData'); 
+const headerData = document.getElementById('headerData');
 const mediaRow = document.getElementById('mediaRow');
 const controlsRow = document.getElementById('controlsRow');
 const statsRow = document.getElementById('statsRow');
-const dxRow = document.getElementById('dxRow');      
+const dxRow = document.getElementById('dxRow');
 
 // Data Elements
 const dxccName = document.getElementById('dxccName');
@@ -41,7 +41,7 @@ const mapContainer = document.getElementById('mapContainer');
 const rotateSP = document.getElementById('rotateBtnSP');
 const rotateLP = document.getElementById('rotateBtnLP');
 const spotFlexBtn = document.getElementById('spotFlexBtn');
-const spotDxClusterBtn = document.getElementById('spotDxClusterBtn'); 
+const spotDxClusterBtn = document.getElementById('spotDxClusterBtn');
 const btnDxLink = document.getElementById('btnDxLink');
 const dxComment = document.getElementById('dxComment');
 
@@ -55,7 +55,7 @@ let appConfig = {};
 // --- Initialize ---
 
 window.onload = async () => {
-    resetUI(); 
+    resetUI();
 
     try {
         appConfig = await ipcRenderer.invoke('get-config');
@@ -64,7 +64,7 @@ window.onload = async () => {
         }
     } catch (err) {
         console.error("Error loading config:", err);
-        appConfig = {}; 
+        appConfig = {};
     }
 };
 
@@ -78,11 +78,11 @@ ipcRenderer.on('wavelog-lookup', (event, data) => {
         gridsquare: data.grid || data.gridsquare,
         city: data.city,
         state: data.state,
-        us_county: data.us_county, 
-        
-        bearing: data.azimuth, 
+        us_county: data.us_county,
+
+        bearing: data.azimuth,
         distance: data.distance,
-        
+
         bearing_lp: (data.azimuth + 180) % 360,
         distance_lp: Math.round(40075 - parseFloat(data.distance || 0)),
 
@@ -90,18 +90,20 @@ ipcRenderer.on('wavelog-lookup', (event, data) => {
         lotw_days: data.lotw_days,
         eqsl_member: data.eqsl_member === "active",
         qsl_manager: data.qsl_manager,
-        
+
         dxcc_confirmed_on_band_mode: data.slot_confirmed,
-        
+
         radio_connected: data.radio_connected,
         test_mode: data.test_mode,
-        
+
         // WS usually lacks image and precise coords, so we pass what we have
-        image: data.image, 
+        image: data.image,
         lat: data.lat,
         lon: data.lon
     };
-
+    // Directly after mappedData is defined, before updateUI(mappedData)
+    console.log('[QSO] image from WS:', mappedData.image);
+    console.log('[QSO] showQsoMedia:', appConfig.application?.showQsoMedia);
     // 1. Update UI immediately with what we have (Text + Map via Grid calc)
     updateUI(mappedData);
 
@@ -109,7 +111,7 @@ ipcRenderer.on('wavelog-lookup', (event, data) => {
     // Only if user has enabled "Show Media" AND we are missing the image
     if (appConfig.application?.showQsoMedia && !mappedData.image && mappedData.callsign) {
         console.log("Media enabled but missing in WebSocket. Triggering background lookup...");
-        performLookup(mappedData.callsign); 
+        performLookup(mappedData.callsign);
     }
 });
 
@@ -145,14 +147,14 @@ if (spotDxClusterBtn) {
         const comment = dxComment.value;
         spotDxClusterBtn.disabled = true;
         const res = await ipcRenderer.invoke('send-dx-spot', { callsign: currentCallsign, comment });
-        
+
         if(res.success) {
             flashButton(spotDxClusterBtn);
-            dxComment.value = ''; 
-            spotDxClusterBtn.disabled = true; 
+            dxComment.value = '';
+            spotDxClusterBtn.disabled = true;
         } else {
             alert("Error: " + res.error);
-            spotDxClusterBtn.disabled = false; 
+            spotDxClusterBtn.disabled = false;
         }
     });
 }
@@ -179,13 +181,13 @@ async function performLookup(callsign) {
 
     try {
         const result = await ipcRenderer.invoke('lookup-callsign', callsign);
-        
+
         if (result) {
             result.radio_connected = await ipcRenderer.invoke('get-radio-status'); // Ensure status is fresh
             updateUI(result);
         } else {
             if(callDisplay) {
-                callDisplay.style.color = "var(--bs-danger)"; 
+                callDisplay.style.color = "var(--bs-danger)";
                 setTimeout(() => callDisplay.style.color = "var(--bs-primary)", 2000);
             }
         }
@@ -196,22 +198,22 @@ async function performLookup(callsign) {
 
 function updateUI(data) {
     currentCallsign = data.callsign;
-    
+
     if(callDisplay) {
         callDisplay.innerText = currentCallsign || '---';
         callDisplay.style.color = "var(--bs-primary)";
     }
-    
-    currentBearingSP = data.bearing; 
+
+    currentBearingSP = data.bearing;
     currentBearingLP = data.bearing_lp;
 
     headerData.classList.remove('d-none');
     statsRow.classList.remove('d-none');
-    dxRow.classList.remove('d-none');   
+    dxRow.classList.remove('d-none');
     controlsRow.classList.remove('d-none');
 
     const rotorEnabled = appConfig.rotator && appConfig.rotator.enabled;
-    
+
     if (rotorEnabled) {
         rotateSP.style.display = 'flex';
         rotateLP.style.display = 'flex';
@@ -219,7 +221,7 @@ function updateUI(data) {
         controlsRow.style.gridTemplateColumns = 'repeat(4, 1fr)';
         if(spotFlexBtn) {
             spotFlexBtn.style.gridColumn = 'span 2';
-            spotFlexBtn.style.width = '100%'; 
+            spotFlexBtn.style.width = '100%';
         }
     } else {
         rotateSP.style.display = 'none';
@@ -228,7 +230,7 @@ function updateUI(data) {
         controlsRow.style.justifyContent = 'center';
         if(spotFlexBtn) {
             spotFlexBtn.style.gridColumn = 'auto';
-            spotFlexBtn.style.width = '50%'; 
+            spotFlexBtn.style.width = '50%';
         }
     }
 
@@ -273,7 +275,7 @@ function updateUI(data) {
     let locString = data.city || '';
     if (data.state) locString += (locString ? `, ${data.state}` : data.state);
     if (data.us_county) locString += ` - ${data.us_county}`;
-    
+
     if (data.name) {
         displayText += ` - ${data.name}`;
         if (locString) displayText += ` (${locString})`;
@@ -284,13 +286,13 @@ function updateUI(data) {
         const isoCode = getIsoCodeFromEmoji(data.dxcc_flag);
         if (isoCode) {
             flagIcon.className = `fi fi-${isoCode} me-2`;
-            flagIcon.innerText = ''; 
+            flagIcon.innerText = '';
         } else {
             flagIcon.className = 'fi me-2';
-            flagIcon.innerText = data.dxcc_flag; 
+            flagIcon.innerText = data.dxcc_flag;
         }
     } else {
-        flagIcon.className = 'd-none'; 
+        flagIcon.className = 'd-none';
     }
 
     let distSP = data.distance;
@@ -316,7 +318,7 @@ function updateUI(data) {
     document.getElementById('rotBearLP').innerText = data.bearing_lp ? `${data.bearing_lp}°` : '';
 
     updateBadge(statusDxcc, data.dxcc_confirmed, "DXCC CNF", "NEW DXCC");
-    
+
     if (data.dxcc_confirmed_on_band_mode !== undefined) {
         statusSlot.style.display = 'flex';
         updateBadge(statusSlot, data.dxcc_confirmed_on_band_mode, "SLOT CNF", "NEW SLOT");
@@ -326,18 +328,18 @@ function updateUI(data) {
 
     if (data.lotw_member) {
         statusLotw.className = 'status-badge status-active';
-        statusLotw.style.backgroundColor = ''; 
+        statusLotw.style.backgroundColor = '';
         if (data.lotw_days !== null && data.lotw_days !== undefined) {
             statusLotw.innerText = `LOTW (${data.lotw_days}D)`;
             if (parseInt(data.lotw_days) > 365) {
-                statusLotw.style.backgroundColor = '#d63384'; 
+                statusLotw.style.backgroundColor = '#d63384';
             }
         } else {
             statusLotw.innerText = "LOTW";
         }
     } else {
         statusLotw.className = 'status-badge status-none';
-        statusLotw.style.backgroundColor = ''; 
+        statusLotw.style.backgroundColor = '';
         statusLotw.innerText = "NO LOTW";
     }
 
@@ -350,6 +352,7 @@ function updateUI(data) {
     }
 
     // --- Media Logic ---
+    console.log('[QSO] updateUI image:', data.image);
     if (data.image) {
         currentImageUrl = data.image;
         profileImg.src = data.image;
@@ -364,7 +367,7 @@ function updateUI(data) {
 
     // --- Map Logic with Grid Fallback ---
     let mapLat = 0, mapLon = 0, hasCoords = false;
-    
+
     // 1. Try explicit Lat/Lon (from API)
     if (data.lat && data.lon) {
         mapLat = parseFloat(data.lat);
@@ -374,7 +377,7 @@ function updateUI(data) {
         mapLat = data.latlng[0];
         mapLon = data.latlng[1];
         hasCoords = true;
-    } 
+    }
     // 2. Fallback: Try to calculate from Grid Square (Local)
     else if (data.gridsquare) {
         const coords = gridToLatLon(data.gridsquare);
@@ -400,7 +403,7 @@ function resetUI() {
     currentBearingSP = null;
     currentBearingLP = null;
     currentImageUrl = '';
-    
+
     headerData.classList.add('d-none');
     statsRow.classList.add('d-none');
     mediaRow.classList.add('d-none');
@@ -412,16 +415,16 @@ function resetUI() {
     distanceValue.innerText = '';
     profileImg.src = '';
     mapFrame.src = 'about:blank';
-    
+
     if(callDisplay) {
-        callDisplay.innerText = "WAITING...";
+        callDisplay.innerText = "STAND BY...";
         callDisplay.style.color = "var(--bs-secondary-color)";
     }
-    
+
     if(spotDxClusterBtn) spotDxClusterBtn.disabled = true;
     if(spotFlexBtn) spotFlexBtn.disabled = true;
     dxComment.disabled = true;
-    if(radioStatusFooter) radioStatusFooter.style.display = 'none'; 
+    if(radioStatusFooter) radioStatusFooter.style.display = 'none';
 }
 
 function updateBadge(el, isConfirmed, textConf, textNeed) {
@@ -461,39 +464,39 @@ function applyTheme(theme) {
  */
 function gridToLatLon(grid) {
     if (!grid || grid.length < 4) return null;
-    
+
     const adjGrid = grid.toUpperCase();
-    
+
     // Field (JO)
     const lonField = adjGrid.charCodeAt(0) - 'A'.charCodeAt(0);
     const latField = adjGrid.charCodeAt(1) - 'A'.charCodeAt(0);
-    
+
     // Square (57)
     const lonSquare = parseInt(adjGrid[2]);
     const latSquare = parseInt(adjGrid[3]);
-    
+
     let lon = (lonField * 20) + (lonSquare * 2) - 180;
     let lat = (latField * 10) + latSquare - 90;
-    
+
     // Center of 4-char square
-    let lonCenter = 1; 
+    let lonCenter = 1;
     let latCenter = 0.5;
 
     // Subsquare (VT) - Optional
     if (adjGrid.length >= 6) {
         const lonSub = adjGrid.charCodeAt(4) - 'A'.charCodeAt(0);
         const latSub = adjGrid.charCodeAt(5) - 'A'.charCodeAt(0);
-        
+
         lon += (lonSub * (2/24));
         lat += (latSub * (1/24));
-        
+
         // Center of 6-char square
         lonCenter = (2/24) / 2;
         latCenter = (1/24) / 2;
     }
 
-    return { 
-        lat: lat + latCenter, 
-        lon: lon + lonCenter 
+    return {
+        lat: lat + latCenter,
+        lon: lon + lonCenter
     };
 }

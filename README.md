@@ -376,7 +376,7 @@ You can choose between two override modes in the **Configuration** tab:
 
 The **QSO Assistant** is a dedicated, compact floating window designed to sit alongside your logging workflow. It offers:
 
-- **Unified Lookup**: Type a callsign and press Enter. The assistant fetches data from both Wavelog (previous QSOs) and QRZ.com (if enabled).
+- **Unified Lookup**: The assistant listens for callsign input from Wavelog - when you enter a callsign in the logging window and move to the next field, the assistant automatically fetches data from Wavelog (previous QSOs) and QRZ.com (if enabled). The display shows **STAND BY** while waiting for input.
 - **Stats Display**: Instantly see Name, QTH, Grid Square, and Bearings (Short Path & Long Path).
 - **Media**: Displays the operator's profile picture (from QRZ) and a dynamic map of their location.
 - **Visual Badges**: Color-coded badges indicate if you need this station for **DXCC**, **Slot** (Band/Mode), or if they use **LoTW** / **OQRS**.

@@ -10,8 +10,8 @@
       try {
         const params = new URLSearchParams(window.location.search);
         const theme = params.get('theme') || 'system';
-        
-        const isDark = theme === 'dark' || 
+
+        const isDark = theme === 'dark' ||
           (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
         if (isDark) {
@@ -24,37 +24,37 @@
       }
     })();
   </script>
-  
+
   <!-- Strict CSP for Offline Use -->
   <meta
     http-equiv="Content-Security-Policy"
     content="
-      default-src 'self'; 
-      script-src 'self' 'unsafe-inline'; 
-      style-src 'self' 'unsafe-inline'; 
+      default-src 'self';
+      script-src 'self' 'unsafe-inline';
+      style-src 'self' 'unsafe-inline';
       font-src 'self' data:;
       img-src 'self' data: http: https:;
       frame-src 'self' https://maps.google.com https://www.google.com https://www.openstreetmap.org;
     "
   />
-  
+
   <!-- Local Assets -->
   <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css">
   <link rel="stylesheet" href="assets/flag-icons/css/flag-icons.min.css">
   <link rel="stylesheet" href="assets/bootstrap-icons/bootstrap-icons.css">
-  
+
   <style>
     body {
       background-color: var(--bs-body-bg);
       color: var(--bs-body-color);
-      overflow: hidden; 
+      overflow: hidden;
       padding: 8px;
       user-select: none;
       height: 100vh;
       display: flex;
       flex-direction: column;
     }
-    
+
     /* --- UNIFIED HEADER --- */
     #unifiedHeader {
         display: flex;
@@ -74,7 +74,7 @@
         display: flex;
         align-items: center;
     }
-    
+
     #callsignInput {
         font-weight: 800;
         text-transform: uppercase;
@@ -137,10 +137,10 @@
         display: flex;
         align-items: center;
     }
-    
-    .status-active { background-color: #198754 !important; color: white !important; } 
-    .status-needed { background-color: #0d6efd !important; color: white !important; } 
-    .status-none   { background-color: #6c757d !important; color: white !important; opacity: 0.5; } 
+
+    .status-active { background-color: #198754 !important; color: white !important; }
+    .status-needed { background-color: #0d6efd !important; color: white !important; }
+    .status-none   { background-color: #6c757d !important; color: white !important; opacity: 0.5; }
 
     /* 3. Bearing Section (Right) */
     .bearing-section {
@@ -169,18 +169,18 @@
     #dxComment { flex-grow: 1; font-size: 0.85rem; }
 
     /* Split button for Rotor (NEW) */
-    .btn-split { display: flex; flex-direction: column; line-height: 0.9; font-size: 0.7rem; }    
+    .btn-split { display: flex; flex-direction: column; line-height: 0.9; font-size: 0.7rem; }
 
     /* --- MEDIA & CONTROLS --- */
 
     .media-container {
       background-color: var(--bs-secondary-bg);
-      border-radius: 4px; 
-      overflow: hidden; 
+      border-radius: 4px;
+      overflow: hidden;
       border: 1px solid var(--bs-border-color);
       position: relative;
       height: 100%;
-      display: flex; 
+      display: flex;
       align-items: center;
       justify-content: center;
     }
@@ -188,15 +188,15 @@
     #profileImg {
         width: 100%;
         height: 100%;
-        object-fit: contain !important; 
+        object-fit: contain !important;
     }
 
     /* Control Grid */
     #controlsRow {
         display: grid;
-        grid-template-columns: repeat(4, 1fr); 
+        grid-template-columns: repeat(4, 1fr);
         gap: 5px;
-        margin-top: auto; 
+        margin-top: auto;
         width: 100%;
         flex-shrink: 0;
     }
@@ -210,7 +210,7 @@
       align-items: center;
       justify-content: center;
       white-space: nowrap;
-      padding: 0; 
+      padding: 0;
     }
   </style>
 </head>
@@ -218,27 +218,27 @@
 
   <!-- Unified Header -->
   <div id="unifiedHeader">
-      
+
       <!-- 1. Callsign Display (LCD Style) - Width auto-adjusts now -->
       <div class="search-section" style="flex-grow: 1; margin-right: 12px; min-width: 160px;">
-          <div id="callsignDisplay" class="d-flex align-items-center justify-content-center" 
-               style="background-color: var(--bs-secondary-bg); color: var(--bs-body-color); font-family: 'Consolas', monospace; 
-                      font-weight: 800; font-size: 1.8rem; height: 42px; border-radius: 4px; 
+          <div id="callsignDisplay" title="Waiting for callsign input in Wavelog" class="d-flex align-items-center justify-content-center"
+               style="background-color: var(--bs-secondary-bg); color: var(--bs-body-color); font-family: 'Consolas', monospace;
+                      font-weight: 800; font-size: 1.8rem; height: 42px; border-radius: 4px;
                       border: 1px solid var(--bs-border-color); letter-spacing: 2px; overflow: hidden; white-space: nowrap; padding-left: 10px; padding-right: 10px;">
-              WAITING...
+              STAND BY...
           </div>
       </div>
 
       <!-- 2. Data Wrapper (Hidden until lookup) -->
       <div id="headerData" class="d-none">
-          
+
           <!-- Info & Badges -->
           <div class="info-section">
               <div class="info-top">
                   <span id="flagIcon" class="fi me-2" style="font-size: 1.4em;"></span>
                   <div id="dxccName">---</div>
               </div>
-              
+
               <div class="badges-inline">
                   <div id="statusDxcc" class="status-badge">DXCC</div>
                   <div id="statusSlot" class="status-badge">SLOT</div>
@@ -289,17 +289,17 @@
       </button>
       <button id="btnDxLink" class="btn btn-sm btn-outline-secondary" title="Open DXWatch"><i class="bi bi-box-arrow-up-right"></i></button>
   </div>
-  
+
   <!-- Control Buttons -->
   <div id="controlsRow" class="d-none">
       <button id="rotateBtnSP" class="btn btn-outline-danger btn-action btn-split"><span>ROTATE</span><span id="rotBearSP" style="font-size:1.1em;">---°</span></button>
       <button id="rotateBtnLP" class="btn btn-outline-warning btn-action btn-split"><span>LONG P</span><span id="rotBearLP" style="font-size:1.1em;">---°</span></button>
-      
+
       <button id="spotFlexBtn" class="btn btn-outline-secondary btn-action" disabled>
           <i class="bi bi-display me-1"></i> Flex Spot
       </button>
   </div>
-  
+
   <!-- Radio Status Footer (New) -->
   <div id="radioStatusFooter" class="text-center mt-2 text-muted small" style="display:none;">
       <i class="bi bi-exclamation-triangle-fill text-warning"></i> Radio Disconnected
