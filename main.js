@@ -525,7 +525,7 @@ async function fetchStationDetails(suppressErrors = false) {
       }
     }
   } catch (error) {
-    logger.error(`Error fetching station information from Wavelog: ${error.message}`);
+    logger.error(`Error fetching station information from Wavelog: ${error instanceof Error ? error.message : error}`);
     wavelogClient.emit('stationFetchError', error); // Trigger error event
     if (!suppressErrors) {
       dialog.showErrorBox('Error', 'Error fetching station details. Please check the configuration.');

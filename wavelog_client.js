@@ -128,12 +128,12 @@ class WavelogClient extends EventEmitter {
         ]);
 
         if (!response.ok) {
-          const errorMessage = `Failed to fetch station profile info: ${response.statusText}`;
+          const errorMessage = new Error(`Failed to fetch station profile info: HTTP ${response.status}`);
           this.handleError(errorMessage, false, suppressErrors);
           this.fetchFailed = true;
           this.fetchPromise = null; // Reset the fetchPromise
           reject(errorMessage);
-          this.emit('stationFetchError', new Error(response.statusText));
+          this.emit('stationFetchError', errorMessage);
           return;
         }
 
