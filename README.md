@@ -1,7 +1,7 @@
 # Wave-Flex Integrator
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Node.js Version](https://img.shields.io/badge/node.js-12%2B-green.svg)](https://nodejs.org/)
+[![Node.js Version](https://img.shields.io/badge/node.js-18%2B-green.svg)](https://nodejs.org/)
 [![Beta Status](https://img.shields.io/badge/status-beta-orange.svg)](#)
 
 *A seamless bridge between your [FlexRadio](https://www.flexradio.com/) and [Wavelog](https://www.wavelog.org) logging software, integrating DX Cluster data, WSJT-X, QSO Assistant, and synchronizing frequency and mode, all without traditional CAT software.*
@@ -115,7 +115,7 @@ Traditional CAT software relies on **Polling** - a legacy method where the softw
 
 On a network-native radio like FlexRadio, this approach is disastrous. It floods your network with redundant traffic, consumes radio CPU cycles, and introduces significant latency, especially when operating remotely via SmartLink. It makes a snappy radio feel sluggish.
 
-**Let’s be honest: Why invest in a state-of-the-art SDR only to communicate with it using Stone Age protocols from the 1980s?**
+**Let's be honest: Why invest in a state-of-the-art SDR only to communicate with it using Stone Age protocols from the 1980s?**
 
 Wave-Flex Integrator respects the hardware. Instead of asking, it **listens**. It establishes a direct TCP stream with the radio API. When you spin the VFO on your Maestro or changing the frequency or mode using SmartSDR, the radio *pushes* that event instantly to the application. The result is zero unnecessary network traffic, zero polling lag, and immediate synchronization.
 
@@ -305,7 +305,7 @@ Upon first startup, no services gets connected. This is normal. Configure the ap
 
 - **WSJT-X integration Enabled**: Toggle WSJT-X integration. If this is set to `false`, all WSJT-X functionality (including `Show QSO` and `Log QSO`) will be disabled, regardless of their individual settings.
 
-- **UDP Listen Port**: The UDP port on which the application listens for WSJT-X “Network Messages” (default is `2237`). Configure WSJT-X **Settings → Reporting → UDP Server** to send to the integrator host/IP and this port.
+- **UDP Listen Port**: The UDP port on which the application listens for WSJT-X "Network Messages" (default is `2237`). Configure WSJT-X **Settings → Reporting → UDP Server** to send to the integrator host/IP and this port.
 
 - **Show ongoing WSJT-X QSO in Wavelog live logging**: When this option and `WSJT-X integration Enabled` are both set to `true`, the details of the ongoing QSO will be displayed in Wavelog's live logging tab (based on WSJT-X *Status* messages).
 
@@ -381,11 +381,24 @@ The **QSO Assistant** is a dedicated, compact floating window designed to sit al
 - **Media**: Displays the operator's profile picture (from QRZ) and a dynamic map of their location.
 - **Visual Badges**: Color-coded badges indicate if you need this station for **DXCC**, **Slot** (Band/Mode), or if they use **LoTW** / **OQRS**.
 - **Rotator Control**: If enabled, click the "ROTATE" or "LONG P" buttons to automatically turn your antenna to the calculated bearing using MQTT.
-- **Flex Spot**: A dedicated button to send the looked-up callsign directly to your FlexRadio panadapter as a spot.
+- **DX Comment**: A text field next to the **Send Spot** button. The content of this field is included as the comment in the outgoing cluster spot (e.g., `5 up`, `JA only`, `Listening 14.250`). The field is cleared automatically after a successful spot.
+- **Send Spot**: Sends a DX cluster spot for the currently looked-up callsign via the active DX Cluster connection. The frequency is taken from the active TX slice on the FlexRadio, and the comment (if any) is appended. The spot is transmitted to the configured cluster as: `DX <freqKHz> <callsign> <comment>`. An active radio connection and a valid TX slice are required.
+- **DXWatch Link**: A small icon button next to **Send Spot** that opens [DXWatch](https://dxwatch.com/) in your default browser, useful for verifying whether the spot has propagated through the cluster network.
+- **Flex Spot**: A button intended to send the looked-up callsign directly to your FlexRadio panadapter as a local spot.
+
+When a callsign is detected, the assistant displays all available information at a glance, including badges, bearings, profile image and map:
+
+![QSO Assistant during an active QSO](assets/wave-flex-integrator-qso-assistant-qso.png)
+
+While no callsign is being looked up, the window collapses to a compact standby state:
+
+![QSO Assistant in standby mode](assets/wave-flex-integrator-qso-assistant-stand-by.png)
 
 ### Profile Manager
 
 The **Profiles** tab lets you view and load **FlexRadio Global Profiles** directly from the application.
+
+![Profiles tab with band columns and mode buttons](assets/wave-flex-integrator-profiles-tab.png)
 
 This tab depends on **profile name parsing** to classify profiles into a band/mode grid. To avoid missing profiles, follow the naming rules below.
 
@@ -401,7 +414,7 @@ This tab depends on **profile name parsing** to classify profiles into a band/mo
 
 #### Critical requirement: profile names MUST contain BOTH band and mode
 
-The application **does not read band/mode from the profile’s internal settings**.  
+The application **does not read band/mode from the profile's internal settings**.  
 It classifies profiles using **only the profile name string**.
 
 To be shown and placed correctly, the profile name must contain:
@@ -495,6 +508,51 @@ FM -  6m
 If you use profiles for digital modes, apply the exact same spacing rules as above, for example: `DIGU - 20m` or `FT8 -  6m`.
 
 ---
+
+### WSJT-X Integration
+
+Wave-Flex Integrator can listen for UDP "Network Messages" from [WSJT-X](https://wsjt.sourceforge.io/wsjtx.html) and react to them in two independent ways: by showing the ongoing QSO in Wavelog, and by automatically logging completed QSOs to Wavelog. Configuration for both is described under [WSJT-X Configuration](#wsjt-x-configuration). This section explains how the integration actually behaves at runtime.
+
+#### How it works
+
+Wave-Flex Integrator opens a UDP socket on the configured port (default `2237`) and listens for WSJT-X status and logging messages. In WSJT-X, point **Settings → Reporting → UDP Server** to the integrator host and port (typically `127.0.0.1:2237` when both run on the same machine).
+
+#### Show ongoing QSO in Wavelog
+
+When `Show ongoing WSJT-X QSO in Wavelog live logging` is enabled, the integrator watches the WSJT-X *Status* messages for the combination of an outgoing callsign (DX call), your own call, and an active TX state. As soon as all three are present and no QSO is already being displayed, Wave-Flex Integrator opens Wavelog's QSO logging page in your default browser, with the DX callsign pre-filled via URL parameter. The opened URL is of the form:
+
+```
+<Wavelog-URL>/qso/log_qso?callsign=<DX-CALLSIGN>
+```
+
+The "active QSO" flag is cleared when WSJT-X reports that TX has stopped, so the next outgoing call will trigger a new page.
+
+> **Note:** This feature opens a browser tab to display the lookup. It does *not* render the QSO inside the Wave-Flex Integrator window itself, and it does not pre-fill anything beyond the callsign. You do not need to manually save anything in that window; if `Log WSJT-X QSO in Wavelog` is enabled, the actual logging is handled separately when the QSO completes (see below).
+
+#### Automatic QSO logging
+
+When `Log WSJT-X QSO in Wavelog` is enabled, the integrator listens for WSJT-X *Logged ADIF* messages. When WSJT-X reports a completed QSO at the end of an exchange, the integrator forwards the full ADIF record to Wavelog's REST API endpoint:
+
+```
+POST <Wavelog-URL>/api/qso
+```
+
+Before posting, Wave-Flex Integrator validates two fields in the ADIF record against the **Active Station** configured in Wavelog:
+
+- `STATION_CALLSIGN` must match (case-insensitive) the Wavelog active station callsign.
+- `MY_GRIDSQUARE` must match (case-insensitive) the Wavelog active station grid square.
+
+If either field is present and does not match, the QSO is silently rejected. The mismatch is recorded in `debug.log` but no on-screen warning is shown, and the QSO is **not** retried. To avoid this, make sure WSJT-X **My Call** and **My Grid** under the *General* tab exactly match the Wavelog station you intend to log to. If you change the Active Station in Wavelog, restart Wave-Flex Integrator so it can pick up the new values.
+
+#### Known limitations
+
+- **No retry, no buffering.** If Wavelog is unreachable when a *Logged ADIF* message arrives, the integrator logs the failure to `debug.log` and discards the QSO. There is currently no offline queue. Re-logging must be done manually from WSJT-X (`File → Open log directory`) or by importing `wsjtx_log.adi` directly into Wavelog.
+- **No multicast support.** The UDP socket is bound for unicast only. If you use WSJT-X multicast to fan out to multiple consumers, configure a unicast copy aimed at the integrator, or use a UDP relay/fan-out tool in front of it.
+- **No UDP port sharing.** The bind is exclusive. Another application cannot simultaneously listen on the same UDP port on the same interface.
+- **Restart on Active Station change.** Wavelog's active station identity is read at startup. If you switch the Active Station in Wavelog while Wave-Flex Integrator is running, restart it so the validation above uses the new values.
+
+---
+
 ## Usage
 
 Start the application by launching it from the Start Menu (Windows), the Applications menu (Linux), or by opening the **Applications** folder and double-clicking on **Wave-Flex Integrator** (macOS). On macOS you can also use **Spotlight** by pressing `Command + Space`, typing "Wave-Flex Integrator," and pressing `Enter` to launch the app.
@@ -561,24 +619,30 @@ Wave-Flex Integrator actively monitors and manages all spots displayed on the Sm
 
 ### Enable Debug Mode
 
-Run the application with debug logging:
+Run the application with the `--app-debug` flag to write a detailed `debug.log` file.
 
-- **Windows**: Launch the application from the command prompt with the `-- -- --app-debug` flag.
+- **Windows**: Launch the application from the command prompt with the `--app-debug` flag.
 
   ```bash
-  "C:\Users\<YourUserName>\AppData\Local\Programs\wave-flex-integrator\WaveFlexIntegrator.exe" -- -- --app-debug
+  "C:\Users\<YourUserName>\AppData\Local\Programs\wave-flex-integrator\WaveFlexIntegrator.exe" --app-debug
   ```
 
-- **Linux**: Run from terminal with the `-- -- --app-debug` flag.
+- **Linux**: Run from terminal with the `--app-debug` flag.
 
   ```bash
-  wave-flex-integrator -- -- --app-debug
+  wave-flex-integrator --app-debug
   ```
 
-- **macOS**: Run from terminal with the -- -- --app-debug flag:
+- **macOS**: Run from terminal with the `--app-debug` flag:
 
   ```bash
-  /Applications/WaveFlexIntegrator.app/Contents/MacOS/WaveFlexIntegrator -- -- --app-debug
+  /Applications/WaveFlexIntegrator.app/Contents/MacOS/WaveFlexIntegrator --app-debug
+  ```
+
+- **Developers running from source** (any OS): use `npm start` with a single `--` separator so npm passes the flag through to Electron:
+
+  ```bash
+  npm start -- --app-debug
   ```
 
 This creates a `debug.log` file with detailed logs.
