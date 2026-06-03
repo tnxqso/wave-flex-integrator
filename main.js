@@ -51,6 +51,15 @@ let autoUpdater = null;
 
 const isDebug = process.argv.includes('--app-debug');
 
+
+// Placeholder values copied from defaultConfig.js.
+// Used to detect a fresh, unconfigured install. Keep in sync with defaultConfig.js.
+const PLACEHOLDERS = {
+  wavelogUrl: 'https://wavelog.example.com/index.php',
+  wavelogApiKey: 'YOUR-WAVELOG-API-KEY-HERE',
+  dxClusterCallsign: 'YOUR-CALLSIGN-HERE',
+};
+
 // We cache the path to ensure consistency throughout the app's lifecycle.
 // This prevents the path from changing if called before vs. after app.isReady().
 let cachedLogPath = null;
@@ -188,31 +197,31 @@ if (fs.existsSync(localConfigPath)) {
 function createTray() {
   const iconPath = path.join(__dirname, 'assets/icons/icon.png');
   const trayIcon = nativeImage.createFromPath(iconPath);
-  
+
   tray = new Tray(trayIcon.resize({ width: 16, height: 16 }));
   tray.setToolTip('Wave-Flex Integrator');
 
   const contextMenu = Menu.buildFromTemplate([
-    { 
-      label: 'Show Wave-Flex Integrator', 
+    {
+      label: 'Show Wave-Flex Integrator',
       click: () => {
         if (mainWindow) mainWindow.show();
-      } 
+      }
     },
     { type: 'separator' },
-    { 
-        label: 'Restart', 
+    {
+        label: 'Restart',
         click: () => {
             app.relaunch();
             app.exit(0);
-        } 
+        }
     },
-    { 
-      label: 'Quit', 
+    {
+      label: 'Quit',
       click: () => {
         isQuitting = true;
         app.quit();
-      } 
+      }
     }
   ]);
 
@@ -239,14 +248,14 @@ function createTray() {
  */
 function updateLoginSettings() {
   const isEnabled = config.application?.startAtLogin || false;
-  
+
   if (!app.isPackaged) {
     // DEVELOPMENT MODE
-    // We forcefully disable auto-start in development to prevent 
+    // We forcefully disable auto-start in development to prevent
     // polluting the registry/startup items with the Electron binary.
     app.setLoginItemSettings({
       openAtLogin: false, // Force Disabled
-      path: process.execPath, 
+      path: process.execPath,
       args: [path.resolve(__dirname)]
     });
     logger.info('Development Mode: Auto-start registration skipped/cleared to prevent double startup entries.');
@@ -256,7 +265,7 @@ function updateLoginSettings() {
     app.setLoginItemSettings({
       openAtLogin: isEnabled,
       path: process.execPath,
-      args: [] 
+      args: []
     });
     logger.info(`Updated Login Item Settings: openAtLogin=${isEnabled}, isPackaged=${app.isPackaged}`);
   }
@@ -285,7 +294,7 @@ function createWindow() {
       contextIsolation: false,
     },
     autoHideMenuBar: true,
-    icon: path.join(__dirname, 'assets/icons/icon.png') 
+    icon: path.join(__dirname, 'assets/icons/icon.png')
   });
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
@@ -296,7 +305,7 @@ function createWindow() {
 
   const saveWindowState = () => {
     if (!mainWindow) return;
-    
+
     // Get current position and size
     const bounds = mainWindow.getBounds();
 
@@ -312,7 +321,7 @@ function createWindow() {
         if (error) {
           logger.error(`Failed to save window state: ${error.message}`);
         } else {
-          // logger.debug('Window state saved to disk.'); 
+          // logger.debug('Window state saved to disk.');
         }
       });
     }, 1000);
@@ -543,7 +552,7 @@ if (!gotTheLock) {
   // We have the lock. Listen for a second instance trying to start.
   app.on('second-instance', (event, commandLine, workingDirectory) => {
     logger.info('Second instance detected. Focusing existing window.');
-    
+
     // Someone tried to run a second instance, we should focus our window.
     if (mainWindow) {
       // If minimized to tray, show it
@@ -577,12 +586,23 @@ app.on('ready', () => {
           `Final Merged Configuration: ${JSON.stringify(safeConfig, null, 2)}`
         );
 
-        // Check for placeholder callsign indicating a fresh install
-        if (config.dxCluster.callsign === 'YOUR-CALLSIGN-HERE') {
-          logger.warn('First start of application, configuration has not been done yet.');
-          appConfigured = false;
-        } else {
-          appConfigured = true;
+        // Determine whether the app has been configured.
+        // The app cannot function without a working Wavelog connection, because the
+        // station identity (callsign, grid, station id) is fetched from Wavelog, not
+        // entered manually. We therefore base "configured" on the Wavelog URL and API
+        // key being set to real values. The DX Cluster callsign is intentionally not
+        // used here, since DX Cluster is optional.
+        const wlUrl = (config.wavelogAPI?.URL || '').trim();
+        const wlApiKey = (config.wavelogAPI?.apiKey || '').trim();
+
+        appConfigured =
+          wlUrl !== '' &&
+          wlUrl !== PLACEHOLDERS.wavelogUrl &&
+          wlApiKey !== '' &&
+          wlApiKey !== PLACEHOLDERS.wavelogApiKey;
+
+        if (!appConfigured) {
+          logger.warn('Application is not configured yet (Wavelog URL or API key still at default). Skipping station fetch and connections.');
         }
 
         setUtilLogger(logger);
@@ -604,7 +624,7 @@ app.on('ready', () => {
         wavelogClient = new WavelogClient(config, logger, mainWindow);
         dxClusterClient = new DXClusterClient(config, logger);
         qrzClient = new QRZClient(config, logger);
-        
+
         // Initialize Rotator Client (MQTT)
         mqttRotatorClient = new MqttRotatorClient(config, logger);
         if (config.rotator && config.rotator.enabled) {
@@ -615,7 +635,7 @@ app.on('ready', () => {
           mqttRotatorClient.on('error', (err) => {
             uiManager.sendStatusUpdate({ event: 'rotatorError', error: err.message });
           });
-          
+
           // Delay connection to ensure GUI is ready to receive the event
           setTimeout(() => {
             mqttRotatorClient.connect();
@@ -678,8 +698,8 @@ app.on('ready', () => {
 
               // Perform Optimistic Update: Push new state to UI immediately
               if (qsyResult.success && flexRadioClient.activeTXSlices && flexRadioClient.activeTXSlices.length > 0) {
-                const activeSlice = { ...flexRadioClient.activeTXSlices[0] }; 
-                
+                const activeSlice = { ...flexRadioClient.activeTXSlices[0] };
+
                 activeSlice.frequency = freq / 1000000.0;
                 if (mode) activeSlice.mode = mode.toUpperCase();
 
@@ -752,22 +772,22 @@ app.on('ready', () => {
           // Connect FlexRadio events to Wavelog outputs
           if (flexRadioClient) {
             flexRadioClient.on('sliceStatus', (slice) => {
-              
+
               // 1. Check Global TX Status
               // We check the internal array maintained by FlexRadioClient.
               const activeTxSlices = flexRadioClient.activeTXSlices || [];
-              
+
               if (activeTxSlices.length === 0) {
                   // Scenario: User turned off TX on all slices.
                   // Action: Send warning to UI, do NOT update Wavelog API (keep last known).
                   if (mainWindow) {
-                      mainWindow.webContents.send('slice-status-update', { 
+                      mainWindow.webContents.send('slice-status-update', {
                           noTx: true, // Flag to tell UI to warn
-                          frequency: 0, 
-                          mode: '' 
+                          frequency: 0,
+                          mode: ''
                       });
                   }
-                  return; 
+                  return;
               }
 
               // 2. Filter: Ignore Non-TX Slices
@@ -786,7 +806,7 @@ app.on('ready', () => {
               if (mainWindow) {
                 mainWindow.webContents.send('slice-status-update', slice);
               }
-              
+
               // 2. Update Wavelog API (Only on change)
               const isChanged = (slice.frequency !== lastRadioState.frequency) || (slice.mode !== lastRadioState.mode);
 
@@ -844,7 +864,7 @@ app.on('ready', () => {
  */
 function isConfigValid() {
   // DX Cluster config is optional now. We check validity before connecting later.
-  
+
   if (
     !config.flexRadio ||
     !config.flexRadio.host ||
@@ -904,7 +924,7 @@ function attachEventListeners() {
     // Determine connection type for UI
     const isBackup = dxClusterClient.usingBackup;
     const currentServer = dxClusterClient.currentHost;
-    
+
     // Send detailed status to UI
     uiManager.sendStatusUpdate({
         event: 'dxClusterConnected',
@@ -1044,17 +1064,17 @@ function attachFlexRadioEventListeners() {
     flexRadioClient.on('connected', () => {
       logger.info('Connected to FlexRadio server');
       // Send connection status AND the host IP to the UI
-      uiManager.sendStatusUpdate({ 
-          event: 'flexRadioConnected', 
-          host: config.flexRadio.host 
+      uiManager.sendStatusUpdate({
+          event: 'flexRadioConnected',
+          host: config.flexRadio.host
       });
     });
-  
+
     flexRadioClient.on('disconnected', () => {
       logger.info('Disconnected from FlexRadio server');
       uiManager.updateFlexRadioStatus('flexRadioDisconnected');
     });
-  
+
     flexRadioClient.on('error', (error) => {
       logger.error(`FlexRadio error: ${error.message}`);
       uiManager.updateFlexRadioStatus('flexRadioError', error);
@@ -1070,7 +1090,7 @@ function attachFlexRadioEventListeners() {
              qsoWindow.webContents.send('external-lookup', callsign);
              qsoWindow.show(); // Bring window to front if hidden
         }
-    });    
+    });
   }
 }
 
@@ -1127,7 +1147,7 @@ async function shutdown() {
 
     if (httpCatListener) {
         httpCatListener.stop();
-    }    
+    }
    if (wavelogWsServer) {
         wavelogWsServer.stop();
     }
@@ -1181,14 +1201,19 @@ function main() {
       // If everything is configured, start the services
       flexRadioClient.connect();
 
-      // Only connect to DX Cluster if enabled and configuration is valid
+      // DX Cluster is optional. Only connect if enabled, with a real host and a
+      // real callsign (not the placeholder). This prevents logging in to the cluster
+      // with 'YOUR-CALLSIGN-HERE' now that appConfigured no longer depends on it.
+      const dxHost = (config.dxCluster?.host || '').trim();
+      const dxCallsign = (config.dxCluster?.callsign || '').trim();
+      const dxCallsignConfigured =
+        dxCallsign !== '' && dxCallsign !== PLACEHOLDERS.dxClusterCallsign;
+
       if (
         config.dxCluster &&
         config.dxCluster.enabled &&
-        config.dxCluster.host &&
-        config.dxCluster.callsign &&
-        config.dxCluster.host.trim() !== '' &&
-        config.dxCluster.callsign.trim() !== ''
+        dxHost !== '' &&
+        dxCallsignConfigured
       ) {
         dxClusterClient.connect();
       } else {
@@ -1299,9 +1324,9 @@ ipcMain.handle('update-config', async (event, newConfig) => {
 
         // --- Update global config in memory immediately ---
         config = updatedConfig;
-        
+
         // Apply auto-start setting immediately
-        updateLoginSettings(); 
+        updateLoginSettings();
 
         // --- Propagate config to clients that need live updates ---
         if (qrzClient) {
@@ -1343,9 +1368,9 @@ ipcMain.handle('get-station-details', async (event) => {
       // If we have the station details, format and return them
       if (stationId && stationProfileName && stationGridSquare && stationCallsign) {
         const stationDetails = `
-          Station ID: ${stationId}, 
-          Station Name: ${stationProfileName}, 
-          Station Grid Square: ${stationGridSquare}, 
+          Station ID: ${stationId},
+          Station Name: ${stationProfileName},
+          Station Grid Square: ${stationGridSquare},
           Station Callsign: ${stationCallsign}
         `;
         return stationDetails.trim(); // Return the formatted string
@@ -1409,14 +1434,14 @@ ipcMain.handle('get-radio-status', () => {
 
 ipcMain.handle('lookup-callsign', async (event, callsign) => {
   logger.info(`Performing lookup for: ${callsign}`);
-  
+
   // Check radio status
   const isRadioConnected = flexRadioClient && flexRadioClient.isConnected();
 
   // 1. Start requests in parallel
   // Use '20m'/'SSB' as fallback, but ideally grab from Flex if connected
   const wavelogPromise = wavelogClient.lookupCallsign(callsign, '20m', 'SSB');
-  
+
   let qrzPromise = Promise.resolve(null);
   if (config.qrz && config.qrz.enabled) {
       qrzPromise = qrzClient.lookup(callsign);
@@ -1444,16 +1469,16 @@ ipcMain.handle('lookup-callsign', async (event, callsign) => {
   // --- Hybrid Strategy: QRZ overrides Geography ---
   if (qrzData) {
       logger.info(`QRZ Data found: ${qrzData.name}, Grid: ${qrzData.grid}`);
-      
+
       if (qrzData.name) finalData.name = qrzData.name;
       if (qrzData.grid) finalData.gridsquare = qrzData.grid;
       if (qrzData.image) finalData.image = qrzData.image;
-      
+
       // Only overwrite if QRZ provides a valid string, otherwise keep Wavelog's value
       if (qrzData.country && qrzData.country.trim() !== '') {
-          finalData.dxcc = qrzData.country; 
-      } 
-      
+          finalData.dxcc = qrzData.country;
+      }
+
       if (qrzData.lat && qrzData.lon) {
           dxLat = parseFloat(qrzData.lat);
           dxLon = parseFloat(qrzData.lon);
@@ -1484,13 +1509,13 @@ ipcMain.handle('lookup-callsign', async (event, callsign) => {
                   const result = wavelogClient.calculateBearingDistance(
                       myCoords.lat, myCoords.lon, dxLat, dxLon
                   );
-                  
+
                   finalData.bearing = result.bearing;
                   finalData.distance = result.distance;
 
                   finalData.bearing_lp = (result.bearing + 180) % 360;
                   finalData.distance_lp = Math.round(40075 - result.distance); // Earth circumference - SP
-                  
+
                   finalData.calc_precision = precision;
                   logger.info(`Calculated: ${result.bearing} deg, ${result.distance} km (${precision})`);
               }
@@ -1499,7 +1524,7 @@ ipcMain.handle('lookup-callsign', async (event, callsign) => {
           logger.error(`Error calculating bearing: ${err.message}`);
       }
   }
-  
+
   return finalData;
 });
 
@@ -1538,7 +1563,7 @@ ipcMain.handle('open-image-window', (event, imageUrl) => {
 
 ipcMain.handle('rotate-rotor', (event, bearing) => {
   logger.info(`ROTATOR CONTROL: Request to rotate to ${bearing} deg`);
-  
+
   if (mqttRotatorClient) {
       mqttRotatorClient.rotate(bearing);
   } else {
@@ -1563,7 +1588,7 @@ ipcMain.handle('send-dx-spot', async (event, { callsign, comment }) => {
 
         if (isConnected && hasSlice) {
             // Real radio frequency
-            const freqHz = flexRadioClient.activeTXSlices[0].frequency * 1e6; 
+            const freqHz = flexRadioClient.activeTXSlices[0].frequency * 1e6;
             freqKHz = (freqHz / 1000).toFixed(1);
         } else if (IS_TEST_MODE) {
             // Fake frequency for testing
@@ -1651,7 +1676,7 @@ function createQSOWindow() {
     const bounds = qsoWindow.getBounds();
     if (!config.application) config.application = {};
     config.application.qsoWindow = bounds;
-    
+
     clearTimeout(saveTimeout);
     saveTimeout = setTimeout(() => {
         storage.set('config', config, (err) => {

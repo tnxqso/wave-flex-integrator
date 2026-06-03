@@ -9,7 +9,7 @@ const defaultConfig = {
     theme: 'system',
     startupTab: 'status',
     compactMode: false,
-    autoOpenQSO: false,host: 'dxc.ve7cc.net',     // Primary Hostname or IPhost: 'dxc.ve7cc.net',     // Primary Hostname or IP
+    autoOpenQSO: false,
     useImperial: false,
     showQsoMedia: false,
     startMinimized: false,
