@@ -202,6 +202,14 @@ const defaultConfig = {
   wavelogLive: {
     enabled: true,     // Master switch for metadata reception
     port: 54322        // Standard Wavelog WebSocket port
+  },
+
+  // ==============================
+  // Local Status HTTP Server
+  // ==============================
+  statusServer: {
+    enabled: false,   // Opt-in; inert when false. Enable in Settings to expose GET /status.
+    port: 54324,      // Binds to 127.0.0.1 only. Next free port after WSS (54323).
   }
 
 };

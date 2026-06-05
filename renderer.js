@@ -182,6 +182,15 @@ function populateForm(config, isPackaged = true) {
   const wlLivePort = document.getElementById('wavelogLivePort');
   if(wlLivePort) wlLivePort.value = wlLiveConfig.port;
 
+  // Populate Status Server Settings
+  const ssConfig = config.statusServer || { enabled: false, port: 54324 };
+
+  const ssEnabled = document.getElementById('statusServerEnabled');
+  if (ssEnabled) ssEnabled.checked = ssConfig.enabled;
+
+  const ssPort = document.getElementById('statusServerPort');
+  if (ssPort) ssPort.value = ssConfig.port;
+
   // Theme
   const theme = appConfig.theme || 'system';
   const themeSelect = document.getElementById('appTheme');
@@ -647,6 +656,10 @@ if (configForm) {
       },
       wavelogLive: {
         port: parseInt(document.getElementById('wavelogLivePort').value) || 54322
+      },
+      statusServer: {
+        enabled: document.getElementById('statusServerEnabled').checked,
+        port: parseInt(document.getElementById('statusServerPort').value) || 54324
       },
       // --- Rotator Settings ---
       rotator: {

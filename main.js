@@ -19,6 +19,7 @@ const QRZClient = require('./qrz_client');
 const MqttRotatorClient = require('./mqtt_client');
 const HttpCatListener = require('./http_cat_listener');
 const WavelogWsServer = require('./wavelog_ws_server');
+const StatusServer = require('./status_server');
 const CertificateManager = require('./certificate_manager');
 const IS_TEST_MODE = false; // Test, when radio is not available.
 let lastApiUpdate = 0;
@@ -27,6 +28,7 @@ let lastRadioState = { frequency: 0, mode: '' };
 let certManager;
 let httpCatListener;
 let wavelogWsServer;
+let statusServer;
 let mqttRotatorClient;
 let qsoWindow = null; // Reference to the QSO Assistant window
 
@@ -768,6 +770,10 @@ app.on('ready', () => {
 
           wavelogWsServer.start(certs);
 
+          // 3. Initialize Status Server (read-only localhost JSON endpoint)
+          statusServer = new StatusServer(config, logger);
+          statusServer.start();
+
           // --- CORE LOGIC: Handle Frequency Updates ---
           // Connect FlexRadio events to Wavelog outputs
           if (flexRadioClient) {
@@ -787,6 +793,7 @@ app.on('ready', () => {
                           mode: ''
                       });
                   }
+                  if (statusServer) statusServer.updateState(null);
                   return;
               }
 
@@ -801,6 +808,9 @@ app.on('ready', () => {
               if (wavelogWsServer) {
                 wavelogWsServer.broadcastStatus(slice);
               }
+
+              // Update status server with current TX slice state.
+              if (statusServer) statusServer.updateState(slice);
 
               // Send update to the UI for the status bar
               if (mainWindow) {
@@ -1073,6 +1083,7 @@ function attachFlexRadioEventListeners() {
     flexRadioClient.on('disconnected', () => {
       logger.info('Disconnected from FlexRadio server');
       uiManager.updateFlexRadioStatus('flexRadioDisconnected');
+      if (statusServer) statusServer.updateState(null);
     });
 
     flexRadioClient.on('error', (error) => {
@@ -1146,10 +1157,13 @@ async function shutdown() {
     }
 
     if (httpCatListener) {
-        httpCatListener.stop();
+      httpCatListener.stop();
     }
-   if (wavelogWsServer) {
-        wavelogWsServer.stop();
+    if (wavelogWsServer) {
+      wavelogWsServer.stop();
+    }
+    if (statusServer) {
+      statusServer.stop();
     }
 
     if (mainWindow) {
