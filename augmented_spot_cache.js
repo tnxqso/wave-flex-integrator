@@ -2,6 +2,7 @@
 
 const { cleanCallsign } = require('./utils'); // Import cleanCallsign from utils.js
 const fetch = require('node-fetch'); // Ensure node-fetch is installed and imported
+const { WAVELOG_TIMEOUT_MS } = require('./wavelog_client');
 
 /**
  * AugmentedSpotCache class responsible for managing augmented spots.
@@ -180,13 +181,25 @@ class AugmentedSpotCache {
       const baseURL = this.config.wavelogAPI.URL.replace(/\/$/, '');
       const fullURL = `${baseURL}/api/private_lookup`;
 
-      const response = await fetch(fullURL, {
-        method: 'POST', // POST method
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), WAVELOG_TIMEOUT_MS);
+      let response;
+      try {
+        response = await fetch(fullURL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+      } catch (fetchErr) {
+        clearTimeout(timeoutId);
+        throw fetchErr.name === 'AbortError' || fetchErr.type === 'aborted'
+          ? new Error('Wavelog request timed out')
+          : fetchErr;
+      }
 
       if (!response.ok) {
         this.logger.error(`Wavelog enrichment failed for Spot ID: ${spotId} (${cleanedCallsign}): ${response.statusText}`);

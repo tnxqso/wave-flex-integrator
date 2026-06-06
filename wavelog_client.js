@@ -1,7 +1,8 @@
 'use strict';
 const { EventEmitter } = require('events');
-const { dialog } = require('electron');
 const fetch = require('node-fetch');
+
+const WAVELOG_TIMEOUT_MS = 8000;
 
 class WavelogClient extends EventEmitter {
   /**
@@ -20,24 +21,15 @@ class WavelogClient extends EventEmitter {
   }
 
   /**
-   * Handles errors by logging and showing a modal error dialog attached to the main window.
-   * Updated to support suppressing the dialog.
+   * Handles errors by logging them. The suppressDialog parameter is retained for
+   * backward compatibility but has no effect; modal dialogs were removed to keep
+   * the main process event loop unblocked during Wavelog failures.
    * @param {string} errorMessage - The error message.
    * @param {boolean} throwError - Whether to throw the error or not.
-   * @param {boolean} suppressDialog - Whether to suppress the UI dialog.
+   * @param {boolean} suppressDialog - Unused; kept for call-site compatibility.
    */
   handleError(errorMessage, throwError = true, suppressDialog = false) {
     this.logger.error(errorMessage);
-    
-    // Only show dialog if not suppressed and mainWindow exists
-    if (!suppressDialog && this.mainWindow) {
-        dialog.showMessageBoxSync(this.mainWindow, {
-            type: 'error',
-            title: 'Wavelog Client Error',
-            message: errorMessage,
-        });
-    }
-    
     if (throwError) {
       throw new Error(errorMessage);
     }
@@ -67,22 +59,33 @@ class WavelogClient extends EventEmitter {
       const baseURL = this.config.wavelogAPI.URL.replace(/\/$/, '');
       const fullURL = `${baseURL}/api/radio`;
 
-      const response = await fetch(fullURL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), WAVELOG_TIMEOUT_MS);
+      let response;
+      try {
+        response = await fetch(fullURL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+      } catch (fetchErr) {
+        clearTimeout(timeoutId);
+        throw fetchErr.name === 'AbortError' || fetchErr.type === 'aborted'
+          ? new Error('Wavelog request timed out')
+          : fetchErr;
+      }
 
       if (!response.ok) {
-        const errorMessage = `Failed to send active TX slice to Wavelog: ${response.statusText}`;
-        this.handleError(errorMessage);
-      } else {
-        this.logger.info(
-          `Successfully sent active TX slice to Wavelog: Frequency ${adjustedFrequencyHz} Hz, Mode ${activeTXSlice.mode}`
-        );
+        // Throw directly so the outer catch handles this error exactly once.
+        throw new Error(`Failed to send active TX slice to Wavelog: ${response.statusText}`);
       }
+      this.logger.info(
+        `Successfully sent active TX slice to Wavelog: Frequency ${adjustedFrequencyHz} Hz, Mode ${activeTXSlice.mode}`
+      );
     } catch (error) {
       const errorMessage = `Error in sendActiveSliceToWavelog: ${error.message}`;
       this.handleError(errorMessage);
@@ -108,24 +111,22 @@ class WavelogClient extends EventEmitter {
 
     // Start a new fetch and store the promise
     this.fetchPromise = new Promise(async (resolve, reject) => {
-      const timeoutSeconds = 10; // Hardcoded timeout of 10 seconds
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), WAVELOG_TIMEOUT_MS);
 
       try {
         const apiKey = this.config.wavelogAPI.apiKey;
         const baseURL = this.config.wavelogAPI.URL.replace(/\/$/, '');
         const fullURL = `${baseURL}/api/station_info/${apiKey}`;
 
-        const response = await Promise.race([
-          fetch(fullURL, {
-            method: 'GET',
-            headers: {
-              Accept: 'application/json',
-            },
-          }),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Request timed out')), timeoutSeconds * 1000)
-          ),
-        ]);
+        const response = await fetch(fullURL, {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+          },
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
 
         if (!response.ok) {
           const errorMessage = new Error(`Failed to fetch station profile info: HTTP ${response.status}`);
@@ -164,12 +165,16 @@ class WavelogClient extends EventEmitter {
           resolve(null);
         }
       } catch (error) {
-        const errorMessage = `Error in getActiveStation: ${error.message}`;
+        clearTimeout(timeoutId);
+        const wrappedError = error.name === 'AbortError' || error.type === 'aborted'
+          ? new Error('Wavelog request timed out')
+          : error;
+        const errorMessage = `Error in getActiveStation: ${wrappedError.message}`;
         this.handleError(errorMessage, false, suppressErrors);
         this.fetchFailed = true;
         this.fetchPromise = null; // Reset the fetchPromise
-        this.emit('stationFetchError', error);
-        reject(error);
+        this.emit('stationFetchError', wrappedError);
+        reject(wrappedError);
       }
     });
 
@@ -304,14 +309,26 @@ class WavelogClient extends EventEmitter {
       const baseURL = this.config.wavelogAPI.URL.replace(/\/$/, '');
       const fullURL = `${baseURL}/api/qso`;
 
-      const response = await fetch(fullURL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), WAVELOG_TIMEOUT_MS);
+      let response;
+      try {
+        response = await fetch(fullURL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+      } catch (fetchErr) {
+        clearTimeout(timeoutId);
+        throw fetchErr.name === 'AbortError' || fetchErr.type === 'aborted'
+          ? new Error('Wavelog request timed out')
+          : fetchErr;
+      }
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -408,14 +425,26 @@ class WavelogClient extends EventEmitter {
 
       this.logger.debug(`Looking up callsign: ${callsign}`);
 
-      const response = await fetch(fullURL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(payload),
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), WAVELOG_TIMEOUT_MS);
+      let response;
+      try {
+        response = await fetch(fullURL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+      } catch (fetchErr) {
+        clearTimeout(timeoutId);
+        throw fetchErr.name === 'AbortError' || fetchErr.type === 'aborted'
+          ? new Error('Wavelog request timed out')
+          : fetchErr;
+      }
 
       if (!response.ok) {
         this.logger.warn(`Lookup failed: ${response.statusText}`);
@@ -495,3 +524,4 @@ class WavelogClient extends EventEmitter {
 }
 
 module.exports = WavelogClient;
+module.exports.WAVELOG_TIMEOUT_MS = WAVELOG_TIMEOUT_MS;
