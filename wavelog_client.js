@@ -21,14 +21,12 @@ class WavelogClient extends EventEmitter {
   }
 
   /**
-   * Handles errors by logging them. The suppressDialog parameter is retained for
-   * backward compatibility but has no effect; modal dialogs were removed to keep
-   * the main process event loop unblocked during Wavelog failures.
+   * Handles errors by logging them. Modal dialogs were removed in Phase 1 to
+   * keep the main process event loop unblocked during Wavelog failures.
    * @param {string} errorMessage - The error message.
    * @param {boolean} throwError - Whether to throw the error or not.
-   * @param {boolean} suppressDialog - Unused; kept for call-site compatibility.
    */
-  handleError(errorMessage, throwError = true, suppressDialog = false) {
+  handleError(errorMessage, throwError = true) {
     this.logger.error(errorMessage);
     if (throwError) {
       throw new Error(errorMessage);
@@ -130,7 +128,7 @@ class WavelogClient extends EventEmitter {
 
         if (!response.ok) {
           const errorMessage = new Error(`Failed to fetch station profile info: HTTP ${response.status}`);
-          this.handleError(errorMessage, false, suppressErrors);
+          this.handleError(errorMessage, false);
           this.fetchFailed = true;
           this.fetchPromise = null; // Reset the fetchPromise
           reject(errorMessage);
@@ -152,14 +150,14 @@ class WavelogClient extends EventEmitter {
             resolve(this.activeStationData);
           } else {
             const errorMessage = 'No active station profile found.';
-            this.handleError(errorMessage, false, suppressErrors);
+            this.handleError(errorMessage, false);
             this.fetchFailed = true;
             this.fetchPromise = null; // Reset the fetchPromise
             resolve(null);
           }
         } else {
           const errorMessage = 'Invalid response format.';
-          this.handleError(errorMessage, false, suppressErrors);
+          this.handleError(errorMessage, false);
           this.fetchFailed = true;
           this.fetchPromise = null; // Reset the fetchPromise
           resolve(null);
@@ -170,7 +168,7 @@ class WavelogClient extends EventEmitter {
           ? new Error('Wavelog request timed out')
           : error;
         const errorMessage = `Error in getActiveStation: ${wrappedError.message}`;
-        this.handleError(errorMessage, false, suppressErrors);
+        this.handleError(errorMessage, false);
         this.fetchFailed = true;
         this.fetchPromise = null; // Reset the fetchPromise
         this.emit('stationFetchError', wrappedError);
