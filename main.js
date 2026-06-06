@@ -24,6 +24,8 @@ const CertificateManager = require('./certificate_manager');
 const IS_TEST_MODE = false; // Test, when radio is not available.
 let lastApiUpdate = 0;
 let lastRadioState = { frequency: 0, mode: '' };
+let sliceInFlight = false;
+let pendingSlice = null;
 
 let certManager;
 let httpCatListener;
@@ -821,16 +823,12 @@ app.on('ready', () => {
               const isChanged = (slice.frequency !== lastRadioState.frequency) || (slice.mode !== lastRadioState.mode);
 
               if (isChanged) {
-                wavelogClient.sendActiveSliceToWavelog(slice).then(() => {
-                  lastApiUpdate = Date.now();
-                  lastRadioState = {
-                    frequency: slice.frequency,
-                    mode: slice.mode
-                  };
-                  logger.info(`[API-SIDE] Sent active slice to Wavelog API: ${slice.frequency} Hz`);
-                }).catch((err) => {
-                  logger.error(`Error sending API update: ${err.message}`);
-                });
+                if (!sliceInFlight) {
+                  sliceInFlight = true;
+                  wavelogClient.sendActiveSliceToWavelog(slice).then(() => onSliceSent(slice)).catch((err) => onSliceFailed(err));
+                } else {
+                  pendingSlice = slice;
+                }
               }
             });
           }
@@ -909,6 +907,31 @@ function bigIntReplacer(key, value) {
  * Attaches event listeners for WSJTClient.
  */
 let activeQSO = false;
+
+function onSliceSent(sentSlice) {
+  lastApiUpdate = Date.now();
+  lastRadioState = { frequency: sentSlice.frequency, mode: sentSlice.mode };
+  logger.info(`[API-SIDE] Sent active slice to Wavelog API: ${sentSlice.frequency} Hz`);
+  sliceInFlight = false;
+  drainPending();
+}
+
+function onSliceFailed(err) {
+  logger.error(`Error sending slice to Wavelog API: ${err.message}`);
+  sliceInFlight = false;
+  drainPending();
+}
+
+function drainPending() {
+  if (pendingSlice === null) return;
+  const toSend = pendingSlice;
+  pendingSlice = null;
+  if (toSend.frequency === lastRadioState.frequency && toSend.mode === lastRadioState.mode) return;
+  sliceInFlight = true;
+  wavelogClient.sendActiveSliceToWavelog(toSend)
+    .then(() => onSliceSent(toSend))
+    .catch((err) => onSliceFailed(err));
+}
 
 /**
  * Attaches event listeners for DXClusterClient and FlexRadioClient.
@@ -1258,13 +1281,9 @@ function main() {
             const timeElapsed = now - lastApiUpdate;
 
             // Double check to not spam if a change JUST happened
-            if (timeElapsed > 250000) { // > 4 minutes roughly
-                wavelogClient.sendActiveSliceToWavelog(slice).then(() => {
-                    lastApiUpdate = now;
-                    logger.info(`[API-SIDE] Sent Heartbeat (Keep-alive) to Wavelog API`);
-                }).catch((err) => {
-                    logger.error(`Error sending API Heartbeat: ${err.message}`);
-                });
+            if (timeElapsed > 250000 && !sliceInFlight) { // > 4 minutes roughly
+                sliceInFlight = true;
+                wavelogClient.sendActiveSliceToWavelog(slice).then(() => onSliceSent(slice)).catch((err) => onSliceFailed(err));
             }
         }
       }, 300000); // Check every 5 minutes
