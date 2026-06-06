@@ -64,6 +64,10 @@ class WavelogClient extends EventEmitter {
     }
   }
 
+  isCircuitOpen() {
+    return this._breakerState !== 'CLOSED';
+  }
+
   _scheduleProbe() {
     if (this._probeTimerId !== null) return;
     this._probeTimerId = setTimeout(() => this._runProbe(), this._probeDelay);

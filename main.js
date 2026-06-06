@@ -647,7 +647,7 @@ app.on('ready', () => {
         }
 
         // Initialize Spot Cache
-        augmentedSpotCache = new AugmentedSpotCache(config.augmentedSpotCache.maxSize, logger, config);
+        augmentedSpotCache = new AugmentedSpotCache(config.augmentedSpotCache.maxSize, logger, config, wavelogClient);
 
         // Start periodic cache health updates to the UI
         setTimeout(() => {

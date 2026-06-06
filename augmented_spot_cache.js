@@ -15,11 +15,12 @@ class AugmentedSpotCache {
    * @param {object} logger - The logger instance for logging purposes.
    * @param {object} config - The configuration object containing Wavelog API details.
    */
-  constructor(maxSize, logger, config) {
+  constructor(maxSize, logger, config, wavelogClient) {
     this.cache = new Map(); // Renamed cache for enriched data only
     this.maxSize = maxSize;
     this.logger = logger;
     this.config = config;
+    this.wavelogClient = wavelogClient;
 
     this.cacheHits = 0;
     this.cacheMisses = 0;
@@ -167,6 +168,11 @@ class AugmentedSpotCache {
       } else {
         this.logger.debug(`Cache MISS for Spot ID: ${spotId}`);
         this.cacheMisses++;
+      }
+
+      if (this.wavelogClient && this.wavelogClient.isCircuitOpen()) {
+        this.logger.debug(`Skipping Wavelog enrichment for Spot ID: ${spotId} - circuit breaker is open`);
+        return null;
       }
 
       const payload = {
