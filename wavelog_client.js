@@ -3,6 +3,10 @@ const { EventEmitter } = require('events');
 const fetch = require('node-fetch');
 
 const WAVELOG_TIMEOUT_MS = 8000;
+const BREAKER_FAILURE_THRESHOLD = 3;
+const PROBE_INITIAL_DELAY_MS = 10000;
+const PROBE_BACKOFF_FACTOR = 2;
+const PROBE_BACKOFF_CAP_MS = 120000;
 
 class WavelogClient extends EventEmitter {
   /**
@@ -18,6 +22,10 @@ class WavelogClient extends EventEmitter {
     this.activeStationData = null; // Cache the active station data
     this.mainWindow = mainWindow; // Store reference to main window
     this.fetchPromise = null; // Promise for ongoing fetch
+    this._breakerState = 'CLOSED';
+    this._failureCount = 0;
+    this._probeDelay = PROBE_INITIAL_DELAY_MS;
+    this._probeTimerId = null;
   }
 
   /**
@@ -33,6 +41,55 @@ class WavelogClient extends EventEmitter {
     }
   }
 
+  _checkBreaker() {
+    if (this._breakerState !== 'CLOSED') {
+      const err = new Error('Wavelog is currently unavailable (circuit open)');
+      err.code = 'CIRCUIT_OPEN';
+      throw err;
+    }
+  }
+
+  _recordSuccess() {
+    this._failureCount = 0;
+  }
+
+  _recordFailure(err) {
+    if (err && err.code === 'CIRCUIT_OPEN') return;
+    this._failureCount++;
+    if (this._failureCount >= BREAKER_FAILURE_THRESHOLD && this._breakerState === 'CLOSED') {
+      this._breakerState = 'OPEN';
+      this.logger.warn('Wavelog circuit breaker opened after consecutive failures');
+      this.emit('breakerOpen');
+      this._scheduleProbe();
+    }
+  }
+
+  _scheduleProbe() {
+    if (this._probeTimerId !== null) return;
+    this._probeTimerId = setTimeout(() => this._runProbe(), this._probeDelay);
+  }
+
+  async _runProbe() {
+    this._breakerState = 'HALF_OPEN'; // synchronous, before any await
+    this._probeTimerId = null;
+    // Clear cache so the probe forces a real network call, not a cache hit.
+    // Fields cleared: activeStationData (cache), fetchPromise (in-flight dedup), fetchFailed (stale flag).
+    this.activeStationData = null;
+    this.fetchPromise = null;
+    this.fetchFailed = false;
+    try {
+      await this.getActiveStation(false, true);
+      this._breakerState = 'CLOSED';
+      this._failureCount = 0;
+      this._probeDelay = PROBE_INITIAL_DELAY_MS;
+      this.emit('breakerClosed');
+    } catch (err) {
+      this._breakerState = 'OPEN';
+      this._probeDelay = Math.min(this._probeDelay * PROBE_BACKOFF_FACTOR, PROBE_BACKOFF_CAP_MS);
+      this._scheduleProbe();
+    }
+  }
+
   /**
    * Sends the active TX slice information to the Wavelog server.
    * @param {Slice} activeTXSlice - The active TX slice object.
@@ -40,6 +97,7 @@ class WavelogClient extends EventEmitter {
    */
   async sendActiveSliceToWavelog(activeTXSlice) {
     try {
+      this._checkBreaker();
       const xitAdjustment = activeTXSlice.xit_on ? activeTXSlice.xit_freq : 0;
       const adjustedFrequencyHz = Math.round(
         activeTXSlice.frequency * 1e6 + xitAdjustment
@@ -84,7 +142,9 @@ class WavelogClient extends EventEmitter {
       this.logger.info(
         `Successfully sent active TX slice to Wavelog: Frequency ${adjustedFrequencyHz} Hz, Mode ${activeTXSlice.mode}`
       );
+      this._recordSuccess();
     } catch (error) {
+      this._recordFailure(error);
       const errorMessage = `Error in sendActiveSliceToWavelog: ${error.message}`;
       this.handleError(errorMessage);
     }
@@ -93,10 +153,14 @@ class WavelogClient extends EventEmitter {
   /**
    * Fetches and caches the active station data from Wavelog API.
    * Implements promise caching to prevent multiple simultaneous fetches.
-   * @param {boolean} suppressErrors - Whether to suppress showing error dialogs.
+   * @param {boolean} suppressErrors - Whether to suppress error dialogs (legacy, unused inside method).
+   * @param {boolean} _probeMode - Internal flag; true only when called from _runProbe. Skips breaker check and record calls.
    * @returns {Promise<object>} - The active station data object.
    */
-  async getActiveStation(suppressErrors = false) {
+  async getActiveStation(suppressErrors = false, _probeMode = false) {
+    if (!_probeMode) {
+      this._checkBreaker();
+    }
     // Return cached data if available
     if (this.activeStationData !== null) {
       return this.activeStationData;
@@ -131,6 +195,7 @@ class WavelogClient extends EventEmitter {
           this.handleError(errorMessage, false);
           this.fetchFailed = true;
           this.fetchPromise = null; // Reset the fetchPromise
+          if (!_probeMode) this._recordFailure(errorMessage);
           reject(errorMessage);
           this.emit('stationFetchError', errorMessage);
           return;
@@ -147,12 +212,14 @@ class WavelogClient extends EventEmitter {
             this.logger.info(`Station Profile Name: ${activeStation.station_profile_name}`);
             this.logger.info(`Station Grid Square: ${activeStation.station_gridsquare}`);
             this.fetchPromise = null; // Reset the fetchPromise
+            if (!_probeMode) this._recordSuccess();
             resolve(this.activeStationData);
           } else {
             const errorMessage = 'No active station profile found.';
             this.handleError(errorMessage, false);
             this.fetchFailed = true;
             this.fetchPromise = null; // Reset the fetchPromise
+            if (!_probeMode) this._recordSuccess();
             resolve(null);
           }
         } else {
@@ -160,6 +227,7 @@ class WavelogClient extends EventEmitter {
           this.handleError(errorMessage, false);
           this.fetchFailed = true;
           this.fetchPromise = null; // Reset the fetchPromise
+          if (!_probeMode) this._recordSuccess();
           resolve(null);
         }
       } catch (error) {
@@ -171,6 +239,7 @@ class WavelogClient extends EventEmitter {
         this.handleError(errorMessage, false);
         this.fetchFailed = true;
         this.fetchPromise = null; // Reset the fetchPromise
+        if (!_probeMode) this._recordFailure(wrappedError);
         this.emit('stationFetchError', wrappedError);
         reject(wrappedError);
       }
@@ -242,6 +311,7 @@ class WavelogClient extends EventEmitter {
    */
   async sendAdifToWavelog(adifString) {
     try {
+      this._checkBreaker();
       // Parse the ADIF string
       const parsedAdif = this.parseAdif(adifString);
       this.logger.debug('Parsed ADIF:', parsedAdif);
@@ -334,9 +404,11 @@ class WavelogClient extends EventEmitter {
       if (!response.ok) {
         const errorText = await response.text();
         const errorMessage = `Failed to send ADIF record to Wavelog: HTTP ${response.status} - ${errorText}`;
+        this._recordFailure(new Error(errorMessage));
         this.handleError(errorMessage, false); // Don't throw, just handle the error
         return; // Stop execution
       } else {
+        this._recordSuccess();
         const responseData = await response.json();
         this.logger.debug(`Wavelog response: ${JSON.stringify(responseData)}`); // Log full response data
 
@@ -368,6 +440,7 @@ class WavelogClient extends EventEmitter {
         }
       }
     } catch (error) {
+      this._recordFailure(error);
       const errorMessage = `Error in sendAdifToWavelog: ${error.message}`;
       this.handleError(errorMessage);
     }
@@ -414,6 +487,7 @@ class WavelogClient extends EventEmitter {
    */
   async lookupCallsign(callsign, band = '20m', mode = 'SSB') {
     try {
+      this._checkBreaker();
       const baseURL = this.config.wavelogAPI.URL.replace(/\/$/, '');
       const fullURL = `${baseURL}/api/private_lookup`;
 
@@ -448,14 +522,17 @@ class WavelogClient extends EventEmitter {
       }
 
       if (!response.ok) {
+        this._recordFailure(new Error(`Lookup failed: HTTP ${response.status}`));
         this.logger.warn(`Lookup failed: HTTP ${response.status}`);
         return null;
       }
 
       const data = await response.json();
+      this._recordSuccess();
       return data;
 
     } catch (error) {
+      this._recordFailure(error);
       this.logger.error(`Error in lookupCallsign: ${error.message}`);
       return null;
     }

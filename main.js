@@ -996,6 +996,20 @@ function attachEventListeners() {
     uiManager.updateWavelogStatus('WavelogUnresponsive', error);
   });
 
+  wavelogClient.on('breakerOpen', () => {
+    uiManager.updateWavelogStatus('WavelogUnresponsive');
+    logger.warn('Wavelog circuit opened - Wavelog appears unavailable');
+  });
+
+  wavelogClient.on('breakerClosed', async () => {
+    try {
+      uiManager.updateWavelogStatus('WavelogResponsive', await wavelogClient.getStationProfileName());
+      logger.info('Wavelog circuit closed - Wavelog has recovered');
+    } catch (err) {
+      logger.error(`Error updating UI after Wavelog recovery: ${err.message}`);
+    }
+  });
+
   if (config.wsjt.enabled) {
     // WSJT-X listener
     wsjtClient.on('status', (message) => {
