@@ -202,7 +202,7 @@ class AugmentedSpotCache {
       }
 
       if (!response.ok) {
-        this.logger.error(`Wavelog enrichment failed for Spot ID: ${spotId} (${cleanedCallsign}): ${response.statusText}`);
+        this.logger.error(`Wavelog enrichment failed for Spot ID: ${spotId} (${cleanedCallsign}): HTTP ${response.status}`);
         this.logger.error(`URL : ${fullURL} Payload: ${JSON.stringify(payload)}`);
         return null;
       }

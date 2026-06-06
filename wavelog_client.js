@@ -81,7 +81,7 @@ class WavelogClient extends EventEmitter {
 
       if (!response.ok) {
         // Throw directly so the outer catch handles this error exactly once.
-        throw new Error(`Failed to send active TX slice to Wavelog: ${response.statusText}`);
+        throw new Error(`Failed to send active TX slice to Wavelog: HTTP ${response.status}`);
       }
       this.logger.info(
         `Successfully sent active TX slice to Wavelog: Frequency ${adjustedFrequencyHz} Hz, Mode ${activeTXSlice.mode}`
@@ -332,7 +332,7 @@ class WavelogClient extends EventEmitter {
 
       if (!response.ok) {
         const errorText = await response.text();
-        const errorMessage = `Failed to send ADIF record to Wavelog: ${response.statusText} - ${errorText}`;
+        const errorMessage = `Failed to send ADIF record to Wavelog: HTTP ${response.status} - ${errorText}`;
         this.handleError(errorMessage, false); // Don't throw, just handle the error
         return; // Stop execution
       } else {
@@ -447,7 +447,7 @@ class WavelogClient extends EventEmitter {
       }
 
       if (!response.ok) {
-        this.logger.warn(`Lookup failed: ${response.statusText}`);
+        this.logger.warn(`Lookup failed: HTTP ${response.status}`);
         return null;
       }
 
