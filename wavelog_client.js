@@ -198,6 +198,9 @@ class WavelogClient extends EventEmitter {
     if (this.activeStationData === null) {
       await this.getActiveStation();
     }
+    if (this.activeStationData === null) {
+      return null;
+    }
     return this.activeStationData.station_profile_name;
   }
 

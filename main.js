@@ -844,21 +844,25 @@ app.on('ready', () => {
 
           // Update UI status after startup delay
           setTimeout(async () => {
-          // Check WSJT
-          if (config.wsjt.enabled) {
-            uiManager.updateWSJTStatus('WSJTEnabled');
-          } else {
-            uiManager.updateWSJTStatus('WSJTDisabled');
-          }
+          try {
+            // Check WSJT
+            if (config.wsjt.enabled) {
+              uiManager.updateWSJTStatus('WSJTEnabled');
+            } else {
+              uiManager.updateWSJTStatus('WSJTDisabled');
+            }
 
-          // Check DX Cluster (Force UI update if disabled)
-          if (!config.dxCluster?.enabled) {
-             uiManager.updateDXClusterStatus('dxClusterDisabled');
-          }
+            // Check DX Cluster (Force UI update if disabled)
+            if (!config.dxCluster?.enabled) {
+              uiManager.updateDXClusterStatus('dxClusterDisabled');
+            }
 
-          // Check Wavelog Profile
-          if (stationCallsign) {
-            uiManager.updateWavelogStatus('WavelogResponsive', await (wavelogClient.getStationProfileName()));
+            // Check Wavelog Profile
+            if (stationCallsign) {
+              uiManager.updateWavelogStatus('WavelogResponsive', await (wavelogClient.getStationProfileName()));
+            }
+          } catch (err) {
+            logger.error(`Error updating startup UI status: ${err.message}`);
           }
         }, 2000);
 
