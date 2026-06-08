@@ -317,8 +317,12 @@ module.exports = class FlexRadioClient extends EventEmitter {
     // Update the active TX slices array
     this.activeTXSlices = updatedActiveTXSlices;
 
-    // Forward the event so that main.js can intercept it
-    this.emit('sliceStatus', slice);
+    // Emit a snapshot rather than the live Slice instance. Consumers hold the reference
+    // across async boundaries (HTTP send, .then() callbacks, pendingSlice buffer), and the
+    // shared Slice is mutated in place by later events in the same burst. All Slice fields
+    // are primitives so a shallow clone is sufficient.
+    const sliceSnapshot = Object.assign({}, slice);
+    this.emit('sliceStatus', sliceSnapshot);
   }
 
 /**
