@@ -1,14 +1,11 @@
 # Wave-Flex Integrator
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Node.js Version](https://img.shields.io/badge/node.js-18%2B-green.svg)](https://nodejs.org/)
-[![Beta Status](https://img.shields.io/badge/status-beta-orange.svg)](#)
+[![Node.js Version](https://img.shields.io/badge/node.js-22.12%2B-green.svg)](https://nodejs.org/)
 
 *A seamless bridge between your [FlexRadio](https://www.flexradio.com/) and [Wavelog](https://www.wavelog.org) logging software, integrating DX Cluster data, WSJT-X, QSO Assistant, and synchronizing frequency and mode, all without traditional CAT software.*
 
 ![Wave-Flex Integrator main tab](assets/wave-flex-integrator-main-tab.png)
-
-> **Note:** This software is currently in beta testing. Features and documentation may change as the project evolves.
 
 ---
 
@@ -169,6 +166,7 @@ The demo provides a hands-on experience to see if Wavelog suits your needs.
 - **SmartSDR**: Installed and running on your local machine. Compatibility varies by version (see below). In the SmartSDR menu, make sure to set Settings --> Spots to `Enabled` and make sure you don't override Colors or Background.
 - **Wavelog**: Installed and running (Version 1.8.6 or later).
 - **DX Cluster Access**: A DX Cluster server accessible via Telnet. Find one [here](http://www.dxcluster.info/telnet/index.php).
+- **Operating System**: Windows 10 or later, macOS 13 (Ventura) or later, or a modern 64-bit Linux distribution. Only 64-bit builds are provided.
 
 ### FlexRadio Compatibility
 
@@ -233,6 +231,8 @@ Wave-Flex Integrator binaries for Linux are available on the [GitHub Releases](h
 ### macOS Installation
 
 Wave-Flex Integrator binaries for macOS are available on the [GitHub Releases](https://github.com/tnxqso/wave-flex-integrator/releases) page.
+
+> **Important:** Starting with version 2.0.0, Wave-Flex Integrator requires macOS 13 (Ventura) or later. This follows from the upgrade to Electron 44, which no longer supports macOS 12 (Monterey) or earlier. If you are running macOS 12 or older, stay on version 1.5.4. The auto-updater will not be able to install 2.0.0 on those systems.
 
 1. **Download**: Get the latest macOS installer (`.dmg` file) from the [Releases](https://github.com/tnxqso/wave-flex-integrator/releases) page.
 
@@ -703,7 +703,7 @@ If you cannot resolve the problem using the steps above, the best way to get hel
 
 We welcome contributions from anyone with expertise in JavaScript, Node.js. If you're interested in improving Wave-Flex Integrator, feel free to open an issue or submit a pull request on GitHub.
 
-Are you passionate about enhancing your FlexRadio experience? Consider joining our beta testing program or contributing directly to the project. Together, we can make this tool even better for the ham radio community!
+Are you passionate about enhancing your FlexRadio experience? Consider contributing directly to the project. Together, we can make this tool even better for the ham radio community!
 
 ---
 
