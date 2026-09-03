@@ -166,6 +166,7 @@ The demo provides a hands-on experience to see if Wavelog suits your needs.
 - **SmartSDR**: Installed and running on your local machine. Compatibility varies by version (see below). In the SmartSDR menu, make sure to set Settings --> Spots to `Enabled` and make sure you don't override Colors or Background.
 - **Wavelog**: Installed and running (Version 1.8.6 or later).
 - **DX Cluster Access**: A DX Cluster server accessible via Telnet. Find one [here](http://www.dxcluster.info/telnet/index.php).
+- **Operating System**: Windows 10 or later, macOS 13 (Ventura) or later, or a modern 64-bit Linux distribution. Only 64-bit builds are provided.
 
 ### FlexRadio Compatibility
 
@@ -230,6 +231,8 @@ Wave-Flex Integrator binaries for Linux are available on the [GitHub Releases](h
 ### macOS Installation
 
 Wave-Flex Integrator binaries for macOS are available on the [GitHub Releases](https://github.com/tnxqso/wave-flex-integrator/releases) page.
+
+> **Important:** Starting with version 2.0.0, Wave-Flex Integrator requires macOS 13 (Ventura) or later. This follows from the upgrade to Electron 44, which no longer supports macOS 12 (Monterey) or earlier. If you are running macOS 12 or older, stay on version 1.5.4. The auto-updater will not be able to install 2.0.0 on those systems.
 
 1. **Download**: Get the latest macOS installer (`.dmg` file) from the [Releases](https://github.com/tnxqso/wave-flex-integrator/releases) page.
 
