@@ -32,7 +32,7 @@
     "dotenv": "^16.4.5",
     "electron-json-storage": "^4.6.0",
     "electron-store": "^10.0.0",
-    "electron-updater": "^6.8.3",
+    "electron-updater": "^6.8.9",
     "fast-xml-parser": "^5.3.3",
     "httpolyglot": "^0.1.2",
     "lodash": "^4.17.21",
