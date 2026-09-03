@@ -132,5 +132,9 @@
       "icon": "assets/icons/icon.png",
       "artifactName": "${productName}-${version}-${arch}.${ext}"
     }
+  },
+    "allowScripts": {
+    "electron": true,
+    "electron-winstaller": true
   }
 }
