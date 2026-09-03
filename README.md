@@ -1,14 +1,11 @@
 # Wave-Flex Integrator
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Node.js Version](https://img.shields.io/badge/node.js-18%2B-green.svg)](https://nodejs.org/)
-[![Beta Status](https://img.shields.io/badge/status-beta-orange.svg)](#)
+[![Node.js Version](https://img.shields.io/badge/node.js-22.12%2B-green.svg)](https://nodejs.org/)
 
 *A seamless bridge between your [FlexRadio](https://www.flexradio.com/) and [Wavelog](https://www.wavelog.org) logging software, integrating DX Cluster data, WSJT-X, QSO Assistant, and synchronizing frequency and mode, all without traditional CAT software.*
 
 ![Wave-Flex Integrator main tab](assets/wave-flex-integrator-main-tab.png)
-
-> **Note:** This software is currently in beta testing. Features and documentation may change as the project evolves.
 
 ---
 
@@ -703,7 +700,7 @@ If you cannot resolve the problem using the steps above, the best way to get hel
 
 We welcome contributions from anyone with expertise in JavaScript, Node.js. If you're interested in improving Wave-Flex Integrator, feel free to open an issue or submit a pull request on GitHub.
 
-Are you passionate about enhancing your FlexRadio experience? Consider joining our beta testing program or contributing directly to the project. Together, we can make this tool even better for the ham radio community!
+Are you passionate about enhancing your FlexRadio experience? Consider contributing directly to the project. Together, we can make this tool even better for the ham radio community!
 
 ---
 
