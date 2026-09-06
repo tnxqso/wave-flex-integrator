@@ -232,19 +232,25 @@ Wave-Flex Integrator binaries for Linux are available on the [GitHub Releases](h
 
 Wave-Flex Integrator binaries for macOS are available on the [GitHub Releases](https://github.com/tnxqso/wave-flex-integrator/releases) page.
 
-> **Important:** Starting with version 2.0.0, Wave-Flex Integrator requires macOS 13 (Ventura) or later. This follows from the upgrade to Electron 44, which no longer supports macOS 12 (Monterey) or earlier. If you are running macOS 12 or older, stay on version 1.5.4. The auto-updater will not be able to install 2.0.0 on those systems.
+> **Important:** Starting with version 2.0.0, Wave-Flex Integrator requires macOS 13 (Ventura) or later. This follows from the upgrade to Electron 44, which no longer supports macOS 12 (Monterey) or earlier. If you are running macOS 12 or older, stay on version 1.5.4.
 
-1. **Download**: Get the latest macOS installer (`.dmg` file) from the [Releases](https://github.com/tnxqso/wave-flex-integrator/releases) page.
+1. **Download**: Get the latest macOS disk image (`.dmg` file) from the [Releases](https://github.com/tnxqso/wave-flex-integrator/releases) page. Choose the `arm64` file for Apple Silicon Macs (M1, M2, M3, M4) and the `x64` file for Intel Macs.
 
-2. **Install**: Open the downloaded `.dmg` file and drag the Wave-Flex Integrator icon into your `Applications` folder.
+2. **Install**: Quit Wave-Flex Integrator if it is running. Open the downloaded `.dmg` file and drag the Wave-Flex Integrator icon onto the `Applications` folder. If macOS asks whether to replace an existing copy, choose **Replace**. Choosing "Keep Both" leaves the old version in place, and it will keep opening instead of the new one.
 
-3. **Launch**: After installation, you can launch Wave-Flex Integrator from the `Applications` folder or using Spotlight search.
+3. **Launch**: Eject the disk image, then launch Wave-Flex Integrator from the `Applications` folder, not from `Downloads` and not from the mounted disk image. The application is not signed with an Apple Developer ID certificate, so the first launch may be blocked. If that happens, right-click the application in `Applications`, choose **Open**, and confirm.
+
+4. **Verify**: Open the **About** tab and check that the version shown matches the one you installed. If it does not, an older copy is still being launched from somewhere else. Searching Spotlight for `WaveFlexIntegrator.app` will reveal any additional copies.
 
 ---
 
 ## Auto-Updating
 
-Wave-Flex Integrator includes an auto-update feature that automatically downloads and installs new versions as they become available. Simply restart the application to apply updates, no manual intervention is required.
+On **Windows and Linux**, Wave-Flex Integrator downloads and installs new versions automatically. Restart the application to apply an update; no manual intervention is required.
+
+On **macOS**, updates must be installed by hand. macOS only allows an application to update itself when it is signed with a paid Apple Developer ID certificate, which this project does not have. Instead, Wave-Flex Integrator checks the GitHub Releases page at startup and every four hours after that, and shows a desktop notification when a newer version is available. Clicking the notification opens the download page; from there, follow the [macOS Installation](#macos-installation) steps.
+
+The macOS check stays silent when the published release requires a newer version of macOS than the one you are running, so you will not be prompted to install something your system cannot run.
 
 ---
 
