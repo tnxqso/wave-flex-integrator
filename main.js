@@ -19,6 +19,7 @@ const QRZClient = require('./qrz_client');
 const MqttRotatorClient = require('./mqtt_client');
 const HttpCatListener = require('./http_cat_listener');
 const WavelogWsServer = require('./wavelog_ws_server');
+const { checkForNewRelease } = require('./update_checker');
 const StatusServer = require('./status_server');
 const CertificateManager = require('./certificate_manager');
 const IS_TEST_MODE = false; // Test, when radio is not available.
@@ -373,60 +374,75 @@ function createWindow() {
   uiManager = new UIManager(mainWindow, logger);
 
   // --- Updater Logic ---
-  ({ autoUpdater } = require('electron-updater'));
+  // Check every four hours.
+  const UPDATE_CHECK_INTERVAL_MS = 14400000;
 
-  // Route updater diagnostics into the application log. Without this the
-  // updater fails silently: neither the user nor the maintainer can see why
-  // an update never arrived.
-  autoUpdater.logger = logger;
+  if (process.platform === 'darwin') {
+    // macOS cannot update itself here. Squirrel.Mac requires the application
+    // bundle to be signed with an Apple Developer ID certificate, which this
+    // project does not have, so electron-updater would fail silently. Check
+    // GitHub directly and let the user install manually instead.
+    logger.info('Automatic updates are unavailable on macOS; using notification-only update checks.');
 
-  autoUpdater.on('error', (error) => {
-    const details = error ? (error.stack || error.message || String(error)) : 'unknown error';
-    logger.error(`Auto-updater error: ${details}`);
-  });
+    checkForNewRelease(logger);
 
-  // Check for updates immediately on startup.
-  // checkForUpdates() also rejects on failure. The error event above already
-  // logs it, so the catch here only prevents an unhandled rejection.
-  autoUpdater.checkForUpdates().catch(() => {});
+    setInterval(() => {
+      logger.info('Performing periodic update check...');
+      checkForNewRelease(logger);
+    }, UPDATE_CHECK_INTERVAL_MS);
+  } else {
+    ({ autoUpdater } = require('electron-updater'));
 
-  // Poll for updates every 4 hours
-  setInterval(() => {
-    logger.info('Performing periodic update check...');
+    // Route updater diagnostics into the application log. Without this the
+    // updater fails silently: neither the user nor the maintainer can see why
+    // an update never arrived.
+    autoUpdater.logger = logger;
+
+    autoUpdater.on('error', (error) => {
+      const details = error ? (error.stack || error.message || String(error)) : 'unknown error';
+      logger.error(`Auto-updater error: ${details}`);
+    });
+
+    // checkForUpdates() also rejects on failure. The error event above already
+    // logs it, so the catch here only prevents an unhandled rejection.
     autoUpdater.checkForUpdates().catch(() => {});
-  }, 14400000);
 
-  // Handle auto-update events
-  autoUpdater.on('update-available', () => {
-    if (mainWindow) {
-      mainWindow.webContents.send('update_available');
-    }
-    logger.info('A new update is available.');
-  });
+    setInterval(() => {
+      logger.info('Performing periodic update check...');
+      autoUpdater.checkForUpdates().catch(() => {});
+    }, UPDATE_CHECK_INTERVAL_MS);
 
-  autoUpdater.on('update-downloaded', () => {
-    logger.info('Update downloaded. Ready to install.');
+    autoUpdater.on('update-available', () => {
+      if (mainWindow) {
+        mainWindow.webContents.send('update_available');
+      }
+      logger.info('A new update is available.');
+    });
 
-    if (mainWindow && mainWindow.isVisible()) {
-      // If the window is visible, show the in-app toast notification
-      mainWindow.webContents.send('update_downloaded');
-    } else {
-      // If the window is hidden (in tray), show a system notification
-      const notification = new Notification({
-        title: 'Wave-Flex Integrator Update',
-        body: 'A new version has been downloaded. Click to restart and install.',
-        icon: path.join(__dirname, 'assets/icons/icon.png')
-      });
+    autoUpdater.on('update-downloaded', () => {
+      logger.info('Update downloaded. Ready to install.');
 
-      notification.show();
+      if (mainWindow && mainWindow.isVisible()) {
+        // If the window is visible, show the in-app toast notification
+        mainWindow.webContents.send('update_downloaded');
+      } else {
+        // If the window is hidden (in tray), show a system notification
+        const notification = new Notification({
+          title: 'Wave-Flex Integrator Update',
+          body: 'A new version has been downloaded. Click to restart and install.',
+          icon: path.join(__dirname, 'assets/icons/icon.png')
+        });
 
-      // If user clicks the system notification, install immediately
-      notification.on('click', () => {
-        isQuitting = true; // Bypass tray logic
-        autoUpdater.quitAndInstall();
-      });
-    }
-  });
+        notification.show();
+
+        // If user clicks the system notification, install immediately
+        notification.on('click', () => {
+          isQuitting = true; // Bypass tray logic
+          autoUpdater.quitAndInstall();
+        });
+      }
+    });
+  }
 }
 
 function createSplashWindow() {
@@ -1476,6 +1492,11 @@ ipcMain.handle('load-global-profile', async (event, profileName) => {
  * Handles IPC request to quit and install the update.
  */
 ipcMain.handle('install-update', async () => {
+  if (!autoUpdater) {
+    logger.warn('Install requested, but the automatic updater is not active on this platform.');
+    return;
+  }
+
   logger.info('User requested install. Quitting and installing...');
   isQuitting = true; // Bypass tray logic to allow update
   autoUpdater.quitAndInstall();
