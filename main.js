@@ -375,13 +375,25 @@ function createWindow() {
   // --- Updater Logic ---
   ({ autoUpdater } = require('electron-updater'));
 
-  // Check for updates immediately on startup
-  autoUpdater.checkForUpdates();
+  // Route updater diagnostics into the application log. Without this the
+  // updater fails silently: neither the user nor the maintainer can see why
+  // an update never arrived.
+  autoUpdater.logger = logger;
+
+  autoUpdater.on('error', (error) => {
+    const details = error ? (error.stack || error.message || String(error)) : 'unknown error';
+    logger.error(`Auto-updater error: ${details}`);
+  });
+
+  // Check for updates immediately on startup.
+  // checkForUpdates() also rejects on failure. The error event above already
+  // logs it, so the catch here only prevents an unhandled rejection.
+  autoUpdater.checkForUpdates().catch(() => {});
 
   // Poll for updates every 4 hours
   setInterval(() => {
     logger.info('Performing periodic update check...');
-    autoUpdater.checkForUpdates();
+    autoUpdater.checkForUpdates().catch(() => {});
   }, 14400000);
 
   // Handle auto-update events
