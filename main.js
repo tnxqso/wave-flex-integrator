@@ -362,12 +362,12 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     if (shouldShow) {
         setTimeout(() => {
-          if (splashWindow) splashWindow.close();
+          closeSplashWindow();
           mainWindow.show();
         }, 3500);
     } else {
         // If we start minimized, just close splash immediately
-        if (splashWindow) splashWindow.close();
+        closeSplashWindow();
     }
   });
 
@@ -443,6 +443,19 @@ function createWindow() {
       }
     });
   }
+}
+
+/**
+ * Closes the splash window and clears the reference. Without clearing it,
+ * a later close() on the already destroyed BrowserWindow throws
+ * "Object has been destroyed", which aborts the shutdown sequence before
+ * it completes.
+ */
+function closeSplashWindow() {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.close();
+  }
+  splashWindow = null;
 }
 
 function createSplashWindow() {
@@ -1247,9 +1260,7 @@ async function shutdown() {
       mainWindow.close();
     }
 
-    if (splashWindow) {
-      splashWindow.close();
-    }
+    closeSplashWindow();
 
     if (logger) {
       logger.info('Shutdown complete.');
