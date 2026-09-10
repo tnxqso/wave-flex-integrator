@@ -1037,7 +1037,13 @@ function attachEventListeners() {
       logger.debug('Raw Spot Data:', spot);
       await augmentedSpotCache.processSpot(spot);
       logger.debug('Enriched Spot Data:', spot);
-      await flexRadioClient.sendSpot(spot);
+      // FlexRadio is only initialized when a station callsign was retrieved
+      // from Wavelog. Without it the client is null, and calling sendSpot
+      // would throw and skip the UI update below, leaving the user with no
+      // spots at all even though the cluster is working.
+      if (flexRadioClient) {
+        await flexRadioClient.sendSpot(spot);
+      }
       uiManager.sendSpotUpdate(spot);
     } catch (e) {
       logger.error(`Error processing spot: ${e.message}`);
