@@ -28,18 +28,50 @@ class WSJTClient extends EventEmitter {
     }
 
     /**
+     * Closes the socket, tolerating a socket that was never bound or that
+     * has already been closed. In both of those cases close() throws
+     * ERR_SOCKET_DGRAM_NOT_RUNNING, which must not propagate.
+     * @private
+     */
+    closeSocketSafely() {
+        if (!this.socket) {
+            return;
+        }
+        try {
+            this.socket.close();
+        } catch (closeErr) {
+            if (this.logger) {
+                this.logger.debug(`WSJT-X UDP socket close ignored: ${closeErr.message}`);
+            }
+        }
+    }
+
+    /**
      * Starts listening for UDP messages from WSJT-X.
      */
     start() {
         this.socket = dgram.createSocket('udp4');
 
         this.socket.on('error', (err) => {
+            // Bind failures such as EADDRINUSE are delivered here too, so this
+            // handler is the only place where a failed listener start can be
+            // detected.
             if (this.logger) {
                 this.logger.error(`WSJT-X UDP Socket Error:\n${err.stack}`);
             } else {
                 console.error(`WSJT-X UDP Socket Error:\n${err.stack}`);
             }
-            this.socket.close();
+
+            this.closeSocketSafely();
+            this.socket = null;
+
+            // Re-emit so the main process can reflect the failure in the UI.
+            // EventEmitter rethrows an 'error' event that has no listener,
+            // which would crash the main process, so only emit when one is
+            // attached.
+            if (this.listenerCount('error') > 0) {
+                this.emit('error', err);
+            }
         });
 
         this.socket.on('message', (msg, rinfo) => {
@@ -106,7 +138,7 @@ class WSJTClient extends EventEmitter {
      */
     stop() {
         if (this.socket) {
-            this.socket.close();
+            this.closeSocketSafely();
             this.socket = null;
         }
     }
