@@ -913,6 +913,19 @@ app.on('ready', () => {
           }
         }, 2000);
 
+      } else {
+        // Without a valid configuration nothing below runs, which previously
+        // left the splash window on screen with no main window and no
+        // explanation. Tell the user instead of hanging silently.
+        logger.error('Configuration is incomplete. FlexRadio host and port and the Wavelog URL, API key and radio name must all be set.');
+        closeSplashWindow();
+        dialog.showErrorBox(
+          'Configuration Incomplete',
+          'Wave-Flex Integrator cannot start because the configuration is incomplete.\n\n' +
+          'The FlexRadio host and port, and the Wavelog URL, API key and radio name must all be set.\n\n' +
+          'Please edit the configuration and start the application again.'
+        );
+        app.quit();
       }
     })
     .catch((err) => {
