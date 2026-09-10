@@ -362,12 +362,12 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     if (shouldShow) {
         setTimeout(() => {
-          if (splashWindow) splashWindow.close();
+          closeSplashWindow();
           mainWindow.show();
         }, 3500);
     } else {
         // If we start minimized, just close splash immediately
-        if (splashWindow) splashWindow.close();
+        closeSplashWindow();
     }
   });
 
@@ -443,6 +443,19 @@ function createWindow() {
       }
     });
   }
+}
+
+/**
+ * Closes the splash window and clears the reference. Without clearing it,
+ * a later close() on the already destroyed BrowserWindow throws
+ * "Object has been destroyed", which aborts the shutdown sequence before
+ * it completes.
+ */
+function closeSplashWindow() {
+  if (splashWindow && !splashWindow.isDestroyed()) {
+    splashWindow.close();
+  }
+  splashWindow = null;
 }
 
 function createSplashWindow() {
@@ -871,11 +884,19 @@ app.on('ready', () => {
           // Update UI status after startup delay
           setTimeout(async () => {
           try {
-            // Check WSJT
-            if (config.wsjt.enabled) {
+            // Check WSJT. The socket binds asynchronously, so config.wsjt.enabled
+            // only tells us that the listener was started, not that it is running.
+            // Report the actual socket state instead, otherwise a bind failure
+            // such as EADDRINUSE is overwritten by an unconditional WSJTEnabled.
+            if (!config.wsjt.enabled) {
+              uiManager.updateWSJTStatus('WSJTDisabled');
+            } else if (wsjtClient && wsjtClient.isListening()) {
               uiManager.updateWSJTStatus('WSJTEnabled');
             } else {
-              uiManager.updateWSJTStatus('WSJTDisabled');
+              const wsjtError = (wsjtClient && wsjtClient.lastError)
+                ? wsjtClient.lastError
+                : new Error('WSJT-X listener failed to start');
+              uiManager.updateWSJTStatus('WSJTError', wsjtError);
             }
 
             // Check DX Cluster (Force UI update if disabled)
@@ -892,6 +913,19 @@ app.on('ready', () => {
           }
         }, 2000);
 
+      } else {
+        // Without a valid configuration nothing below runs, which previously
+        // left the splash window on screen with no main window and no
+        // explanation. Tell the user instead of hanging silently.
+        logger.error('Configuration is incomplete. FlexRadio host and port and the Wavelog URL, API key and radio name must all be set.');
+        closeSplashWindow();
+        dialog.showErrorBox(
+          'Configuration Incomplete',
+          'Wave-Flex Integrator cannot start because the configuration is incomplete.\n\n' +
+          'The FlexRadio host and port, and the Wavelog URL, API key and radio name must all be set.\n\n' +
+          'Please edit the configuration and start the application again.'
+        );
+        app.quit();
       }
     })
     .catch((err) => {
@@ -1003,7 +1037,13 @@ function attachEventListeners() {
       logger.debug('Raw Spot Data:', spot);
       await augmentedSpotCache.processSpot(spot);
       logger.debug('Enriched Spot Data:', spot);
-      await flexRadioClient.sendSpot(spot);
+      // FlexRadio is only initialized when a station callsign was retrieved
+      // from Wavelog. Without it the client is null, and calling sendSpot
+      // would throw and skip the UI update below, leaving the user with no
+      // spots at all even though the cluster is working.
+      if (flexRadioClient) {
+        await flexRadioClient.sendSpot(spot);
+      }
       uiManager.sendSpotUpdate(spot);
     } catch (e) {
       logger.error(`Error processing spot: ${e.message}`);
@@ -1239,9 +1279,7 @@ async function shutdown() {
       mainWindow.close();
     }
 
-    if (splashWindow) {
-      splashWindow.close();
-    }
+    closeSplashWindow();
 
     if (logger) {
       logger.info('Shutdown complete.');

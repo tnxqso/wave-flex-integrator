@@ -25,6 +25,39 @@ class WSJTClient extends EventEmitter {
         this.address = config.wsjt && config.wsjt.address ? config.wsjt.address : '0.0.0.0';
         this.logger = logger;
         this.socket = null;
+
+        // The socket binds asynchronously, so callers cannot assume the listener
+        // is running just because start() returned. These two fields hold the
+        // outcome of the bind so the UI can report the real state.
+        this.listening = false;
+        this.lastError = null;
+    }
+
+    /**
+     * Reports whether the UDP socket is currently bound and receiving.
+     * @returns {boolean}
+     */
+    isListening() {
+        return this.listening;
+    }
+
+    /**
+     * Closes the socket, tolerating a socket that was never bound or that
+     * has already been closed. In both of those cases close() throws
+     * ERR_SOCKET_DGRAM_NOT_RUNNING, which must not propagate.
+     * @private
+     */
+    closeSocketSafely() {
+        if (!this.socket) {
+            return;
+        }
+        try {
+            this.socket.close();
+        } catch (closeErr) {
+            if (this.logger) {
+                this.logger.debug(`WSJT-X UDP socket close ignored: ${closeErr.message}`);
+            }
+        }
     }
 
     /**
@@ -34,12 +67,28 @@ class WSJTClient extends EventEmitter {
         this.socket = dgram.createSocket('udp4');
 
         this.socket.on('error', (err) => {
+            // Bind failures such as EADDRINUSE are delivered here too, so this
+            // handler is the only place where a failed listener start can be
+            // detected.
             if (this.logger) {
                 this.logger.error(`WSJT-X UDP Socket Error:\n${err.stack}`);
             } else {
                 console.error(`WSJT-X UDP Socket Error:\n${err.stack}`);
             }
-            this.socket.close();
+
+            this.listening = false;
+            this.lastError = err;
+
+            this.closeSocketSafely();
+            this.socket = null;
+
+            // Re-emit so the main process can reflect the failure in the UI.
+            // EventEmitter rethrows an 'error' event that has no listener,
+            // which would crash the main process, so only emit when one is
+            // attached.
+            if (this.listenerCount('error') > 0) {
+                this.emit('error', err);
+            }
         });
 
         this.socket.on('message', (msg, rinfo) => {
@@ -91,6 +140,10 @@ class WSJTClient extends EventEmitter {
 
         this.socket.on('listening', () => {
             const address = this.socket.address();
+
+            this.listening = true;
+            this.lastError = null;
+
             if (this.logger) {
                 this.logger.info(`WSJT-X UDP socket listening on ${address.address}:${address.port}`);
             } else {
@@ -105,8 +158,9 @@ class WSJTClient extends EventEmitter {
      * Stops listening for UDP messages and closes the socket.
      */
     stop() {
+        this.listening = false;
         if (this.socket) {
-            this.socket.close();
+            this.closeSocketSafely();
             this.socket = null;
         }
     }
