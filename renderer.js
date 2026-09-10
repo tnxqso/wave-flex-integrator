@@ -5,6 +5,12 @@ const { ipcRenderer } = require('electron');
 const { shell } = require('electron');
 let isWavelogLive = false;
 
+// Holds the configuration last loaded into the form. The submit handler
+// reads values from it that have no corresponding form field, such as the
+// QSO window position. Without this, the identifier 'config' in the submit
+// handler resolves to the DOM element with id="config" instead.
+let loadedConfig = null;
+
 /**
  * Scrolls the window to the top of the page.
  */
@@ -137,6 +143,7 @@ function populateForm(config, isPackaged = true) {
     showAlert('Configuration data is missing.', 'danger');
     return;
   }
+  loadedConfig = config;
 
   // --- Populate Application General Settings ---
   // IMPORTANT: Must be defined before using it for Tray settings
@@ -642,11 +649,11 @@ if (configForm) {
             width: parseInt(document.getElementById('appWindowWidth').value) || 900,
             height: parseInt(document.getElementById('appWindowHeight').value) || 800
         },
+        // Position is owned by the window move handler in the main process,
+        // not by this form. Sending it here would write back a stale value.
         qsoWindow: {
             width: parseInt(document.getElementById('qsoWindowWidth').value) || 600,
-            height: parseInt(document.getElementById('qsoWindowHeight').value) || 500,
-            x: config.application?.qsoWindow?.x,
-            y: config.application?.qsoWindow?.y
+            height: parseInt(document.getElementById('qsoWindowHeight').value) || 500
         }
       },
       catListener: {
