@@ -871,11 +871,19 @@ app.on('ready', () => {
           // Update UI status after startup delay
           setTimeout(async () => {
           try {
-            // Check WSJT
-            if (config.wsjt.enabled) {
+            // Check WSJT. The socket binds asynchronously, so config.wsjt.enabled
+            // only tells us that the listener was started, not that it is running.
+            // Report the actual socket state instead, otherwise a bind failure
+            // such as EADDRINUSE is overwritten by an unconditional WSJTEnabled.
+            if (!config.wsjt.enabled) {
+              uiManager.updateWSJTStatus('WSJTDisabled');
+            } else if (wsjtClient && wsjtClient.isListening()) {
               uiManager.updateWSJTStatus('WSJTEnabled');
             } else {
-              uiManager.updateWSJTStatus('WSJTDisabled');
+              const wsjtError = (wsjtClient && wsjtClient.lastError)
+                ? wsjtClient.lastError
+                : new Error('WSJT-X listener failed to start');
+              uiManager.updateWSJTStatus('WSJTError', wsjtError);
             }
 
             // Check DX Cluster (Force UI update if disabled)

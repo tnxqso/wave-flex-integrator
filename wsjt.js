@@ -25,6 +25,20 @@ class WSJTClient extends EventEmitter {
         this.address = config.wsjt && config.wsjt.address ? config.wsjt.address : '0.0.0.0';
         this.logger = logger;
         this.socket = null;
+
+        // The socket binds asynchronously, so callers cannot assume the listener
+        // is running just because start() returned. These two fields hold the
+        // outcome of the bind so the UI can report the real state.
+        this.listening = false;
+        this.lastError = null;
+    }
+
+    /**
+     * Reports whether the UDP socket is currently bound and receiving.
+     * @returns {boolean}
+     */
+    isListening() {
+        return this.listening;
     }
 
     /**
@@ -61,6 +75,9 @@ class WSJTClient extends EventEmitter {
             } else {
                 console.error(`WSJT-X UDP Socket Error:\n${err.stack}`);
             }
+
+            this.listening = false;
+            this.lastError = err;
 
             this.closeSocketSafely();
             this.socket = null;
@@ -123,6 +140,10 @@ class WSJTClient extends EventEmitter {
 
         this.socket.on('listening', () => {
             const address = this.socket.address();
+
+            this.listening = true;
+            this.lastError = null;
+
             if (this.logger) {
                 this.logger.info(`WSJT-X UDP socket listening on ${address.address}:${address.port}`);
             } else {
@@ -137,6 +158,7 @@ class WSJTClient extends EventEmitter {
      * Stops listening for UDP messages and closes the socket.
      */
     stop() {
+        this.listening = false;
         if (this.socket) {
             this.closeSocketSafely();
             this.socket = null;
