@@ -725,6 +725,28 @@
                                     <option value="false">Don't Log</option>
                                 </select>
                             </div>
+                            <div class="mt-2">
+                                <label class="form-label small mb-0">Listen Mode</label>
+                                <select class="form-select form-select-sm" id="wsjtListenMode">
+                                    <option value="unicast">Unicast (only this application)</option>
+                                    <option value="multicast">Multicast (share with other applications)</option>
+                                </select>
+                            </div>
+                            <div id="wsjtMulticastFields" class="d-none mt-2">
+                                <div class="row g-1">
+                                    <div class="col-7">
+                                        <label class="form-label small mb-0">Multicast Group</label>
+                                        <input type="text" class="form-control form-control-sm" id="wsjtMulticastGroup" placeholder="224.0.0.1">
+                                    </div>
+                                    <div class="col-5">
+                                        <label class="form-label small mb-0">Interface</label>
+                                        <input type="text" class="form-control form-control-sm" id="wsjtMulticastInterface" placeholder="auto">
+                                    </div>
+                                </div>
+                                <div class="form-text small">
+                                    Set the same group and port in WSJT-X under Settings, Reporting, UDP Server. Leave Interface empty unless the automatic choice is wrong.
+                                </div>
+                            </div>                            
                         </div>
                     </div>
 

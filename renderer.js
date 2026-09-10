@@ -135,6 +135,43 @@ function updateConnectionBadge(status) {
 }
 
 /**
+ * Returns true when the address is a valid IPv4 multicast address, that is
+ * within 224.0.0.0/4. Mirrors the check in wsjt.js so the user gets an error
+ * in the form instead of a listener that fails at startup.
+ * @param {string} address
+ * @returns {boolean}
+ */
+function isMulticastAddress(address) {
+  if (typeof address !== 'string') {
+    return false;
+  }
+  const parts = address.trim().split('.');
+  if (parts.length !== 4) {
+    return false;
+  }
+  const octets = parts.map((part) => Number(part));
+  if (octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)) {
+    return false;
+  }
+  return octets[0] >= 224 && octets[0] <= 239;
+}
+
+/**
+ * Shows the multicast group and interface fields only in multicast mode.
+ */
+function updateWsjtListenModeUI() {
+  const modeSelect = document.getElementById('wsjtListenMode');
+  const fields = document.getElementById('wsjtMulticastFields');
+  if (!modeSelect || !fields) return;
+
+  if (modeSelect.value === 'multicast') {
+    fields.classList.remove('d-none');
+  } else {
+    fields.classList.add('d-none');
+  }
+}
+
+/**
  * Function to populate form with config values
  */
 function populateForm(config, isPackaged = true) {
@@ -443,6 +480,23 @@ const dxClusterBackupHostInput = document.getElementById('dxClusterBackupHost');
     wsjtLogQSOSelect.value = config.wsjt.logQSO.toString();
   }
 
+  const wsjtListenModeSelect = document.getElementById('wsjtListenMode');
+  if (wsjtListenModeSelect) {
+    wsjtListenModeSelect.value = config.wsjt.listenMode || 'unicast';
+    wsjtListenModeSelect.addEventListener('change', updateWsjtListenModeUI);
+    updateWsjtListenModeUI();
+  }
+
+  const wsjtMulticastGroupInput = document.getElementById('wsjtMulticastGroup');
+  if (wsjtMulticastGroupInput) {
+    wsjtMulticastGroupInput.value = config.wsjt.multicastGroup || '224.0.0.1';
+  }
+
+  const wsjtMulticastInterfaceInput = document.getElementById('wsjtMulticastInterface');
+  if (wsjtMulticastInterfaceInput) {
+    wsjtMulticastInterfaceInput.value = config.wsjt.multicastInterface || '';
+  }
+
   // Helper Function to set color inputs
   function setColorInput(elementId, colorValue) {
     const input = document.getElementById(elementId);
@@ -628,6 +682,18 @@ if (configForm) {
         document.getElementById(field).focus();
         return;
       }
+    }
+
+    // Validate the multicast group before saving, so an unusable value is
+    // caught here rather than silently producing a listener that receives
+    // nothing.
+    const wsjtListenMode = document.getElementById('wsjtListenMode').value;
+    const wsjtMulticastGroup = document.getElementById('wsjtMulticastGroup').value.trim();
+
+    if (wsjtListenMode === 'multicast' && !isMulticastAddress(wsjtMulticastGroup)) {
+      showAlert('Invalid WSJT-X multicast group. Use an address between 224.0.0.0 and 239.255.255.255.', 'danger');
+      document.getElementById('wsjtMulticastGroup').focus();
+      return;
     }
 
   // Build the new configuration object from the form values
@@ -817,6 +883,9 @@ if (configForm) {
         port: parseInt(document.getElementById('wsjtPort').value, 10),
         showQSO: document.getElementById('wsjtShowQSO').value === 'true',
         logQSO: document.getElementById('wsjtLogQSO').value === 'true',
+        listenMode: wsjtListenMode,
+        multicastGroup: wsjtMulticastGroup || '224.0.0.1',
+        multicastInterface: document.getElementById('wsjtMulticastInterface').value.trim(),
       },
     };
 
