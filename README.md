@@ -1,7 +1,7 @@
 # Wave-Flex Integrator
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Node.js Version](https://img.shields.io/badge/node.js-22.12%2B-green.svg)](https://nodejs.org/)
+[![Node.js Version](https://img.shields.io/badge/node.js-24%2B-green.svg)](https://nodejs.org/)
 
 *A seamless bridge between your [FlexRadio](https://www.flexradio.com/) and [Wavelog](https://www.wavelog.org) logging software, integrating DX Cluster data, WSJT-X, QSO Assistant, and synchronizing frequency and mode, all without traditional CAT software.*
 

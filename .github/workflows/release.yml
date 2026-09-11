@@ -91,6 +91,8 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
+          prerelease: ${{ contains(steps.tag.outputs.tag, '-') }}
+          make_latest: ${{ !contains(steps.tag.outputs.tag, '-') }}
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
