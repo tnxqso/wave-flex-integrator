@@ -43,6 +43,15 @@ class WSJTMessage {
         const schema = buffer.readUInt32BE(offset);
         offset += 4;
 
+        // The field layouts below follow schema 3. A newer schema may move or
+        // add fields, which would silently produce garbled callsigns and
+        // frequencies rather than an obvious failure, so reject it instead.
+        if (schema !== SCHEMA_VERSION) {
+            throw new Error(
+                `Unsupported WSJT-X schema version ${schema}, expected ${SCHEMA_VERSION}`
+            );
+        }
+
         // Read message type
         const type = buffer.readUInt32BE(offset);
         offset += 4;
