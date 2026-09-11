@@ -1744,21 +1744,39 @@ ipcMain.handle('install-certificate', async () => {
     return false;
 });
 
-// Handle uncaught exceptions
+/**
+ * Formats a thrown value for the log, preferring the stack trace. The
+ * message alone rarely identifies where the failure originated.
+ * @param {unknown} value
+ * @returns {string}
+ */
+function formatThrown(value) {
+  if (value instanceof Error) {
+    return value.stack || `${value.name}: ${value.message}`;
+  }
+  return String(value);
+}
+
+// Handle uncaught exceptions. The application deliberately keeps running:
+// it is a long-running background integration, and a stray failure in one
+// asynchronous callback should not take down cluster and QSO logging.
 process.on('uncaughtException', (error) => {
+  const details = formatThrown(error);
   if (logger) {
-    logger.error(`Uncaught Exception: ${error.message}`);
+    logger.error(`Uncaught Exception: ${details}`);
   } else {
-    console.error(`Uncaught Exception: ${error.message}`);
+    console.error(`Uncaught Exception: ${details}`);
   }
 });
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
+// Handle unhandled promise rejections. The promise object itself carries no
+// useful information in a log line, so only the rejection reason is written.
+process.on('unhandledRejection', (reason) => {
+  const details = formatThrown(reason);
   if (logger) {
-    logger.error(`Unhandled Rejection at: ${promise}, reason: ${reason}`);
+    logger.error(`Unhandled Rejection: ${details}`);
   } else {
-    console.error(`Unhandled Rejection at: ${promise}, reason: ${reason}`);
+    console.error(`Unhandled Rejection: ${details}`);
   }
 });
 
