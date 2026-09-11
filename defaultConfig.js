@@ -185,6 +185,18 @@ const defaultConfig = {
     port: 2237,
     showQSO: true,
     logQSO: true,
+    // 'unicast' matches the previous behaviour and is the default so that
+    // existing installations are unaffected. 'multicast' lets several
+    // applications receive the same WSJT-X datagrams at once.
+    listenMode: 'unicast',
+    // 224.0.0.1 is the address used by GridTracker, JTAlert and N1MM, so it
+    // is the value most users will already have configured in WSJT-X. It is
+    // link-local, meaning routers never forward it off the local segment.
+    multicastGroup: '224.0.0.1',
+    // Empty means let the operating system pick the interface. Set this only
+    // when the automatic choice is wrong, for example on a machine with VPN
+    // or virtual adapters.
+    multicastInterface: '',
   },
 
   // ==============================

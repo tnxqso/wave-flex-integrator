@@ -217,13 +217,13 @@ Wave-Flex Integrator binaries for Linux are available on the [GitHub Releases](h
    For Debian-based distributions (Ubuntu, Debian):
 
    ```bash
-   sudo dpkg -i wave-flex-integrator_1.0.0_amd64.deb
+   sudo dpkg -i wave-flex-integrator_<version>_amd64.deb
    ```
 
    For RPM-based distributions (Fedora, CentOS):
 
    ```bash
-   sudo rpm -i wave-flex-integrator-1.0.0.x86_64.rpm
+   sudo rpm -i wave-flex-integrator-<version>.x86_64.rpm
    ```
 
 3. **Launch**: Start Wave-Flex Integrator from your applications menu or by running `wave-flex-integrator` from the terminal.
@@ -264,17 +264,26 @@ Upon first startup, no services gets connected. This is normal. Configure the ap
 
 - **Theme**: Light, Dark, or System Sync.
 - **Startup Tab**: Choose which tab opens by default.
-- **QSO Assistant Settings**: 
+- **QSO Assistant Settings**:
   - **Show Profile Image & Map**: Toggle visual media in QSO Assistant.
-  - **Auto-Log to Wavelog**: If enabled, lookups via Enter key or external triggers will automatically be logged.
+  - **Auto-open on start**: Opens the QSO Assistant window automatically when the application starts.
 - **Rotator Control**: Enable MQTT-based rotator control (e.g., RemoteQTH Interface V).
 - **QRZ.com Integration**: Enable XML data lookup (requires QRZ subscription) to fetch names, locators, and images.
 
 #### Wavelog Click-to-Tune (Local Listener)
 
 - **Enable**: Turns on the local HTTP listener.
-- **Bind IP**: Default `127.0.0.1`.
+- **Bind IP**: The address the listener binds to. The default `0.0.0.0` accepts connections from any interface, which is required when Wavelog runs in a browser on another machine. Set it to `127.0.0.1` to accept connections from the local machine only.
 - **Port**: Default `54321`. This allows Wavelog to tune your radio.
+
+#### Status HTTP Server
+
+A read-only endpoint that exposes the current transmit frequency and mode as JSON, intended for browser userscripts and other local tools.
+
+- **Enable Status Server**: Turns the endpoint on.
+- **Port**: Default `54324`.
+
+The server binds to `127.0.0.1` only and cannot be reached from other machines. It responds to `GET /status` and accepts no commands.
 
 #### DX Cluster Settings
 
@@ -321,7 +330,15 @@ Upon first startup, no services gets connected. This is normal. Configure the ap
 
 - **Log WSJT-X QSO in Wavelog**: When both this option and `WSJT-X integration Enabled` are set to `true`, completed QSOs from WSJT-X broadcasts will be automatically logged in Wavelog (based on WSJT-X *Logged ADIF* messages). In WSJT-X settings (General tab), the station details for `My Call` and `My Grid` must match those set in Wavelog for the Station Location marked as `Active Station`. If the `Active Station` is changed in Wavelog, Wave-Flex Integrator should be restarted to pick up the changes.
 
-- **Multicast / port sharing**: Multicast reception is **not supported** in the current version, and the integrator does not currently enable UDP port sharing. If you use multicast to feed multiple programs, use a UDP relay/fan-out feature in another application, or configure WSJT-X to send a unicast copy to the integrator.
+- **Listen Mode**: Selects how the UDP socket receives WSJT-X messages.
+
+  - **Unicast** (default): WSJT-X sends to a single address, and only Wave-Flex Integrator can listen on the port. Use this when Wave-Flex Integrator is the only program receiving WSJT-X messages. In WSJT-X, set **UDP Server** to the integrator host, typically `127.0.0.1`.
+
+  - **Multicast**: WSJT-X sends to a multicast group, and every application that joins that group receives a copy of each message. Use this to run Wave-Flex Integrator alongside GridTracker, JTAlert, N1MM or other companion software at the same time. In WSJT-X, set **UDP Server** to the same group address configured here.
+
+- **Multicast Group**: The group address to join, shown only in multicast mode. The default `224.0.0.1` is the address used by GridTracker, JTAlert and N1MM, so it is usually the value already configured elsewhere. Any address between `224.0.0.0` and `239.255.255.255` is accepted, but every program in the group must use the same one. Addresses starting with `224.0.0.` are link-local and never leave the local network segment, which is what you want in almost all cases.
+
+- **Multicast Interface**: The local IP address of the network interface to join the group on, shown only in multicast mode. Leave it empty to let the operating system choose, which works on most machines. Set it explicitly only if the automatic choice picks the wrong adapter, which can happen on machines with VPN clients or virtual network adapters.
 
 > **Note:** Both **Show ongoing WSJT-X QSO in Wavelog live logging** and **Log WSJT-X QSO in Wavelog** options only take effect if WSJT-X integration (`WSJT-X integration Enabled`) is set to `true`. If WSJT-X integration is disabled, these features will not function, even if individually enabled.
 
@@ -523,6 +540,14 @@ Wave-Flex Integrator can listen for UDP "Network Messages" from [WSJT-X](https:/
 
 Wave-Flex Integrator opens a UDP socket on the configured port (default `2237`) and listens for WSJT-X status and logging messages. In WSJT-X, point **Settings → Reporting → UDP Server** to the integrator host and port (typically `127.0.0.1:2237` when both run on the same machine).
 
+The socket can operate in two modes, selected under [WSJT-X Configuration](#wsjt-x-configuration).
+
+In **unicast** mode the bind is exclusive. Only one application can listen on the port, and a second one starting up will fail with an address-in-use error. This is the default and matches how most single-application setups are configured.
+
+In **multicast** mode Wave-Flex Integrator joins a multicast group, and WSJT-X sends each message to that group instead of to a single address. Every application that has joined the same group receives its own copy, so Wave-Flex Integrator can run alongside GridTracker, JTAlert or other companion software without any of them blocking the others. All programs involved, including WSJT-X, must be configured with the same group address and port.
+
+Multicast works both when everything runs on one computer and when the programs are spread across a local network. Group addresses starting with `224.0.0.` stay on the local network segment and are never forwarded by routers.
+
 #### Show ongoing QSO in Wavelog
 
 When `Show ongoing WSJT-X QSO in Wavelog live logging` is enabled, the integrator watches the WSJT-X *Status* messages for the combination of an outgoing callsign (DX call), your own call, and an active TX state. As soon as all three are present and no QSO is already being displayed, Wave-Flex Integrator opens Wavelog's QSO logging page in your default browser, with the DX callsign pre-filled via URL parameter. The opened URL is of the form:
@@ -553,8 +578,7 @@ If either field is present and does not match, the QSO is silently rejected. The
 #### Known limitations
 
 - **No retry, no buffering.** If Wavelog is unreachable when a *Logged ADIF* message arrives, the integrator logs the failure to `debug.log` and discards the QSO. There is currently no offline queue. Re-logging must be done manually from WSJT-X (`File → Open log directory`) or by importing `wsjtx_log.adi` directly into Wavelog.
-- **No multicast support.** The UDP socket is bound for unicast only. If you use WSJT-X multicast to fan out to multiple consumers, configure a unicast copy aimed at the integrator, or use a UDP relay/fan-out tool in front of it.
-- **No UDP port sharing.** The bind is exclusive. Another application cannot simultaneously listen on the same UDP port on the same interface.
+- **Port sharing requires multicast.** In unicast mode the bind is exclusive, so another application cannot listen on the same UDP port at the same time. Switch to multicast mode to share the WSJT-X message stream between several applications.
 - **Restart on Active Station change.** Wavelog's active station identity is read at startup. If you switch the Active Station in Wavelog while Wave-Flex Integrator is running, restart it so the validation above uses the new values.
 
 ---
@@ -622,6 +646,34 @@ If the application is running but the radio doesn't react when you click a spot 
 ### Ensure No Other Applications Are Creating Spots on the SmartSDR panadapter
 
 Wave-Flex Integrator actively monitors and manages all spots displayed on the SmartSDR panadapter. To avoid conflicts or duplicate entries, make sure that no other applications are generating spots simultaneously. Additionally, only one instance of Wave-Flex Integrator should be connected to your FlexRadio at any given time to ensure operation and to avoid unexpected results.
+
+### WSJT-X messages do not arrive
+
+If the WSJT-X Listener shows **Enabled** on the Status tab but nothing happens when WSJT-X decodes or logs a QSO, work through the following.
+
+1. **Check the listener line in `debug.log`.** Run with `--app-debug` and look for the line written at startup:
+
+```
+   WSJT-X UDP socket listening on 0.0.0.0:2237 (unicast)
+```
+
+   In multicast mode it reads:
+
+```
+   WSJT-X UDP socket listening on 0.0.0.0:2237 (multicast group 224.0.0.1 on interface default)
+```
+
+   If the line is missing entirely, the socket never started. Look for an error above it.
+
+2. **Address and port must match exactly.** In unicast mode, the WSJT-X **UDP Server** address must be the integrator host. In multicast mode it must be the same group address configured here, and the port must match in both cases.
+
+3. **In multicast mode, every application must join the same group.** GridTracker, JTAlert and N1MM each have their own multicast setting. A program still configured for `127.0.0.1` will not receive anything once WSJT-X sends to a group.
+
+4. **Start WSJT-X first.** Some companion applications read the WSJT-X configuration at startup to determine the address to use.
+
+5. **If the group is joined but nothing arrives, try setting the interface explicitly.** Enter the IPv4 address of the network adapter that carries the traffic, for example `192.168.1.50`. This is most often needed on machines with VPN clients or virtual network adapters, where the automatic choice may select the wrong one.
+
+6. **A firewall can block multicast.** On Windows, allow Wave-Flex Integrator on the private network profile. On Linux, check that the firewall permits inbound UDP on the configured port.
 
 ### Enable Debug Mode
 
@@ -702,6 +754,8 @@ If you cannot resolve the problem using the steps above, the best way to get hel
 - **Connection Issues**:
   - Test connectivity with Telnet or PuTTY.
   - Verify network settings and firewall configurations.
+- **Window positions are not restored (Linux with Wayland)**:
+  - Wave-Flex Integrator saves the position and size of its windows and restores them at startup. On Linux running a Wayland session, the position cannot be saved. Wayland does not expose window coordinates to applications, so the windows open wherever the compositor places them. Window sizes are still restored correctly. Running an X11 session instead restores positions as expected. Windows and macOS are unaffected.
 
 ---
 

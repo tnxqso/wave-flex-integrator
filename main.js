@@ -1421,7 +1421,11 @@ ipcMain.handle('reset-config-to-defaults', async (event) => {
  * @returns {Promise<void>} - Resolves when the configuration is updated.
  */
 ipcMain.handle('update-config', async (event, newConfig) => {
-  const updatedConfig = mergeWith({}, defaultConfig, newConfig, customizer);
+  // The current configuration must be part of the merge. The settings form
+  // only serializes the fields it displays, so without this layer every key
+  // it does not send is silently dropped, including window positions written
+  // by the move handlers.
+  const updatedConfig = mergeWith({}, defaultConfig, config || {}, newConfig, customizer);
 
   return new Promise((resolve, reject) => {
     storage.set('config', updatedConfig, (error) => {
