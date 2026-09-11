@@ -228,6 +228,8 @@ Wave-Flex Integrator binaries for Linux are available on the [GitHub Releases](h
 
 3. **Launch**: Start Wave-Flex Integrator from your applications menu or by running `wave-flex-integrator` from the terminal.
 
+> **Note:** Automatic updates work with the AppImage build only. If you install the `.deb` or `.rpm` package, download and install new versions manually from the [Releases](https://github.com/tnxqso/wave-flex-integrator/releases) page.
+
 ### macOS Installation
 
 Wave-Flex Integrator binaries for macOS are available on the [GitHub Releases](https://github.com/tnxqso/wave-flex-integrator/releases) page.

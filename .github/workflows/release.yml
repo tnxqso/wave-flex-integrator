@@ -56,6 +56,8 @@ jobs:
             dist/*.exe
             dist/*.dmg
             dist/*.AppImage
+            dist/*.deb
+            dist/*.rpm
             dist/*.blockmap
             dist/latest*.yml
           if-no-files-found: error
@@ -95,6 +97,8 @@ jobs:
             artifacts/**/*.exe
             artifacts/**/*.dmg
             artifacts/**/*.AppImage
+            artifacts/**/*.deb
+            artifacts/**/*.rpm
             artifacts/**/*.blockmap
             artifacts/**/latest*.yml
         env:
