@@ -973,7 +973,10 @@ let activeQSO = false;
 function onSliceSent(sentSlice) {
   lastApiUpdate = Date.now();
   lastRadioState = { frequency: sentSlice.frequency, mode: sentSlice.mode };
-  logger.info(`[API-SIDE] Sent active slice to Wavelog API: ${sentSlice.frequency} Hz`);
+  // slice.frequency is MHz throughout the application; the Wavelog API is
+  // sent Hz. Log the transmitted value so the line matches what went over
+  // the wire.
+  logger.info(`[API-SIDE] Sent active slice to Wavelog API: ${Math.round(sentSlice.frequency * 1e6)} Hz`);
   sliceInFlight = false;
   drainPending();
 }
