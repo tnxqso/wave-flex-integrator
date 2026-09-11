@@ -208,23 +208,45 @@ Wave-Flex Integrator binaries for Windows are available on the [GitHub Releases]
 
 ### Linux Installation
 
-Wave-Flex Integrator binaries for Linux are available on the [GitHub Releases](https://github.com/tnxqso/wave-flex-integrator/releases) page.
+Wave-Flex Integrator binaries for Linux are available on the [GitHub Releases](https://github.com/tnxqso/wave-flex-integrator/releases) page. Three formats are provided: an AppImage that runs on any modern distribution, and `.deb` and `.rpm` packages for distributions that use those package managers.
 
-1. **Download**: Get the latest Linux package from the [Releases](https://github.com/tnxqso/wave-flex-integrator/releases) page.
+#### AppImage (recommended)
 
-2. **Install**: Use your distribution's package manager to install the application.
+The AppImage is a single self-contained file that runs without installation, and it is the only format that supports automatic updates.
+
+1. **Download**: Get the `.AppImage` file from the [Releases](https://github.com/tnxqso/wave-flex-integrator/releases) page.
+
+2. **Make it executable**:
+
+```bash
+   chmod +x WaveFlexIntegrator-*.AppImage
+```
+
+3. **Launch**: Run it directly.
+
+```bash
+   ./WaveFlexIntegrator-*.AppImage
+```
+
+Keep the file somewhere permanent, for example `~/Applications`, since the application updates itself in place. If the AppImage does not start, your distribution may be missing FUSE; install `fuse2` or `libfuse2` through your package manager, depending on the distribution.
+
+#### Debian and RPM packages
+
+1. **Download**: Get the `.deb` or `.rpm` file from the [Releases](https://github.com/tnxqso/wave-flex-integrator/releases) page.
+
+2. **Install**, substituting the version you downloaded:
 
    For Debian-based distributions (Ubuntu, Debian):
 
-   ```bash
-   sudo dpkg -i wave-flex-integrator_<version>_amd64.deb
-   ```
+```bash
+   sudo dpkg -i WaveFlexIntegrator-<version>-amd64.deb
+```
 
    For RPM-based distributions (Fedora, CentOS):
 
-   ```bash
-   sudo rpm -i wave-flex-integrator-<version>.x86_64.rpm
-   ```
+```bash
+   sudo rpm -i WaveFlexIntegrator-<version>-x86_64.rpm
+```
 
 3. **Launch**: Start Wave-Flex Integrator from your applications menu or by running `wave-flex-integrator` from the terminal.
 
