@@ -562,12 +562,15 @@ function loadConfig() {
 /**
  * Fetches station information from Wavelog.
  * @param {boolean} suppressErrors - Whether to suppress error dialogs.
+ * @param {boolean} bypassBreaker - Skip the circuit breaker check and do not record
+ *   success/failure (used by the startup retry so it cannot open the breaker).
+ * @returns {Promise<Error|undefined>} - The caught error, if the fetch failed.
  */
-async function fetchStationDetails(suppressErrors = false) {
+async function fetchStationDetails(suppressErrors = false, bypassBreaker = false) {
   try {
     if (!stationId || !stationProfileName || !stationGridSquare || !stationCallsign) {
       // Fetch all station details in one call
-      const activeStation = await wavelogClient.getActiveStation(suppressErrors);
+      const activeStation = await wavelogClient.getActiveStation(suppressErrors, bypassBreaker);
 
       if (activeStation) {
         stationId = activeStation.station_id;
@@ -584,6 +587,32 @@ async function fetchStationDetails(suppressErrors = false) {
     if (!suppressErrors) {
       dialog.showErrorBox('Error', 'Error fetching station details. Please check the configuration.');
     }
+    return error;
+  }
+}
+
+// Delays between startup station fetch attempts (about 60 s in total).
+const STARTUP_STATION_FETCH_RETRY_DELAYS_MS = [2000, 4000, 8000, 15000, 30000];
+
+/**
+ * Fetches station information at startup, retrying on transient network errors.
+ * When autostarted at login, the network may not be up yet; a single failed
+ * attempt would leave stationCallsign unset and skip all radio/server setup.
+ * Retries bypass the circuit breaker so they neither open it nor get blocked by it.
+ * Any other failure (HTTP error, no active profile, invalid response) is not retried.
+ */
+async function fetchStationDetailsWithStartupRetry() {
+  const maxRetries = STARTUP_STATION_FETCH_RETRY_DELAYS_MS.length;
+  for (let attempt = 0; ; attempt++) {
+    const error = await fetchStationDetails(true, true); // Suppress errors during startup
+    if (stationCallsign || attempt >= maxRetries || isQuitting) return;
+
+    const code = WavelogClient.getTransientNetworkErrorCode(error);
+    if (!code) return;
+
+    const delayMs = STARTUP_STATION_FETCH_RETRY_DELAYS_MS[attempt];
+    logger.info(`Wavelog not reachable at startup (${code}). Retry ${attempt + 1}/${maxRetries} in ${delayMs / 1000} s.`);
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
   }
 }
 
@@ -717,7 +746,8 @@ app.on('ready', () => {
 
         // Fetch station profile from Wavelog
         if (appConfigured) {
-          await fetchStationDetails(true); // Suppress errors during startup
+          await fetchStationDetailsWithStartupRetry(); // Suppress errors during startup
+          if (isQuitting) return;
         }
 
         // --- FlexRadio & Server Initialization ---

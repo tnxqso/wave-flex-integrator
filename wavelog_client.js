@@ -7,6 +7,17 @@ const BREAKER_FAILURE_THRESHOLD = 3;
 const PROBE_INITIAL_DELAY_MS = 10000;
 const PROBE_BACKOFF_FACTOR = 2;
 const PROBE_BACKOFF_CAP_MS = 120000;
+// Socket/DNS error codes that indicate the network is not (yet) available.
+// Used to decide whether a failed station fetch at startup is worth retrying.
+const TRANSIENT_NETWORK_ERROR_CODES = new Set([
+  'EAI_AGAIN',
+  'ENOTFOUND',
+  'ENETUNREACH',
+  'ECONNREFUSED',
+  'EHOSTUNREACH',
+  'ECONNRESET',
+  'WAVELOG_TIMEOUT', // Set by getActiveStation when its request is aborted
+]);
 
 class WavelogClient extends EventEmitter {
   /**
@@ -66,6 +77,22 @@ class WavelogClient extends EventEmitter {
 
   isCircuitOpen() {
     return this._breakerState !== 'CLOSED';
+  }
+
+  /**
+   * Returns the transient network error code for an error rejected by getActiveStation,
+   * or null if the error is not a transient network failure.
+   * node-fetch v2 puts the system error code on error.code; native fetch (undici)
+   * puts it on error.cause.code, so both are checked. HTTP errors, invalid JSON
+   * (e.g. a Cloudflare Access login page) and SyntaxErrors carry no such code and
+   * are therefore never classified as transient.
+   * @param {Error} error - The rejected error.
+   * @returns {string|null} - The transient error code, or null.
+   */
+  static getTransientNetworkErrorCode(error) {
+    if (!error) return null;
+    const code = error.code ?? error.cause?.code;
+    return TRANSIENT_NETWORK_ERROR_CODES.has(code) ? code : null;
   }
 
   _scheduleProbe() {
@@ -158,7 +185,8 @@ class WavelogClient extends EventEmitter {
    * Fetches and caches the active station data from Wavelog API.
    * Implements promise caching to prevent multiple simultaneous fetches.
    * @param {boolean} suppressErrors - Whether to suppress error dialogs (legacy, unused inside method).
-   * @param {boolean} _probeMode - Internal flag; true only when called from _runProbe. Skips breaker check and record calls.
+   * @param {boolean} _probeMode - Internal flag; skips breaker check and record calls. True when called from
+   *   _runProbe or from the startup retry in main.js, whose attempts must not feed the breaker.
    * @returns {Promise<object>} - The active station data object.
    */
   async getActiveStation(suppressErrors = false, _probeMode = false) {
@@ -237,7 +265,7 @@ class WavelogClient extends EventEmitter {
       } catch (error) {
         clearTimeout(timeoutId);
         const wrappedError = error.name === 'AbortError' || error.type === 'aborted'
-          ? new Error('Wavelog request timed out')
+          ? Object.assign(new Error('Wavelog request timed out'), { code: 'WAVELOG_TIMEOUT' })
           : error;
         const errorMessage = `Error in getActiveStation: ${wrappedError.message}`;
         this.handleError(errorMessage, false);
