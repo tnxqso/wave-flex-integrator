@@ -95,6 +95,30 @@ class WavelogClient extends EventEmitter {
     return TRANSIENT_NETWORK_ERROR_CODES.has(code) ? code : null;
   }
 
+  /**
+   * Returns an error whose message has the API key replaced with [REDACTED].
+   * node-fetch includes the request URL in its error messages, and the
+   * station_info URL contains the API key. name, code, errno, type and cause are
+   * preserved so getTransientNetworkErrorCode still classifies the error.
+   * @param {Error} error - The original error.
+   * @returns {Error} - The original error if it does not contain the key, else a redacted copy.
+   */
+  _redactApiKey(error) {
+    const apiKey = this.config.wavelogAPI.apiKey;
+    if (!apiKey || typeof error?.message !== 'string' || !error.message.includes(apiKey)) {
+      return error;
+    }
+    const redacted = new Error(
+      error.message.replaceAll(apiKey, '[REDACTED]'),
+      error.cause !== undefined ? { cause: error.cause } : undefined
+    );
+    redacted.name = error.name;
+    if (error.code !== undefined) redacted.code = error.code;
+    if (error.errno !== undefined) redacted.errno = error.errno;
+    if (error.type !== undefined) redacted.type = error.type;
+    return redacted;
+  }
+
   _scheduleProbe() {
     if (this._probeTimerId !== null) return;
     this._probeTimerId = setTimeout(() => this._runProbe(), this._probeDelay);
@@ -264,9 +288,9 @@ class WavelogClient extends EventEmitter {
         }
       } catch (error) {
         clearTimeout(timeoutId);
-        const wrappedError = error.name === 'AbortError' || error.type === 'aborted'
+        const wrappedError = this._redactApiKey(error.name === 'AbortError' || error.type === 'aborted'
           ? Object.assign(new Error('Wavelog request timed out'), { code: 'WAVELOG_TIMEOUT' })
-          : error;
+          : error);
         const errorMessage = `Error in getActiveStation: ${wrappedError.message}`;
         this.handleError(errorMessage, false);
         this.fetchFailed = true;
