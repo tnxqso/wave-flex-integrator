@@ -1,12 +1,13 @@
 {
   "name": "wave-flex-integrator",
-  "version": "2.1.3",
+  "version": "2.1.4",
   "description": "A seamless bridge between your FlexRadio and Wavelog logging software, integrating DX Cluster data, and synchronizing frequency and mode, all without traditional CAT software.",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder",
-    "postinstall": "electron-builder install-app-deps"
+    "postinstall": "electron-builder install-app-deps",
+    "test": "node --test"
   },
   "keywords": [
     "dxcluster",
