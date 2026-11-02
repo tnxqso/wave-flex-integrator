@@ -2,6 +2,7 @@
 
 const MAGIC_NUMBER = 0xadbccbda;
 const SCHEMA_VERSION = 3; // Adjust according to your needs
+const MIN_SCHEMA_VERSION = 2; // WSJT-X sends schema 2 until a server negotiates
 
 const MESSAGE_TYPES = {
     HEARTBEAT: 0,
@@ -46,9 +47,15 @@ class WSJTMessage {
         // The field layouts below follow schema 3. A newer schema may move or
         // add fields, which would silently produce garbled callsigns and
         // frequencies rather than an obvious failure, so reject it instead.
-        if (schema !== SCHEMA_VERSION) {
+        // Schema 2 is accepted as well: the WSJT-X MessageClient uses schema 2
+        // for every message until a server answers its heartbeat, and we never
+        // answer. Packets therefore arrive as schema 2 unless another server on
+        // the same multicast group negotiates schema 3. Schemas 2 and 3 share
+        // the same field layouts for the types parsed here; v2.1.2 parsed
+        // schema 2 traffic with this layout without problems.
+        if (schema < MIN_SCHEMA_VERSION || schema > SCHEMA_VERSION) {
             throw new Error(
-                `Unsupported WSJT-X schema version ${schema}, expected ${SCHEMA_VERSION}`
+                `Unsupported WSJT-X schema version ${schema}, expected ${MIN_SCHEMA_VERSION} to ${SCHEMA_VERSION}`
             );
         }
 
