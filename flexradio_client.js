@@ -113,7 +113,8 @@ module.exports = class FlexRadioClient extends EventEmitter {
     this.flexClient = new net.Socket();
 
     this.flexClient.connect(port, host, () => {
-      this.logger.info('Connected to FlexRadio server.');
+      // main.js logs the user-facing "Connected" line once the session is set up
+      this.logger.debug('Connected to FlexRadio server.');
       this.connected = true;
       this.isReconnecting = false;
 
@@ -159,7 +160,8 @@ module.exports = class FlexRadioClient extends EventEmitter {
       }
 
       if (hadError) {
-        this.logger.warn('FlexRadio connection attempt failed. Retrying in 5 seconds...');
+        // The 'error' handler has already logged the cause and scheduled a reconnect
+        this.logger.debug('FlexRadio connection attempt failed.');
       } else {
         this.logger.warn('FlexRadio connection closed. Retrying in 5 seconds...');
       }
@@ -473,13 +475,15 @@ module.exports = class FlexRadioClient extends EventEmitter {
       return;
     }
 
+    // Both 'error' and 'close' fire for a failed attempt, so a second call is expected
     if (this.isReconnecting) {
-      this.logger.warn('Reconnection attempt already in progress.');
+      this.logger.debug('Reconnection attempt already in progress.');
       return;
     }
 
     this.isReconnecting = true;
-    this.logger.info('Retrying connection to FlexRadio in 5 seconds...');
+    // The caller has already logged a warning that says a retry follows
+    this.logger.debug('Retrying connection to FlexRadio in 5 seconds...');
     setTimeout(() => {
       if (!this.connected && this.shouldReconnect) {
         this.initiateConnection();
