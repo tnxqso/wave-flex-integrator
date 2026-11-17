@@ -26,6 +26,7 @@ const IS_TEST_MODE = false; // Test, when radio is not available.
 let lastApiUpdate = 0;
 let lastRadioState = { frequency: 0, mode: '' };
 let sliceInFlight = false;
+let flexWasConnected = false; // Used to log a FlexRadio disconnect only once per connection
 let pendingSlice = null;
 
 let certManager;
@@ -877,6 +878,12 @@ app.on('ready', () => {
                 return;
               }
 
+              // A newly created slice is announced before the radio reports its frequency.
+              // Skip it until it is fully populated, so Wavelog never receives 0 Hz.
+              if (!(slice.frequency > 0)) {
+                return;
+              }
+
               // 1. WebSocket Broadcast (Immediate GUI Update)
               if (wavelogWsServer) {
                 wavelogWsServer.broadcastStatus(slice);
@@ -1214,6 +1221,7 @@ function attachEventListeners() {
 function attachFlexRadioEventListeners() {
   if (flexRadioClient) {
     flexRadioClient.on('connected', () => {
+      flexWasConnected = true;
       logger.info('Connected to FlexRadio server');
       // Send connection status AND the host IP to the UI
       uiManager.sendStatusUpdate({
@@ -1223,13 +1231,23 @@ function attachFlexRadioEventListeners() {
     });
 
     flexRadioClient.on('disconnected', () => {
-      logger.info('Disconnected from FlexRadio server');
+      // Only log the transition from connected; failed reconnect attempts are already
+      // reported by FlexRadioClient.
+      if (flexWasConnected) {
+        logger.info('Disconnected from FlexRadio server');
+      }
+      flexWasConnected = false;
       uiManager.updateFlexRadioStatus('flexRadioDisconnected');
       if (statusServer) statusServer.updateState(null);
     });
 
     flexRadioClient.on('error', (error) => {
-      logger.error(`FlexRadio error: ${error.message}`);
+      // Unreachable radio is expected (e.g. powered off) and already logged as a warning
+      if (['ECONNREFUSED', 'ETIMEDOUT', 'EHOSTUNREACH'].includes(error.code)) {
+        logger.debug(`FlexRadio error: ${error.message}`);
+      } else {
+        logger.error(`FlexRadio error: ${error.message}`);
+      }
       uiManager.updateFlexRadioStatus('flexRadioError', error);
     });
 
