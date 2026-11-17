@@ -1388,7 +1388,8 @@ function main() {
       // --- Dedicated Heartbeat Loop (Every 5 minutes) ---
       setInterval(() => {
         // Only send heartbeat if radio is actually connected and has a slice
-        if (flexRadioClient && flexRadioClient.isConnected() && flexRadioClient.activeTXSlices.length > 0) {
+        // activeTXSlices is null until the radio has reported its first TX slice
+        if (flexRadioClient && flexRadioClient.isConnected() && flexRadioClient.activeTXSlices?.length > 0) {
             const slice = flexRadioClient.activeTXSlices[0];
             const now = Date.now();
             const timeElapsed = now - lastApiUpdate;
